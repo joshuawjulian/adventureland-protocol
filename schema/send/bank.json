@@ -1,0 +1,398 @@
+{
+  "event": "bank",
+  "source": "node/server.js:9257-9483",
+  "request": {
+    "fields": [
+      {"name": "operation", "type": "\"withdraw\" | \"deposit\" | \"unlock\" | \"move\" | \"swap\"", "optional": false, "coerce": "compared with `==`", "description": "The bank operation. It selects the variant. Any other value (or none) changes nothing and sends the **Success** reply."}
+    ],
+    "others": "ignored, except the fields of the variant",
+    "example": {"operation": "withdraw"},
+    "confirm": {"code": ["node/server.js:9266", "node/server.js:9272", "node/server.js:9278", "node/server.js:9371", "node/server.js:9400"]}
+  },
+  "variants": {
+    "key": "operation",
+    "intro": "Each variant reads only its own fields; the server ignores the others. Every variant ends with `player` (`reopen: true`) and a `game_response` `data`.",
+    "list": [
+      {
+        "value": "withdraw",
+        "when": "Takes gold from the bank.",
+        "request": {
+          "fields": [
+            {"name": "amount", "type": "integer", "optional": true, "default": 0, "coerce": "`max(0, min(parseInt(amount) || 0, bank gold))`: a non-number is 0, and the server limits it to the gold in the bank", "description": "The gold to take from the bank.", "example": 100000}
+          ],
+          "example": {"operation": "withdraw", "amount": 50000},
+          "confirm": {"code": ["node/server.js:9266-9267"]}
+        },
+        "responses": [
+          {
+            "name": "Withdraw data",
+            "event": "game_response",
+            "code": "data",
+            "when": "The gold moved from the bank to you. The `bank_withdraw` reply follows at once.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The gold moved, after the server limited `amount`. It can be 0."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"gold": 50000, "cevent": true, "success": true, "response": "data", "place": "bank"},
+            "source": "node/server.js:9266-9271, 9481",
+            "confirm": {"code": ["node/server.js:9267-9270", "node/server.js:9479-9481", "node/server_functions.js:3421-3446"], "note": "`success_response` replaces `response` with `\"data\"` and adds `success` and `place`"}
+          },
+          {
+            "name": "Withdraw",
+            "event": "game_response",
+            "code": "bank_withdraw",
+            "when": "After the `data` reply.",
+            "fields": [
+              {"name": "response", "type": "\"bank_withdraw\"", "optional": false, "description": "The code."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The gold that moved from the bank to you."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"response": "bank_withdraw", "gold": 50000, "cevent": true},
+            "source": "node/server.js:9270, 9482",
+            "confirm": {"code": ["node/server.js:9270", "node/server.js:9479", "node/server.js:9482"], "note": "A copy taken before `success_response` changes the object"}
+          }
+        ],
+        "order": [
+          "`player` with `reopen: true` to you",
+          "`game_response` `data` with `gold` to you",
+          "`game_response` `bank_withdraw` to you"
+        ],
+        "source": "node/server.js:9266-9271"
+      },
+      {
+        "value": "deposit",
+        "when": "Puts gold into the bank.",
+        "request": {
+          "fields": [
+            {"name": "amount", "type": "integer", "optional": true, "default": 0, "coerce": "`max(0, min(parseInt(amount) || 0, your gold))`: a non-number is 0, and the server limits it to your gold", "description": "The gold to put into the bank.", "example": 100000}
+          ],
+          "example": {"operation": "deposit", "amount": 100000},
+          "confirm": {"code": ["node/server.js:9272-9273"]}
+        },
+        "responses": [
+          {
+            "name": "Deposit data",
+            "event": "game_response",
+            "code": "data",
+            "when": "The gold moved from you to the bank. The `bank_store` reply follows at once.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The gold moved, after the server limited `amount`. It can be 0."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"gold": 100000, "cevent": true, "success": true, "response": "data", "place": "bank"},
+            "source": "node/server.js:9272-9277, 9481",
+            "confirm": {"code": ["node/server.js:9273-9276", "node/server.js:9479-9481", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Deposit",
+            "event": "game_response",
+            "code": "bank_store",
+            "when": "After the `data` reply.",
+            "fields": [
+              {"name": "response", "type": "\"bank_store\"", "optional": false, "description": "The code."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The gold that moved from you to the bank."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"response": "bank_store", "gold": 100000, "cevent": true},
+            "source": "node/server.js:9276, 9482",
+            "confirm": {"code": ["node/server.js:9276", "node/server.js:9479", "node/server.js:9482"]}
+          }
+        ],
+        "order": [
+          "`player` with `reopen: true` to you",
+          "`game_response` `data` with `gold` to you",
+          "`game_response` `bank_store` to you"
+        ],
+        "source": "node/server.js:9272-9277"
+      },
+      {
+        "value": "unlock",
+        "when": "Buys a bank pack with gold (`gold: true`) or with shells (`shells: true`). The bank map does not matter.",
+        "request": {
+          "fields": [
+            {"name": "pack", "type": "BankPackName", "optional": false, "coerce": "none: used as an object key. A missing `pack` fails with `invalid`", "description": "The pack to unlock. It must be a key of `bank_packs`. The bank map does not matter."},
+            {"name": "gold", "type": "boolean", "optional": true, "coerce": "any truthy value", "description": "Pay the gold price of the pack (`bank_packs[pack][1]`)."},
+            {"name": "shells", "type": "boolean", "optional": true, "coerce": "any truthy value", "description": "Pay the shell price (`bank_packs[pack][2]`). The server reads it only when `gold` is not set. If neither is set, the unlock does nothing and sends the **Success** reply."},
+            {"name": "request_id", "type": "any", "optional": true, "description": "The server copies it into the `bank_new_pack` and `bank_new_pack_failed` replies, and into the `data` reply of a gold unlock."}
+          ],
+          "example": {"operation": "unlock", "pack": "items2", "gold": true, "request_id": "u7"},
+          "confirm": {"code": ["node/server.js:9279-9301", "node/server.js:9309-9311"]}
+        },
+        "responses": [
+          {
+            "name": "Unlocked with gold",
+            "event": "game_response",
+            "code": "data",
+            "when": "`gold` is set. The `bank_new_pack` reply follows at once.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "pack", "type": "BankPackName", "optional": false, "description": "The pack that you unlocked."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The gold paid: `bank_packs[pack][1]`."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id`, when the request has one."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"pack": "items2", "gold": 75000000, "cevent": true, "success": true, "response": "data", "place": "bank"},
+            "source": "node/server.js:9294-9300, 9481",
+            "confirm": {"code": ["node/server.js:9282", "node/server.js:9294-9300", "node/server.js:9479-9481", "node/server_functions.js:3421-3446", "js/old_common_functions.js:54-70"], "note": "An undefined `request_id` drops out of the JSON"}
+          },
+          {
+            "name": "New pack (gold)",
+            "event": "game_response",
+            "code": "bank_new_pack",
+            "when": "`gold` is set, after the `data` reply.",
+            "fields": [
+              {"name": "response", "type": "\"bank_new_pack\"", "optional": false, "description": "The code."},
+              {"name": "pack", "type": "BankPackName", "optional": false, "description": "The pack."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The gold paid."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id`, when the request has one."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"response": "bank_new_pack", "pack": "items2", "gold": 75000000, "cevent": true},
+            "source": "node/server.js:9294-9300, 9482",
+            "confirm": {"code": ["node/server.js:9294-9300", "node/server.js:9479", "node/server.js:9482"]}
+          },
+          {
+            "name": "Unlock started (shells)",
+            "event": "game_response",
+            "code": "data",
+            "when": "`shells` is set and `gold` is not. The server started the purchase; the result comes later.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the purchase is not complete."},
+              {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"success": false, "in_progress": true, "response": "data", "place": "bank"},
+            "source": "node/server.js:9368, 9481",
+            "confirm": {"code": ["node/server.js:9368", "node/server.js:9479-9481", "node/server_functions.js:3421-3446"], "note": "`success_response` keeps `success: false`"}
+          },
+          {
+            "name": "New pack (shells)",
+            "event": "game_response",
+            "code": "bank_new_pack",
+            "when": "Later: the shell purchase is complete. A `player` with `reopen: true` comes just before it. If you left the game first, the server sends nothing.",
+            "fields": [
+              {"name": "response", "type": "\"bank_new_pack\"", "optional": false, "description": "The code."},
+              {"name": "pack", "type": "BankPackName", "optional": false, "description": "The pack."},
+              {"name": "shells", "type": "integer", "optional": false, "description": "The shells paid: `bank_packs[pack][2]`."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id`, when the request has one."},
+              {"name": "cevent", "type": "\"bank_new_pack\"", "optional": false, "description": "The code again."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"response": "bank_new_pack", "pack": "items2", "shells": 600, "cevent": "bank_new_pack", "success": true},
+            "source": "node/server.js:9302-9316, 9351-9353",
+            "confirm": {"code": ["node/server.js:9302-9317", "node/server.js:9349-9353"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "`pack` is not a key of `bank_packs`.", "code": "invalid", "source": "node/server.js:9279-9281", "confirm": {"code": ["node/server.js:9279-9281", "node/server_functions.js:3393-3419"]}},
+            {"when": "You unlocked the pack already.", "code": "invalid", "source": "node/server.js:9284-9286", "confirm": {"code": ["node/server.js:9284-9286", "node/server_functions.js:3393-3419"]}},
+            {"when": "`gold` is set, and your gold is less than the gold price.", "code": "gold_not_enough", "source": "node/server.js:9288-9290", "confirm": {"code": ["node/server.js:9287-9290", "node/server_functions.js:3393-3419"]}},
+            {"when": "`shells` is set (and `gold` is not), and a shell unlock of the same pack runs already.", "code": "bank_opi", "source": "node/server.js:9318-9320", "confirm": {"code": ["node/server.js:9301", "node/server.js:9318-9320", "node/server_functions.js:3393-3419"]}},
+            {
+              "when": "Later (a shell unlock): the account is not found (`nouser`), the transaction fails (`already_unlocked`, `not_enough`, or `exception` for any other error inside it), or an error outside the transaction occurs (`coms_failure`). The code also names `purchase_failed` (a failure without a reason) and the `tx` helper can return `retries`, but neither can happen: `tx` runs one try here and always gives a reason. Before each reason except `coms_failure` you also get `game_log` \"Purchase failed\". If you left the game, the server sends nothing.",
+              "replies": [
+                {
+                  "code": "bank_new_pack_failed",
+                  "form": "plain",
+                  "extra": [
+                    {"name": "pack", "type": "BankPackName", "optional": false, "description": "The pack.", "example": "items2"},
+                    {"name": "shells", "type": "integer", "optional": false, "description": "The shell price.", "example": 600},
+                    {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id`, when the request has one.", "example": "u7"},
+                    {"name": "cevent", "type": "\"bank_new_pack_failed\"", "optional": false, "description": "The code again."},
+                    {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                    {"name": "reason", "type": "\"nouser\" | \"already_unlocked\" | \"not_enough\" | \"exception\" | \"coms_failure\"", "optional": false, "description": "Why.", "example": "not_enough"}
+                  ]
+                }
+              ],
+              "source": "node/server.js:9302-9365; common_engine mongodb_functions.js:57-111",
+              "confirm": {"code": ["node/server.js:9302-9317", "node/server.js:9324-9347", "node/server.js:9362-9366", "common:mongodb_functions.js:57-111"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "game_log",
+            "to": "you",
+            "when": "A shell unlock fails later for any reason except `coms_failure`, before `bank_new_pack_failed`.",
+            "type": "LocalizedText",
+            "example": {"message": "Purchase failed", "phrase": "server.game_log.purchase_failed", "phrase_args": {}},
+            "source": "node/server.js:9327, 9344",
+            "confirm": {"code": ["node/server.js:9327", "node/server.js:9344", "languages/index.js:256-258", "languages/en/server.js:258"]}
+          },
+          {"name": "later", "event": "player", "to": "you", "when": "A shell unlock is complete, before `bank_new_pack`.", "summary": "Your state with `reopen: true`. `cash` and `user` (the bank) show the new pack.", "source": "node/server.js:9351-9352", "confirm": {"code": ["node/server.js:9349-9352", "node/server.js:4550-4594"]}}
+        ],
+        "order": {
+          "Gold": [
+            "`player` with `reopen: true` to you",
+            "`game_response` `data` with `pack` and `gold` to you",
+            "`game_response` `bank_new_pack` to you"
+          ],
+          "Shells": [
+            "`player` with `reopen: true` to you",
+            "`game_response` `data` with `in_progress: true` to you",
+            "later: `player` with `reopen: true`, then `game_response` `bank_new_pack` (or `game_log`, then `bank_new_pack_failed`)"
+          ],
+          "Neither": ["`player` with `reopen: true` to you", "`game_response` `data` (**Success**) to you"]
+        },
+        "source": "node/server.js:9278-9370"
+      },
+      {
+        "value": "move",
+        "when": "Moves an item between two slots of one pack. Two stacks of the same item merge into slot `b`.",
+        "request": {
+          "fields": [
+            {"name": "pack", "type": "BankPackName", "optional": false, "coerce": "none: used as an object key. A missing `pack` fails with `invalid`", "description": "The pack. You must have unlocked it, and it must be on your bank map."},
+            {"name": "a", "type": "integer", "optional": true, "default": 0, "coerce": "`max(0, min(41, parseInt(a) || 0))`", "description": "The first slot in the pack, 0 to 41."},
+            {"name": "b", "type": "integer", "optional": true, "default": 0, "coerce": "`max(0, min(41, parseInt(b) || 0))`", "description": "The second slot in the pack, 0 to 41. If `a` equals `b` after the conversion, the move fails."}
+          ],
+          "example": {"operation": "move", "pack": "items0", "a": 3, "b": 7},
+          "confirm": {"code": ["node/server.js:9373", "node/server.js:9377-9378"]}
+        },
+        "failures": {
+          "rows": [
+            {"when": "You did not unlock `pack`, or the pack is on another bank map.", "code": "invalid", "source": "node/server.js:9373-9375", "confirm": {"code": ["node/server.js:9373-9375", "node/server_functions.js:3393-3419"]}},
+            {"when": "`a` equals `b` after the conversion.", "code": "invalid", "source": "node/server.js:9379-9381", "confirm": {"code": ["node/server.js:9377-9381", "node/server_functions.js:3393-3419"]}},
+            {"when": "Slot `a` or slot `b` holds a placeholder.", "code": "item_placeholder", "source": "node/server.js:9382-9387", "confirm": {"code": ["node/server.js:9382-9387", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "order": ["`player` with `reopen: true` to you", "`game_response` `data` (**Success**) to you"],
+        "source": "node/server.js:9371-9399"
+      },
+      {
+        "value": "swap",
+        "when": "Moves an item between your inventory and a pack: a swap of two slots, a store (no usable `str`) or a retrieve (no usable `inv`).",
+        "request": {
+          "fields": [
+            {"name": "pack", "type": "BankPackName", "optional": false, "coerce": "none: used as an object key. A missing `pack` fails with `invalid`", "description": "The pack. You must have unlocked it, and it must be on your bank map."},
+            {"name": "str", "type": "integer", "optional": true, "coerce": "`parseInt`; `-1`, a missing value or a non-number means \"find a slot\"; then `max(0, min(41, str))`", "description": "The pack slot. Without a usable `str` the operation is a store: the server uses the first empty pack slot."},
+            {"name": "inv", "type": "InventoryIndex", "optional": true, "coerce": "`parseInt`; `-1`, a missing value or a non-number means \"find a slot\"; then `max(0, min(isize - 1, inv))`", "description": "The inventory slot. Without a usable `inv` the operation is a retrieve: the server uses the first empty inventory slot. If both `str` and `inv` are missing, the swap fails."}
+          ],
+          "example": {"operation": "swap", "pack": "items0", "inv": 4, "str": -1},
+          "confirm": {"code": ["node/server.js:9403", "node/server.js:9406-9433"]}
+        },
+        "responses": [
+          {
+            "name": "Swapped",
+            "event": "game_response",
+            "code": "data",
+            "when": "`swap` with both `str` and `inv`: the server exchanges the two slots (one or both can be empty).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "operation", "type": "\"swap\"", "optional": false, "description": "Always `\"swap\"`."},
+              {"name": "bank_action", "type": "\"swap\"", "optional": false, "description": "The operation that happened."},
+              {"name": "stored", "type": "boolean", "optional": false, "description": "`true` if an item went from the inventory into the pack."},
+              {"name": "pack", "type": "BankPackName", "optional": false, "description": "The pack."},
+              {"name": "inv", "type": "InventoryIndex", "optional": false, "description": "The inventory slot, after the conversion."},
+              {"name": "str", "type": "integer", "optional": false, "description": "The pack slot, after the conversion."}
+            ],
+            "example": {"operation": "swap", "bank_action": "swap", "stored": true, "pack": "items0", "inv": 4, "str": 7, "success": true, "response": "data", "place": "bank"},
+            "source": "node/server.js:9446-9458, 9481",
+            "confirm": {"code": ["node/server.js:9446-9458", "node/server.js:9479-9481", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Stored",
+            "event": "game_response",
+            "code": "data",
+            "when": "`swap` without a usable `str`, and `inv` holds an item: the item goes into the pack.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "operation", "type": "\"swap\"", "optional": false, "description": "Always `\"swap\"`."},
+              {"name": "bank_action", "type": "\"store\"", "optional": false, "description": "The operation that happened."},
+              {"name": "pack", "type": "BankPackName", "optional": false, "description": "The pack."},
+              {"name": "inv", "type": "InventoryIndex", "optional": false, "description": "The inventory slot that the item came from."},
+              {"name": "str", "type": "integer", "optional": false, "description": "The pack slot that got the item. For a stackable item it is the slot of the stack that grew (`bank_add_item`, node/server.js:2171-2196)."}
+            ],
+            "example": {"operation": "swap", "bank_action": "store", "pack": "items0", "inv": 4, "str": 12, "success": true, "response": "data", "place": "bank"},
+            "source": "node/server.js:9459-9465, 9481",
+            "confirm": {"code": ["node/server.js:9459-9465", "node/server.js:2171-2196", "node/server.js:9479-9481", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Retrieved",
+            "event": "game_response",
+            "code": "data",
+            "when": "`swap` without a usable `inv`, and `str` holds an item: the item goes into your inventory.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "operation", "type": "\"swap\"", "optional": false, "description": "Always `\"swap\"`."},
+              {"name": "bank_action", "type": "\"retrieve\"", "optional": false, "description": "The operation that happened."},
+              {"name": "pack", "type": "BankPackName", "optional": false, "description": "The pack."},
+              {"name": "inv", "type": "InventoryIndex", "optional": false, "description": "The inventory slot that got the item (from `add_item`). For a stackable item it is the slot of the stack that grew."},
+              {"name": "str", "type": "integer", "optional": false, "description": "The pack slot that the item came from."}
+            ],
+            "example": {"operation": "swap", "bank_action": "retrieve", "pack": "items0", "inv": 9, "str": 7, "success": true, "response": "data", "place": "bank"},
+            "source": "node/server.js:9466-9472, 9481",
+            "confirm": {"code": ["node/server.js:9466-9472", "node/server.js:2132", "node/server.js:9479-9481", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "You did not unlock `pack`, or the pack is on another bank map.", "code": "invalid", "source": "node/server.js:9403-9405", "confirm": {"code": ["node/server.js:9403-9405", "node/server_functions.js:3393-3419"]}},
+            {"when": "Both `str` and `inv` mean \"find a slot\".", "code": "invalid", "source": "node/server.js:9418-9421", "confirm": {"code": ["node/server.js:9406-9421", "node/server_functions.js:3393-3419"]}},
+            {"when": "The inventory slot holds a placeholder.", "code": "item_placeholder", "source": "node/server.js:9436-9438", "confirm": {"code": ["node/server.js:9436-9438", "node/server_functions.js:3393-3419"]}},
+            {"when": "The inventory item has `b` (it is on your merchant stand).", "code": "item_blocked", "source": "node/server.js:9439-9441", "confirm": {"code": ["node/server.js:9439-9441", "node/server_functions.js:3393-3419"]}},
+            {"when": "A store: the pack has no space for the item (`can_add_item`). When the pack has no empty slot, `str` becomes 0.", "code": "storage_full", "source": "node/server.js:9460-9462", "confirm": {"code": ["node/server.js:9422-9432", "node/server.js:9459-9462", "node/server_functions.js:3393-3419"]}},
+            {"when": "A retrieve: your inventory has no space for the item. When the inventory has no empty slot, `inv` becomes 0.", "code": "inventory_full", "source": "node/server.js:9467-9469", "confirm": {"code": ["node/server.js:9408-9417", "node/server.js:9433", "node/server.js:9466-9469", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "order": {"Swap, store or retrieve": ["`player` with `reopen: true` to you", "`game_response` `data` with `bank_action` to you"], "Nothing to move": ["`player` with `reopen: true` to you", "`game_response` `data` (**Success**) to you"]},
+        "source": "node/server.js:9400-9474"
+      }
+    ]
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "An operation that changes nothing, or that sends no fields of its own: `move`, a `swap` that moves nothing (a store from an empty inventory slot, or a retrieve from an empty pack slot), an `unlock` without `gold` or `shells`, and an unknown `operation`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"bank\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "bank"},
+      "source": "node/server.js:9481",
+      "confirm": {"code": ["node/server.js:9265", "node/server.js:9479-9481", "node/server_functions.js:3421-3446", "node/server.js:4886"], "note": "`success` stays `{}`, so the reply has only the three fields"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "bank",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9259-9261", "confirm": {"code": ["node/server.js:9258-9261"]}},
+      {"when": "You are not in the bank (`player.user` is not set), or the bank is mounting or unmounting.", "code": "bank_unavailable", "source": "node/server.js:9262-9264", "confirm": {"code": ["node/server.js:9262-9264", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {"event": "player", "to": "you", "when": "Every success, before the `game_response`.", "summary": "Your state with `reopen: true`. `gold`, `items` and `user` (the bank) show the change.", "source": "node/server.js:9352, 9480", "confirm": {"code": ["node/server.js:9480", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "`player` with `reopen: true` to you",
+    "`game_response` `data` (with the fields of the operation) to you",
+    "for `withdraw`, `deposit` and a gold `unlock`: a second `game_response` with the code"
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "event": "open_chest",
+  "source": "node/server.js:11273-11562",
+  "request": {
+    "fields": [
+      {"name": "id", "type": "string", "optional": false, "coerce": "none: used as a key of `chests`", "description": "The chest id from the `drop` event: a random string of 30 characters (`randomStr(30)`, node/server.js:2242)."}
+    ],
+    "others": "ignored",
+    "example": {"id": "kQ2mZp9TxL4vWc7NbR1sYh8JdF6gUe"},
+    "confirm": {"code": ["node/server.js:11274", "node/server.js:11280", "node/server.js:11330", "node/server.js:11555"], "note": "The handler reads only `id`"}
+  },
+  "responses": [
+    {
+      "name": "Opened",
+      "event": "chest_opened",
+      "when": "All checks pass. Without a party (or for an encouragement chest) you get one. In a party, each member online gets one, with `party: true`, `items` kept as `[]` when empty, and the gold of that member. Without a party, the server removes `items` when it is empty.",
+      "example": {"id": "kQ2mZp9TxL4vWc7NbR1sYh8JdF6gUe", "goldm": 1.2, "opener": "Wizard", "gold": 1580, "items": [{"name": "hpamulet", "level": 0, "looter": "Wizard"}]},
+      "source": "node/server.js:11392, 11552",
+      "type": "ChestOpenedResult",
+      "confirm": {"code": ["node/server.js:11280", "node/server.js:11286-11302", "node/server.js:11334-11345", "node/server.js:11346-11364", "node/server.js:11365-11371", "node/server.js:11388-11392", "node/server.js:11395", "node/server.js:11415-11468", "node/server.js:11469-11521", "node/server.js:11522-11553", "node/server_functions.js:4234-4311", "node/server_functions.js:715-728"], "live_needed": "`items` holds `cache_item` copies whose keys depend on the dropped item; a capture shows a real chest."}
+    },
+    {
+      "name": "Cave chest",
+      "event": "chest_opened",
+      "when": "A chest of a Cave of Many Dreams run (`chest.cave`) opens. `gold` is 0, `goldm` is 1, `items` is `[]`, and `cave` holds the gold and the amber that went to the purse of the run, not to you. Every member of the run gets this object. There is no `game_response`.",
+      "example": {"id": "kQ2mZp9TxL4vWc7NbR1sYh8JdF6gUe", "opener": "Wizard", "gold": 0, "goldm": 1, "items": [], "cave": {"gold": 420, "amber": 3, "shared": true}},
+      "source": "node/logic/cave_of_many_dreams.js:566-567, node/server.js:11281-11285",
+      "type": "ChestOpenedResult",
+      "confirm": {"code": ["node/server.js:11281-11285", "node/logic/cave_of_many_dreams.js:561-567"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "open_chest",
+    "intro": "A null payload throws before the character check, at `chests[data.id]`.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:11277-11279", "confirm": {"code": ["node/server.js:11275-11279"]}},
+      {"when": "Cave chest: the run is closed or ended, you are not an active member, you are not on the map and instance of the chest, or you are dead.", "code": "loot_failed", "source": "node/logic/cave_of_many_dreams.js:545-556", "confirm": {"code": ["node/server.js:11281-11283", "node/logic/cave_of_many_dreams.js:545-556", "node/server_functions.js:3393-3419"]}},
+      {"when": "Cave chest: the run is paused.", "code": "cave_paused", "source": "node/logic/cave_of_many_dreams.js:557", "confirm": {"code": ["node/server.js:11281-11283", "node/logic/cave_of_many_dreams.js:557", "node/server_functions.js:3393-3419"]}},
+      {"when": "Cave chest: you are more than 400 px from the chest.", "code": "loot_failed", "source": "node/logic/cave_of_many_dreams.js:558", "confirm": {"code": ["node/server.js:11281-11283", "node/logic/cave_of_many_dreams.js:558", "node/server_functions.js:3393-3419"]}},
+      {"when": "Cave chest: someone opened it already.", "code": "loot_failed", "source": "node/logic/cave_of_many_dreams.js:559", "confirm": {"code": ["node/server.js:11281-11283", "node/logic/cave_of_many_dreams.js:559", "node/server_functions.js:3393-3419"]}},
+      {"when": "An encouragement chest (it has `character`) that is not for your character, your account and your encouragement group.", "code": "loot_failed", "source": "node/server.js:11286-11293", "confirm": {"code": ["node/server.js:11286-11293", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are on `woffice` or on a mount map (the bank), or you are invisible. The chest does not need to exist for this check.", "code": "loot_failed", "source": "node/server.js:11303-11305", "confirm": {"code": ["node/server.js:11303-11305", "node/server_functions.js:3393-3419"]}},
+      {"when": "Without a party (or an encouragement chest): your inventory has no space for all of `chest.items`.", "code": "loot_no_space", "source": "node/server.js:11312-11316", "confirm": {"code": ["node/server.js:11311-11316", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "The chest does not exist (someone opened it, or it expired).",
+        "replies": [
+          {
+            "event": "chest_opened",
+            "example": {"id": "kQ2mZp9TxL4vWc7NbR1sYh8JdF6gUe", "gone": true}
+          }
+        ],
+        "source": "node/server.js:11554-11556",
+        "confirm": {"code": ["node/server.js:11554-11556"]}
+      },
+      {"when": "An error during the loot. The server deletes the chest first, so items and gold that it already gave stay given, and the rest is lost.", "code": "error", "source": "node/server.js:11557-11561", "confirm": {"code": ["node/server.js:11557-11561", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "game_log",
+      "to": "you; in a party, every member",
+      "when": "Success: one for each item (`Found a ...`, `Looted ...`, `Lost ...`; in a party with the name of the looter), then one for the gold if it is not 0 (phrase `server.game_log.gold`, `phrase_args.amount` is the pretty-printed gold; each member gets its own; node/server.js:11376, 11537).",
+      "type": "LocalizedText",
+      "example": {"message": "Found an Amulet of HP", "phrase": "server.item.found.an", "phrase_args": {"item": "Amulet of HP", "quantity": 1}, "color": "#4BAEAA"},
+      "source": "node/server.js:11341-11362, 11372-11380, 11442-11466, 11519, 11532-11541",
+      "confirm": {"code": ["node/server.js:11341", "node/server.js:11355", "node/server.js:11362", "node/server.js:11372-11381", "node/server.js:11442-11451", "node/server.js:11466", "node/server.js:11497-11506", "node/server.js:11519", "node/server.js:11533-11542", "node/server_functions.js:4576-4589", "languages/index.js:256-258"], "note": "`item_message` adds `color` to the `localization.message` object"}
+    },
+    {
+      "event": "disappearing_text",
+      "to": "you; in a party, every member in your instance",
+      "when": "Success, after the gold `game_log`. `args.color` is `\"+gold\"` without a party and `\"gold\"` in a party.",
+      "fields": [
+        {"name": "message", "type": "string", "optional": false, "description": "`\"+\"` and the gold of the receiver."},
+        {"name": "x", "type": "number", "optional": false, "description": "The x of the chest."},
+        {"name": "y", "type": "number", "optional": false, "description": "The y of the chest minus 10."},
+        {"name": "args", "type": "object", "optional": false, "description": "`{color, size: \"large\"}`."}
+      ],
+      "example": {"message": "+1580", "x": 120, "y": -310, "args": {"color": "+gold", "size": "large"}},
+      "source": "node/server.js:11382-11387, 11543-11550",
+      "confirm": {"code": ["node/server.js:11382-11387", "node/server.js:11543-11550"], "note": "A direct emit, not `disappearing_text()`: no `id`"}
+    },
+    {"event": "player", "to": "you; in a party, every member", "when": "Success, before `chest_opened`. It has `reopen: true` for a receiver that got an item.", "summary": "Your state with the new `gold` and `items`.", "source": "node/server.js:11391, 11551", "confirm": {"code": ["node/server.js:11391", "node/server.js:11551", "node/server.js:4550-4594"]}},
+    {"name": "Big gold", "event": "server_message", "to": "everyone", "when": "The chest is not a PvP chest, it has more than 100,000,000 gold, and you are not `stealth`. Sent before the loot.", "summary": "A `LocalizedText` (`server.server_message.looted_gold`) with `color: \"gold\"`, `type: \"server_gold\"` and `name`.", "source": "node/server.js:11317-11330, 11398-11411", "confirm": {"code": ["node/server.js:11317-11329", "node/server.js:11398-11410", "languages/index.js:256-258", "node/server_functions.js:3495-3496"]}},
+    {
+      "name": "Rare item",
+      "event": "server_message",
+      "to": "everyone",
+      "when": "`add_item` gives a rare item (its `G.items[name].a` score) or a shiny item, unless the receiver is `stealth`. Each item of the chest can turn shiny: 1 in 500 for an upgradable item, 1 in 20,000 for a compoundable item (not for `pvp_items`).",
+      "source": "node/server.js:2029-2036, 2099-2126",
+      "type": "ItemAnnouncement",
+      "confirm": {"code": ["node/server.js:11336", "node/server.js:11349", "node/server.js:2029-2036", "node/server.js:2098-2126", "node/server_functions.js:4576-4589", "node/server_functions.js:3495-3496"], "live_needed": "Whether an item is announced depends on G (`G.items[name].a`), the running `a_score` and a random shiny roll."},
+      "example": {
+        "message": "Wizard found a Shiny Amulet of HP",
+        "phrase": "server.item.named_found.a",
+        "phrase_args": {"player": "Wizard", "item": "Shiny Amulet of HP", "quantity": 1},
+        "color": "#85C76B",
+        "type": "server_found",
+        "item": {"name": "hpamulet", "level": 0, "p": "shiny"},
+        "name": "Wizard"
+      }
+    },
+    {"event": "chest_opened", "to": "each encouragement contributor that is not a looter", "when": "The chest has encouragement receipts. Each contributor online gets its own drops and gold, and a `chest_opened` with only its own items.", "summary": "`{id, goldm, opener, items, gold}` with the items and gold of that contributor, plus `dry` / `stale` when the opener's reply has them. `items` is removed when empty. Sent only when the contributor got gold, items or shells; a contributor without inventory space gets a reserved chest dropped instead.", "source": "node/logic/encouragement.js:445-500", "confirm": {"code": ["node/server.js:11371", "node/server.js:11522", "node/logic/encouragement.js:445-500"], "live_needed": "Needs a chest with encouragement receipts from a contributor outside the party."}},
+    {"event": "cave", "to": "the members of the run", "when": "Cave chest: success, after `chest_opened` (`cave_publish`).", "summary": "`{type: \"state\", state}`: a new snapshot of the run, with the new purse.", "source": "node/logic/cave_of_many_dreams.js:568", "confirm": {"code": ["node/logic/cave_of_many_dreams.js:568", "node/logic/cave_of_many_dreams.js:1869-1887"]}}
+  ],
+  "order": {
+    "Normal": [
+      "`server_message` to everyone, for a chest with more than 100,000,000 gold",
+      "`game_log` for each item, then one for the gold",
+      "`disappearing_text` with the gold",
+      "`player` to you (and to each member in a party)",
+      "`chest_opened` to you (and to each member in a party)"
+    ],
+    "Cave chest": ["`chest_opened` to every member of the run", "`cave` to the members of the run"]
+  }
+}

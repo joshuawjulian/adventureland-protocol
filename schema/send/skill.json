@@ -1,0 +1,2124 @@
+{
+  "event": "skill",
+  "source": "node/server.js:9764-10997",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "SkillName", "optional": false, "coerce": "none: used as a key of `G.skills`", "description": "The skill. It selects the variant. **Server bug:** the lookup is on a plain object, so `\"toString\"` and `\"constructor\"` pass the checks and get the default success with no effect (node/server.js:9788). If `name` is missing, failures have `place: \"skill\"`."}
+    ],
+    "others": "ignored",
+    "example": {"name": "charge"},
+    "confirm": {"code": ["node/server.js:9775", "node/server.js:9788"], "note": "The shared checks read `name`; each variant lists the other fields it reads"}
+  },
+  "variants": {
+    "key": "name",
+    "intro": "The emote, `ids`, `targets`, target, `slot` and `consume` checks run in the shared checks, before the variant. They apply to the skills that `G.skills` marks (`emote`, `target`, `slot`, `consume`), so each variant lists only the request fields that its skills read.",
+    "list": [
+      {
+        "name": "Emote",
+        "value": ["boop", "drop_egg", "fart", "headwiggle", "hearts_single", "highfive", "ikissyou", "joy", "jump", "makeawish", "mirrordance", "pocketstorm", "spotlight", "superjump", "wiggle"],
+        "when": "An emote skill (`emote` in `G.skills`). Spends the MP of the emote. Clients nearby get `emote`. During the anniversary, `ikissyou` on the featured character can claim a reward. The checks of emotes (ownership, `no_self`, friend, `ikissyou` target) are in the shared checks.",
+        "source": "node/server.js:10064-10081",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": true, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target, for an emote with `target` in `G.skills` (`boop`, `highfive`, `ikissyou`, `spotlight`). Other emotes ignore it."}
+          ],
+          "example": {"name": "highfive", "id": "Priest"},
+          "confirm": {"code": ["node/server.js:9816-9817", "node/server.js:9899-9909", "node/server.js:9927-9952", "node/server.js:10079"]}
+        },
+        "responses": [
+          {
+            "name": "Kiss",
+            "event": "game_response",
+            "code": "data",
+            "when": "Every `ikissyou` that passes the checks: the server always asks the anniversary controller (`anniversary_state()` never returns null). With no event running, `claim` fails, so the reply is `rewarded: false, reason: \"no_round\"` without `message`. Other emotes get the default success.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"ikissyou\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`. The kiss works also when there is no reward."},
+              {"name": "rewarded", "type": "boolean", "optional": false, "description": "`true` when this kiss claimed the reward of the round."},
+              {"name": "reason", "type": "string | null", "optional": false, "description": "`null` when `rewarded` is `true`. Else why there is no reward: `\"no_round\"`, `\"claimed\"`, `\"realmfatigue\"`, `\"hopsickness\"`, `\"merchant_home\"`, `\"host\"`, `\"no_visit\"`, `\"target_unavailable\"` or `\"wrong_target\"` (node/logic/anniversary_event.js:53-107)."},
+              {"name": "message", "type": "string", "optional": true, "description": "Only when there is no reward and the target is the featured character of the round: the English text of `phrase`."},
+              {"name": "phrase", "type": "string", "optional": true, "description": "With `message`: `\"interface.anniversary_status.<reason>\"`."},
+              {"name": "phrase_args", "type": "object", "optional": true, "description": "With `message`: always `{}`."}
+            ],
+            "example": {
+              "response": "data",
+              "place": "ikissyou",
+              "success": true,
+              "rewarded": false,
+              "reason": "claimed",
+              "message": "You already received this round's kiss rewards and buff.",
+              "phrase": "interface.anniversary_status.claimed",
+              "phrase_args": {}
+            },
+            "source": "node/server.js:10065-10071",
+            "confirm": {
+              "code": [
+                "node/server.js:9775",
+                "node/server.js:9816-9826",
+                "node/server.js:10064-10071",
+                "node/server_functions.js:2267-2280",
+                "node/logic/anniversary_event.js:96-108",
+                "node/logic/anniversary_event.js:198-222",
+                "languages/index.js:256-258",
+                "node/server.js:10995-10996"
+              ],
+              "note": "`anniversary_state()` always returns the controller, so every `ikissyou` that passes the checks gets `rewarded` and `reason`"
+            }
+          },
+          {
+            "name": "Kiss condition",
+            "event": "game_response",
+            "code": "condition",
+            "via": "a hitchhiker in `player`",
+            "when": "`ikissyou` with `rewarded: true`: `claim` gives you the condition `anniversary_kiss` (20 min) and removes your `anniversary_visit`.",
+            "type": "GameResponseCondition",
+            "example": {"response": "condition", "name": "anniversary_kiss", "cevent": true, "duration": 1200000},
+            "source": "node/logic/anniversary_event.js:217",
+            "confirm": {"code": ["node/server.js:10066", "node/logic/anniversary_event.js:198-222", "node/server_functions.js:3244-3245", "node/server_functions.js:3330-3350"], "note": "`G.conditions.anniversary_kiss.duration` is 20 * 60 * 1000 (design/conditions.js:33)"}
+          }
+        ],
+        "also": [
+          {
+            "event": "emote",
+            "to": "nearby",
+            "when": "An emote skill passes the checks.",
+            "fields": [
+              {"name": "name", "type": "string", "optional": false, "description": "The emote (`G.skills[name].emote`)."},
+              {"name": "player", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "target", "type": "CharacterName", "optional": true, "description": "The target. Absent for an emote without a target."},
+              {"name": "variation", "type": "0 | 1 | 2", "optional": false, "description": "A random variation."}
+            ],
+            "example": {"name": "highfive", "player": "Wizard", "target": "Priest", "variation": 2},
+            "source": "node/server.js:10076-10081",
+            "confirm": {"code": ["node/server.js:10076-10081", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "name": "Attack",
+        "value": [
+          "arcane_needle",
+          "attack",
+          "burst",
+          "curse",
+          "heal",
+          "mentalburst",
+          "piercingshot",
+          "poisonarrow",
+          "purify",
+          "quickpunch",
+          "quickstab",
+          "shield_slam",
+          "smash",
+          "snowball",
+          "supershot",
+          "taunt",
+          "zapperzap"
+        ],
+        "when": "`commence_attack`: a projectile to the target. `curse` adds party DPS credit on success. A `commence_attack` failure keeps the cooldown free.",
+        "source": "node/server.js:10082-10108, 10360-10369",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "EntityId", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target: a monster id or a character name. A number or a string. `\"052\"` is a character name; `52` and `\"52\"` are a monster id (node/server.js:9903). `undefined` or `null` fails with `no_target`."},
+            {"name": "num", "type": "InventoryIndex", "optional": true, "coerce": "none: used as an array key, so `3` and `\"3\"` are the same", "description": "The slot of the item of `consume` (`poisonarrow`: `poison`, `snowball`: `snowball`) to use. If `num` is `undefined` or `null`, the server uses the matching item in the highest slot (node/server.js:10036-10053)."}
+          ],
+          "example": {"name": "supershot", "id": "48213"},
+          "confirm": {"code": ["node/server.js:9899-9903", "node/server.js:10034-10054", "node/server.js:10102"]}
+        },
+        "responses": [
+          {
+            "name": "Attack",
+            "event": "game_response",
+            "code": "data",
+            "when": "`commence_attack` succeeds. The object is the `Action` plus `response` and `place`. It has no `success` field. `selfheal` gets this reply too (you are the target).",
+            "extends": "Action",
+            "fields": [{"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."}, {"name": "place", "type": "SkillName", "optional": false, "description": "The skill."}],
+            "example": {
+              "attacker": "Ranger",
+              "target": "48213",
+              "type": "supershot",
+              "source": "supershot",
+              "x": 512.4,
+              "y": -96,
+              "eta": 180,
+              "m": 0,
+              "pid": "Qm7Zr2",
+              "projectile": "arrow",
+              "damage": 1236,
+              "response": "data",
+              "place": "supershot"
+            },
+            "source": "node/server.js:10102-10115, 10360-10369, 3609-3612",
+            "confirm": {
+              "code": ["node/server.js:3547-3612", "node/server.js:10102-10104", "node/server.js:10362-10364", "node/server.js:10995-10996"],
+              "note": "`eta` is always present: 0 for an instant projectile, which also gets `instant: true`"
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "`commence_attack`: your instance or the instance of the target is paused. No cooldown starts.",
+              "code": "data",
+              "extra": [{"name": "reason", "type": "\"cave_paused\"", "optional": false, "description": "Why."}],
+              "source": "node/server.js:3160-3161, 10990-10994",
+              "confirm": {
+                "code": ["node/server.js:3160-3161", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"],
+                "note": "`reject.response` is set to `\"data\"`; `failed`, `reason`, `place` come from `commence_attack`"
+              }
+            },
+            {
+              "when": "`commence_attack`: you or the target is a cave actor, and the cave rules say that the target is not hostile.",
+              "code": "data",
+              "extra": [
+                {"name": "reason", "type": "\"friendly_target\"", "optional": false, "description": "Why."},
+                {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}
+              ],
+              "source": "node/server.js:3163-3164",
+              "confirm": {"code": ["node/server.js:3163-3164", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"]}
+            },
+            {
+              "when": "`commence_attack`: you are a merchant, and the skill has no `merchant_use` (only `snowball` has it). `attack` with a `dartgun` passes.",
+              "replies": [
+                {"code": "attack_failed", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}]},
+                {
+                  "code": "data",
+                  "extra": [
+                    {"name": "reason", "type": "\"merchant\"", "optional": false, "description": "Why."},
+                    {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}
+                  ]
+                }
+              ],
+              "source": "node/server.js:3209-3216",
+              "confirm": {"code": ["node/server.js:3209-3216", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"]}
+            },
+            {
+              "when": "`commence_attack`: `mode.pvp_level_gap` is on (only on the `HARDCORE` server), the target is a character, the skill is hostile, and your levels differ by more than 10.",
+              "replies": [
+                {
+                  "code": "attack_failed",
+                  "form": "plain",
+                  "extra": [
+                    {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"},
+                    {"name": "reason", "type": "\"level\"", "optional": false, "description": "Why."}
+                  ]
+                },
+                {
+                  "code": "data",
+                  "extra": [
+                    {"name": "reason", "type": "\"level_gap\"", "optional": false, "description": "Why."},
+                    {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}
+                  ]
+                }
+              ],
+              "source": "node/server.js:3217-3226",
+              "confirm": {"code": ["node/server.js:3217-3226", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"]}
+            },
+            {
+              "when": "`commence_attack`: a hostile skill on a character that is not in a PvP area, or any of these skills on an NPC.",
+              "replies": [
+                {"code": "attack_failed", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}]},
+                {
+                  "code": "data",
+                  "extra": [
+                    {"name": "reason", "type": "\"no_pvp\"", "optional": false, "description": "Why."},
+                    {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}
+                  ]
+                }
+              ],
+              "source": "node/server.js:3279-3282",
+              "confirm": {"code": ["node/server.js:3271-3282", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"]}
+            },
+            {
+              "when": "`commence_attack`: `attack` and your `mp` is less than your `mp_cost`; or `burst` and your `mp` is less than 1.",
+              "replies": [
+                {"code": "no_mp", "form": "plain"},
+                {
+                  "code": "data",
+                  "extra": [
+                    {"name": "reason", "type": "\"no_mp\"", "optional": false, "description": "Why."},
+                    {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}
+                  ]
+                }
+              ],
+              "source": "node/server.js:3337-3340, 3383-3387",
+              "confirm": {"code": ["node/server.js:3301-3340", "node/server.js:3383-3387", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"]}
+            },
+            {
+              "when": "`commence_attack`, except `attack` and skills with `pierces_immunity`: the target is `immune`. Clients near the target get `disappearing_text` \"IMMUNE!\".",
+              "code": "data",
+              "extra": [
+                {"name": "reason", "type": "\"skill_immune\"", "optional": false, "description": "Why."},
+                {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}
+              ],
+              "source": "node/server.js:3435-3443",
+              "confirm": {"code": ["node/server.js:3435-3443", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"]}
+            },
+            {
+              "when": "`commence_attack`: a hostile skill, and you are on a `safe` map; or the map is `duelland` and you or the target is not in the duel; or `mode.friendly_fire` is off (it is on, node/server.js:286) and the target is in your party or guild.",
+              "replies": [
+                {"code": "friendly", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}]},
+                {
+                  "code": "data",
+                  "extra": [
+                    {"name": "reason", "type": "\"friendly\"", "optional": false, "description": "Why."},
+                    {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}
+                  ]
+                }
+              ],
+              "source": "node/server.js:3445-3456",
+              "confirm": {"code": ["node/server.js:3445-3456", "node/server.js:286", "node/server.js:10102-10108", "node/server.js:10362-10369", "node/server.js:10990-10994"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "disappearing_text",
+            "to": "nearby",
+            "when": "The target is `immune`: \"IMMUNE!\" on the target.",
+            "fields": [
+              {"name": "message", "type": "string", "optional": false, "description": "The text."},
+              {"name": "phrase", "type": "string", "optional": true, "description": "For \"IMMUNE!\": `\"server.floating.immune\"`."},
+              {"name": "phrase_args", "type": "object", "optional": true, "description": "With `phrase`: `{}`."},
+              {"name": "x", "type": "number", "optional": false, "description": "The position of the entity."},
+              {"name": "y", "type": "number", "optional": false, "description": "The position of the entity, minus 30."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The entity."},
+              {"name": "args", "type": "object", "optional": false, "description": "Display options: `c` (color: `\"red\"`, `\"mana\"`, `\"evade\"`), `from`."},
+              {"name": "nv", "type": "1", "optional": true, "description": "For \"IMMUNE!\"."}
+            ],
+            "example": {"message": "IMMUNE!", "phrase": "server.floating.immune", "phrase_args": {}, "x": 512.4, "y": -126, "id": "48213", "args": {"c": "evade", "from": "Warrior"}, "nv": 1},
+            "source": "node/server.js:3435-3441",
+            "confirm": {"code": ["node/server.js:3435-3441", "node/server_functions.js:3956-3997", "node/server_functions.js:3744-3779", "languages/index.js:256-258"]}
+          }
+        ]
+      },
+      {
+        "value": "selfheal",
+        "same_as": "Attack",
+        "when": "`commence_attack` with you as the target. It reads no `id`.",
+        "source": "node/server.js:10109-10116",
+        "request": {"confirm": {"code": ["node/server.js:10109-10116"], "note": "Reads no field: `commence_attack(player, player, \"selfheal\")`"}}
+      },
+      {
+        "value": "invis",
+        "when": "Adds `invis` if you are not invisible now. If you are invisible now, no branch runs (the generic path, as for **Other**): you get the default success. The cooldown (`reuse_cooldown`) starts when you become visible again (node/server.js:13756-13767).",
+        "source": "node/server.js:10117-10123",
+        "failures": {
+          "rows": [
+            {
+              "when": "You are `marked` (and not invisible now).",
+              "code": "skill_cant_use",
+              "source": "node/server.js:10117-10120",
+              "confirm": {"code": ["node/server.js:10117-10120", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "disappear",
+            "to": "nearby",
+            "when": "You become invisible. Every client that saw you or is near you.",
+            "fields": [
+              {"name": "id", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "invis", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "reason", "type": "\"invis\"", "optional": false, "description": "Always `\"invis\"`."}
+            ],
+            "example": {"id": "Rogue", "invis": true, "reason": "invis"},
+            "source": "node/server.js:10122",
+            "confirm": {"code": ["node/server.js:10122", "node/server_functions.js:3834-3854"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10117-10123"], "note": "Reads no field"}}
+      },
+      {
+        "value": "pickpocket",
+        "when": "Starts the `pickpocket` channel (`duration_min` to `duration_max`). At the end, it takes one item with `v` from a random slot of the target, if the target is within 20 px.",
+        "source": "node/server.js:10124-10132",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."},
+            {"name": "request_id", "type": "any", "optional": true, "description": "Stored with the channel and copied into its result. The final `game_response` of this handler does not carry it."}
+          ],
+          "example": {"name": "pickpocket", "id": "Merchant", "request_id": 7},
+          "confirm": {"code": ["node/server.js:9899-9909", "node/server.js:10126-10130"]}
+        },
+        "responses": [
+          {
+            "name": "Pickpocket started",
+            "event": "game_response",
+            "code": "data",
+            "when": "The channel starts. The result comes when the channel ends (see Also sent).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"pickpocket\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the result is not known yet."},
+              {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"response": "data", "place": "pickpocket", "success": false, "in_progress": true},
+            "source": "node/server.js:10132",
+            "confirm": {"code": ["node/server.js:10132", "node/server.js:10995-10996"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "game_response",
+            "to": "you",
+            "when": "Later: the channel ends. `picked` when the roll takes an item that has `v` (an item from PvP) from a random slot of the target; then `skill_timeout` (from `reuse_cooldown`) and `player`. Else `pick_failed`.",
+            "fields": [
+              {"name": "response", "type": "\"picked\" | \"pick_failed\"", "optional": false, "description": "The result."},
+              {"name": "slot", "type": "\"mainhand\"", "optional": true, "description": "`picked` only."},
+              {"name": "reason", "type": "\"player_gone\" | \"distance\" | \"misfortune\"", "optional": true, "description": "`pick_failed` only: the target left, is more than 20 px away, or the slot had no PvP item."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request."}
+            ],
+            "example": {"response": "pick_failed", "cevent": true, "reason": "misfortune"},
+            "source": "node/server.js:14984-15031",
+            "confirm": {"code": ["node/server.js:14984-15031", "node/server_functions.js:3448-3467"]}
+          },
+          {
+            "event": "game_response",
+            "to": "the target of `pickpocket`",
+            "when": "Later: the channel took an item.",
+            "fields": [{"name": "response", "type": "\"got_picked\"", "optional": false, "description": "The code."}, {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."}],
+            "example": {"response": "got_picked", "cevent": true},
+            "source": "node/server.js:15022",
+            "confirm": {"code": ["node/server.js:15022"]}
+          }
+        ]
+      },
+      {
+        "name": "Fishing or mining",
+        "value": ["fishing", "mining"],
+        "when": "Starts the channel if a zone of that type is next to you and you do not move. At the end, a 10% (`fishing`) or 20% (`mining`) roll gives a drop of the zone, and the tool can break (`breaks`).",
+        "source": "node/server.js:10133-10171",
+        "request": {
+          "fields": [
+            {"name": "request_id", "type": "any", "optional": true, "description": "Copied into the `ui` failure and into the results at the end of the channel. The final `game_response` of this handler does not carry it."}
+          ],
+          "example": {"name": "fishing", "request_id": 12},
+          "confirm": {"code": ["node/server.js:10154-10160", "node/server.js:10164-10168"], "note": "Reads only `request_id`"}
+        },
+        "responses": [
+          {
+            "name": "Channel started",
+            "event": "game_response",
+            "code": "data",
+            "when": "The channel starts. The result comes when the channel ends (see Also sent).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"fishing\" | \"mining\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the result is not known yet."},
+              {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"response": "data", "place": "fishing", "success": false, "in_progress": true},
+            "source": "node/server.js:10170",
+            "confirm": {"code": ["node/server.js:10170", "node/server.js:10995-10996"], "note": "Overridden by `reject` when the zone check fails"}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No zone of that type is next to you (24 px in one of four directions), or you move. Clients nearby get `ui` `fishing_fail` or `mining_fail`. The MP is spent. These skills have only `reuse_cooldown`, so no cooldown starts.",
+              "code": "data",
+              "form": "plain",
+              "extra": [{"name": "place", "type": "\"fishing\" | \"mining\"", "optional": false, "description": "The skill. The object has no `failed` field.", "example": "fishing"}],
+              "source": "node/server.js:10133-10162",
+              "confirm": {"code": ["node/server.js:10133-10162", "node/server.js:10990-10994"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "The check of the zone fails. The `type` is `\"fishing_fail\"` or `\"mining_fail\"`.",
+            "fields": [
+              {"name": "type", "type": "\"fishing_fail\" | \"mining_fail\"", "optional": false, "description": "The skill plus `_fail`."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire a code event."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request."},
+              {"name": "reason", "type": "\"location\" | \"moving\"", "optional": false, "description": "`\"location\"`: no zone next to you. `\"moving\"`: you move."}
+            ],
+            "example": {"type": "fishing_fail", "name": "Merchant", "cevent": true, "reason": "location"},
+            "source": "node/server.js:10154-10160",
+            "confirm": {"code": ["node/server.js:10154-10160", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "The channel starts.",
+            "fields": [
+              {"name": "type", "type": "\"fishing_start\" | \"mining_start\"", "optional": false, "description": "The skill plus `_start`."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "direction", "type": "0 | 1 | 2 | 3", "optional": false, "description": "The side of the zone: 0 below you, 1 left, 2 right, 3 above."}
+            ],
+            "example": {"type": "fishing_start", "name": "Merchant", "direction": 3},
+            "source": "node/server.js:10163",
+            "confirm": {"code": ["node/server.js:10163", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "game_response",
+            "to": "you",
+            "when": "Later: the `fishing` channel ends and the 10% roll hits (`mining`: 20%). The server gives a drop if you have a free slot, starts the `reuse_cooldown` (`skill_timeout`), and sends `player`. If the tool breaks, `game_log` and a `game_response` with `cevent: \"item_break\"` come first.",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "cevent", "type": "\"fishing_success\" | \"mining_success\" | \"item_break\"", "optional": false, "description": "What happened."},
+              {"name": "slot", "type": "\"mainhand\"", "optional": false, "description": "Always `\"mainhand\"`."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request."}
+            ],
+            "example": {"response": "data", "cevent": "fishing_success", "slot": "mainhand"},
+            "source": "node/server.js:15033-15061, 15070-15098",
+            "confirm": {"code": ["node/server.js:15033-15061", "node/server.js:15070-15098", "node/server_functions.js:3448-3467"]}
+          },
+          {
+            "event": "ui",
+            "to": "you",
+            "when": "Later: the `fishing` or `mining` channel ends and the roll misses. No cooldown starts.",
+            "fields": [
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "type", "type": "\"fishing_none\" | \"mining_none\"", "optional": false, "description": "The result."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request."}
+            ],
+            "example": {"name": "Merchant", "type": "fishing_none", "cevent": true},
+            "source": "node/server.js:15062-15068, 15099-15105",
+            "confirm": {"code": ["node/server.js:15062-15068", "node/server.js:15099-15105"]}
+          }
+        ]
+      },
+      {
+        "value": "light",
+        "when": "Clients nearby get `light`. Rogues and invisible characters within 300 px lose `invis`.",
+        "source": "node/server.js:10172-10175",
+        "also": [
+          {
+            "event": "light",
+            "to": "nearby",
+            "when": "Always. A rogue or an invisible character within 300 px gets `{name, affected: 1}` instead and loses `invis`.",
+            "fields": [
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "affected", "type": "1", "optional": true, "description": "Only for a rogue or an invisible character within 300 px."}
+            ],
+            "example": {"name": "Wizard"},
+            "source": "node/server.js:10174, node/server_functions.js:3762-3766",
+            "confirm": {"code": ["node/server.js:10174", "node/server_functions.js:3762-3766", "node/server_functions.js:3744-3779"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10172-10175"], "note": "Reads no field"}}
+      },
+      {
+        "name": "Self buff",
+        "value": ["charge", "hardshell", "power", "xpower", "shelter", "mshield", "aether_shield", "phaseout", "pcoat"],
+        "when": "Adds a condition to you: `charge` adds `charging` for `duration`; `hardshell`, `power`, `xpower`, `shelter` add the condition of the skill; `mshield` and `aether_shield` turn their condition on or off (each one removes the other); `phaseout` adds `phasedout`; `pcoat` adds `poisonous`. The reply is the default success.",
+        "source": "node/server.js:10176-10178, 10281-10290, 10354-10359",
+        "request": {
+          "fields": [
+            {"name": "num", "type": "InventoryIndex", "optional": true, "coerce": "none: used as an array key, so `3` and `\"3\"` are the same", "description": "The slot of the item of `consume` (`phaseout`: `shadowstone`, `pcoat`: `poison`) to use. If `num` is `undefined` or `null`, the server uses the matching item in the highest slot (node/server.js:10036-10053)."}
+          ],
+          "example": {"name": "hardshell"},
+          "confirm": {"code": ["node/server.js:10034-10054", "node/server.js:10176-10178", "node/server.js:10281-10289", "node/server.js:10354-10359"]}
+        }
+      },
+      {
+        "value": "dash",
+        "when": "Moves you at speed 500 to a safe spot near the point (within 50 px of you). Adds `dash` (1,000 ms).",
+        "source": "node/server.js:10179-10212",
+        "request": {
+          "fields": [
+            {"name": "x", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(x) || 0`", "description": "The point to dash to."},
+            {"name": "y", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(y) || 0`", "description": "The point to dash to."}
+          ],
+          "example": {"name": "dash", "x": -120, "y": 402},
+          "confirm": {"code": ["node/server.js:10181-10182"]}
+        },
+        "responses": [
+          {
+            "name": "Dash move",
+            "event": "eval",
+            "when": "The dash succeeds: the official client runs the code to move the camera. `dash` has a `cooldown` of 0, so no `skill_timeout` comes; the `player` update follows.",
+            "fields": [{"name": "code", "type": "string", "optional": false, "description": "`\"ui_move(<x>,<y>)\"` with the spot that the server found."}],
+            "example": {"code": "ui_move(-120.5,402)"},
+            "source": "node/server.js:10210",
+            "confirm": {"code": ["node/server.js:10210"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The point (`x`, `y`) is more than 50 px from you; or the server finds no safe spot at the point, at 80% or at 60% of the way, or the spot is less than 10 px from you. The MP is spent. `dash` has no cooldown.",
+              "replies": [
+                {"code": "dash_failed", "form": "bare"},
+                {"code": "data", "form": "plain", "extra": [{"name": "place", "type": "\"dash\"", "optional": false, "description": "The skill. The object has no `failed` field."}]}
+              ],
+              "source": "node/server.js:10179-10201",
+              "confirm": {"code": ["node/server.js:10184-10201", "node/server.js:10990-10994"]}
+            }
+          ]
+        }
+      },
+      {
+        "value": "cleansing_light",
+        "when": "Removes each `cleansable` condition from the target.",
+        "source": "node/server.js:10213-10235",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "cleansing_light", "id": "Priest"},
+          "confirm": {"code": ["node/server.js:9899-9909"]}
+        },
+        "responses": [
+          {
+            "name": "Cleansing light",
+            "event": "game_response",
+            "code": "data",
+            "when": "The skill passes the checks.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"cleansing_light\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "cleansed", "type": "string[]", "optional": false, "description": "The conditions that the server removed from the target: each one has `cleansable` in `G.conditions`. Can be empty."}
+            ],
+            "example": {"response": "data", "place": "cleansing_light", "success": true, "cleansed": ["poisoned", "cursed"]},
+            "source": "node/server.js:10235",
+            "confirm": {"code": ["node/server.js:10223-10235", "node/server.js:9775", "node/server.js:10995-10996"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The target is you, an NPC, dead, in another instance, or fails `is_same` level 3. Level 3 accepts every character while you are not in PvP; in PvP it accepts your account, your IP address, your party, your coop or your team.",
+              "code": "non_friendly_target",
+              "source": "node/server.js:10214-10222",
+              "confirm": {"code": ["node/server.js:10214-10222", "node/server_functions.js:505-527", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"cleansing_light\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "targets", "type": "CharacterName[]", "optional": false, "description": "The characters that the skill affected."}
+            ],
+            "example": {"type": "cleansing_light", "from": "Paladin", "targets": ["Priest"]},
+            "source": "node/server.js:10233",
+            "confirm": {"code": ["node/server.js:10233", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "guardians_oath",
+        "when": "Adds `guardians_oath` to the target. Part of the damage to the target then goes to you.",
+        "source": "node/server.js:10236-10256",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "guardians_oath", "id": "Priest"},
+          "confirm": {"code": ["node/server.js:9899-9909"]}
+        },
+        "responses": [
+          {
+            "name": "Guardians oath",
+            "event": "game_response",
+            "code": "data",
+            "when": "The skill passes the checks.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"guardians_oath\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "target", "type": "CharacterName", "optional": false, "description": "The character that now has the oath."}
+            ],
+            "example": {"response": "data", "place": "guardians_oath", "success": true, "target": "Priest"},
+            "source": "node/server.js:10256",
+            "confirm": {"code": ["node/server.js:10256", "node/server.js:9775", "node/server.js:10995-10996"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The target is you, an NPC, dead, in another instance, or fails `is_same` level 3. Level 3 accepts every character while you are not in PvP; in PvP it accepts your account, your IP address, your party, your coop or your team.",
+              "code": "non_friendly_target",
+              "source": "node/server.js:10237-10245",
+              "confirm": {"code": ["node/server.js:10237-10245", "node/server_functions.js:505-527", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "You already have an active oath on a character.",
+              "code": "skill_cant_use",
+              "extra": [{"name": "reason", "type": "\"outgoing_oath\"", "optional": false, "description": "Why."}],
+              "source": "node/server.js:10246-10247",
+              "confirm": {"code": ["node/server.js:10246-10247", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The target already has an active oath.",
+              "code": "skill_cant_use",
+              "extra": [{"name": "reason", "type": "\"incoming_oath\"", "optional": false, "description": "Why."}],
+              "source": "node/server.js:10248-10249",
+              "confirm": {"code": ["node/server.js:10248-10249", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"guardians_oath\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "targets", "type": "CharacterName[]", "optional": false, "description": "The characters that the skill affected."}
+            ],
+            "example": {"type": "guardians_oath", "from": "Paladin", "targets": ["Priest"]},
+            "source": "node/server.js:10254",
+            "confirm": {"code": ["node/server.js:10254", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "beacon_of_resolve",
+        "when": "Adds the condition to each living character within `range` that passes `is_same` level 3, you included.",
+        "source": "node/server.js:10257-10276",
+        "responses": [
+          {
+            "name": "Beacon of resolve",
+            "event": "game_response",
+            "code": "data",
+            "when": "Always.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"beacon_of_resolve\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "affected", "type": "CharacterName[]", "optional": false, "description": "The characters that got the condition, you included."}
+            ],
+            "example": {"response": "data", "place": "beacon_of_resolve", "success": true, "affected": ["Paladin", "Priest", "Ranger"]},
+            "source": "node/server.js:10276",
+            "confirm": {"code": ["node/server.js:10258-10276", "node/server.js:9775", "node/server.js:10995-10996"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"beacon_of_resolve\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "targets", "type": "CharacterName[]", "optional": false, "description": "The characters that the skill affected."}
+            ],
+            "example": {"type": "beacon_of_resolve", "from": "Paladin", "targets": ["Paladin", "Priest"]},
+            "source": "node/server.js:10275",
+            "confirm": {"code": ["node/server.js:10275", "node/server_functions.js:3744-3779"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10257-10276"], "note": "Reads no field"}}
+      },
+      {
+        "value": "paladin_aura",
+        "when": "Selects the aura state.",
+        "source": "node/server.js:10277-10280",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "string", "optional": true, "coerce": "the server reads `id || state`", "description": "The aura state. When it is set, the server ignores `state`."},
+            {"name": "state", "type": "string", "optional": true, "coerce": "the server reads `id || state`", "description": "`\"bulwark\"`, `\"sanctuary\"`, `\"zeal\"` or `\"warding\"` (keys of `G.skills.paladin_aura.states`). Any other value selects the state after the current one (node/server.js:15839-15843)."}
+          ],
+          "example": {"name": "paladin_aura", "state": "zeal"},
+          "confirm": {"code": ["node/server.js:10278", "node/server.js:15839-15847"]}
+        },
+        "responses": [
+          {
+            "name": "Paladin aura",
+            "event": "game_response",
+            "code": "data",
+            "when": "Always.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"paladin_aura\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "aura", "type": "\"bulwark\" | \"sanctuary\" | \"zeal\" | \"warding\"", "optional": false, "description": "The aura state now (`p.paladin_aura`)."}
+            ],
+            "example": {"response": "data", "place": "paladin_aura", "success": true, "aura": "zeal"},
+            "source": "node/server.js:10280",
+            "confirm": {
+              "code": ["node/server.js:10277-10280", "node/server.js:15839-15847", "node/server.js:9775", "node/server.js:10995-10996"],
+              "note": "The states are the keys of `G.skills.paladin_aura.states` (four in the current G)"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Merchant buff",
+        "value": ["mcourage", "mfrenzy", "massproduction", "massproductionpp", "massexchange", "massexchangepp"],
+        "when": "Adds the condition of the skill to you.",
+        "source": "node/server.js:10290-10301",
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"mcourage\" | \"mfrenzy\" | \"massproduction\" | \"massproductionpp\" | \"massexchange\" | \"massexchangepp\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."}
+            ],
+            "example": {"type": "mcourage", "name": "Merchant"},
+            "source": "node/server.js:10300",
+            "confirm": {"code": ["node/server.js:10300", "node/server_functions.js:3744-3779"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10290-10301"], "note": "Reads no field"}}
+      },
+      {
+        "value": "throw",
+        "when": "Removes one unit of the item. `essenceoffire` adds `eburn`, `essenceoflife` adds `eheal`. Another item does `random * attack * 15` or `random * armor * 24` damage; the target keeps at least 1 HP.",
+        "source": "node/server.js:10302-10353",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "EntityId", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target: a monster id or a character name. A number or a string. `\"052\"` is a character name; `52` and `\"52\"` are a monster id (node/server.js:9903). `undefined` or `null` fails with `no_target`."},
+            {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `3` and `\"3\"` are the same", "description": "The inventory slot of the item to throw. A missing `num` fails with `skill_no_item`."}
+          ],
+          "example": {"name": "throw", "id": "48213", "num": 5},
+          "confirm": {"code": ["node/server.js:9899-9909", "node/server.js:10306"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The target has `invincible`.",
+              "code": "target_invincible",
+              "source": "node/server.js:10303-10305",
+              "confirm": {"code": ["node/server.js:10303-10305", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The slot `num` is empty.",
+              "code": "skill_no_item",
+              "source": "node/server.js:10306-10308",
+              "confirm": {"code": ["node/server.js:10306-10308", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The item is a placeholder (an upgrade or a compound runs).",
+              "code": "item_placeholder",
+              "source": "node/server.js:10309-10310",
+              "confirm": {"code": ["node/server.js:10309-10310", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The item is locked (`l`).",
+              "code": "item_locked",
+              "source": "node/server.js:10311-10312",
+              "confirm": {"code": ["node/server.js:10311-10312", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The item is blocked (`b`).",
+              "code": "item_blocked",
+              "source": "node/server.js:10313-10314",
+              "confirm": {"code": ["node/server.js:10313-10314", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The item is harmful (`essenceoffire`, or it has `attack` or `armor`), the target is a character, and you are not in PvP.",
+              "code": "not_in_pvp",
+              "source": "node/server.js:10316-10326",
+              "confirm": {"code": ["node/server.js:10316-10326", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"throw\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "to", "type": "EntityId", "optional": false, "description": "The target."},
+              {"name": "item", "type": "ItemName", "optional": false, "description": "The item thrown."}
+            ],
+            "example": {"type": "throw", "from": "Merchant", "to": "48213", "item": "hpot0"},
+            "source": "node/server.js:10346",
+            "confirm": {"code": ["node/server.js:10346", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "disappearing_text",
+            "to": "nearby",
+            "when": "The throw did damage: `\"-<damage>\"` on the target, red.",
+            "fields": [
+              {"name": "message", "type": "string", "optional": false, "description": "The text."},
+              {"name": "phrase", "type": "string", "optional": true, "description": "For \"IMMUNE!\": `\"server.floating.immune\"`."},
+              {"name": "phrase_args", "type": "object", "optional": true, "description": "With `phrase`: `{}`."},
+              {"name": "x", "type": "number", "optional": false, "description": "The position of the entity."},
+              {"name": "y", "type": "number", "optional": false, "description": "The position of the entity, minus 30."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The entity."},
+              {"name": "args", "type": "object", "optional": false, "description": "Display options: `c` (color: `\"red\"`, `\"mana\"`, `\"evade\"`), `from`."},
+              {"name": "nv", "type": "1", "optional": true, "description": "For \"IMMUNE!\"."}
+            ],
+            "example": {"message": "-412", "x": 512.4, "y": -126, "id": "48213", "args": {"c": "red"}},
+            "source": "node/server.js:10343",
+            "confirm": {"code": ["node/server.js:10338-10344", "node/server_functions.js:3956-3997", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "name": "Entangle",
+        "value": ["entangle", "tangle"],
+        "when": "Adds `tangled` to the target and stops it.",
+        "source": "node/server.js:10370-10386",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "EntityId", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target: a monster id or a character name. A number or a string. `\"052\"` is a character name; `52` and `\"52\"` are a monster id (node/server.js:9903). `undefined` or `null` fails with `no_target`."},
+            {"name": "num", "type": "InventoryIndex", "optional": true, "coerce": "none: used as an array key, so `3` and `\"3\"` are the same", "description": "The slot of the item of `consume` (`entangle`: `essenceofnature`; `tangle` uses none) to use. If `num` is `undefined` or `null`, the server uses the matching item in the highest slot (node/server.js:10036-10053)."}
+          ],
+          "example": {"name": "entangle", "id": "48213"},
+          "confirm": {"code": ["node/server.js:9899-9909", "node/server.js:10034-10054"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The target has `invincible`.",
+              "code": "target_invincible",
+              "source": "node/server.js:10371-10373",
+              "confirm": {"code": ["node/server.js:10371-10373", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always. Both skills give `type: \"entangle\"`.",
+            "fields": [
+              {"name": "type", "type": "\"entangle\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "to", "type": "EntityId", "optional": false, "description": "The target."}
+            ],
+            "example": {"type": "entangle", "from": "Mage", "to": "48213"},
+            "source": "node/server.js:10377",
+            "confirm": {"code": ["node/server.js:10377", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "4fingers",
+        "when": "Adds `fingered` and `stunned` (`duration` minus 2,000 ms) to the target.",
+        "source": "node/server.js:10387-10400",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "4fingers", "id": "Rogue"},
+          "confirm": {"code": ["node/server.js:9899-9909"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The target has `invincible`.",
+              "code": "target_invincible",
+              "source": "node/server.js:10388-10390",
+              "confirm": {"code": ["node/server.js:10388-10390", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "You are not in PvP, and the target fails `is_same` level 1 (your account, your IP address, your party, your coop or your team).",
+              "code": "non_friendly_target",
+              "source": "node/server.js:10391-10393",
+              "confirm": {"code": ["node/server.js:10391-10393", "node/server_functions.js:505-527", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"4fingers\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "to", "type": "EntityId", "optional": false, "description": "The target."}
+            ],
+            "example": {"type": "4fingers", "from": "Ranger", "to": "Rogue"},
+            "source": "node/server.js:10396",
+            "confirm": {"code": ["node/server.js:10396", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "revive",
+        "when": "If the target is dead with full HP, it gets a `revival` channel of 8,000 ms. Then it is alive.",
+        "source": "node/server.js:10401-10416",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."},
+            {"name": "num", "type": "InventoryIndex", "optional": true, "coerce": "none: used as an array key, so `3` and `\"3\"` are the same", "description": "The slot of the `essenceoflife` to use. If `num` is `undefined` or `null`, the server uses the matching item in the highest slot (node/server.js:10036-10053)."}
+          ],
+          "example": {"name": "revive", "id": "Warrior"},
+          "confirm": {"code": ["node/server.js:9899-9909", "node/server.js:10034-10054"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The target is not dead.",
+              "code": "target_alive",
+              "source": "node/server.js:10402-10404",
+              "confirm": {"code": ["node/server.js:10402-10404", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The target does not have full HP. The MP and the cooldown are spent.",
+              "replies": [
+                {"code": "revive_failed", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The `id` from the request.", "example": "Priest"}]},
+                {
+                  "code": "data",
+                  "form": "plain",
+                  "extra": [
+                    {"name": "place", "type": "\"revive\"", "optional": false, "description": "The skill. The object has no `failed` field."},
+                    {"name": "reason", "type": "\"hp\"", "optional": false, "description": "Why."}
+                  ]
+                }
+              ],
+              "source": "node/server.js:10406-10409",
+              "confirm": {"code": ["node/server.js:10406-10409", "node/server.js:10990-10994"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "player",
+            "to": "the target of `revive`",
+            "when": "Later: the `revival` channel (8,000 ms) of the target ends. The target is alive again.",
+            "summary": "The state of the target with `rip: false`.",
+            "source": "node/server.js:15107-15114",
+            "confirm": {"code": ["node/server.js:15107-15114", "node/server.js:4550-4594"]}
+          }
+        ]
+      },
+      {
+        "value": "cburst",
+        "when": "One projectile for each pair, with damage from its MP. It skips duplicates, MP of 0, invisible or invincible targets, you, and targets out of range.",
+        "source": "node/server.js:10417-10471",
+        "request": {
+          "fields": [
+            {"name": "targets", "type": "[EntityId, number | string][]", "optional": false, "coerce": "the server keeps the first 16 pairs; MP is `max(0, parseInt(mp) || 0)`", "description": "Pairs of target and MP to spend on it. The id must be a string or a non-negative safe integer. The MP must be a number or a string whose `Number()` is finite, else the request fails with `invalid` (node/server.js:9801-9815). A pair whose MP is 0 after `parseInt` is skipped (node/server.js:10432-10435)."}
+          ],
+          "example": {"name": "cburst", "targets": [["48213", 120], ["48214", "80"]]},
+          "confirm": {"code": ["node/server.js:9801-9815", "node/server.js:10424-10436"]}
+        },
+        "responses": [
+          {
+            "name": "Cburst hits",
+            "event": "game_response",
+            "code": "data",
+            "when": "At least one target got a projectile. The object is the `Action` of the first hit, plus the ids of all projectiles and targets.",
+            "extends": "Action",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"cburst\"", "optional": false, "description": "The skill."},
+              {"name": "pids", "type": "string[]", "optional": false, "description": "The projectile id of each hit, in hit order. Each later `hit` carries one of them."},
+              {"name": "targets", "type": "EntityId[]", "optional": false, "description": "The target of each hit, in the same order."}
+            ],
+            "example": {
+              "attacker": "Mage",
+              "target": "48213",
+              "type": "cburst",
+              "source": "cburst",
+              "x": 512.4,
+              "y": -96,
+              "eta": 0,
+              "m": 0,
+              "pid": "Xk3pQa",
+              "projectile": "burst",
+              "instant": true,
+              "damage": 287,
+              "pids": ["Xk3pQa", "b81LwE"],
+              "targets": ["48213", "48214"],
+              "response": "data",
+              "place": "cburst"
+            },
+            "source": "node/server.js:10453-10461",
+            "confirm": {"code": ["node/server.js:10450-10461", "node/server.js:10470", "node/server.js:3547-3612", "node/server.js:10995-10996"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No target got a projectile. You also get `disappearing_text` \"NO HITS\". The MP and the cooldown are spent. A `commence_attack` failure for one target only skips that target, but its first reply (`attack_failed`, `no_mp`, `friendly`) still comes.",
+              "code": "data",
+              "extra": [{"name": "reason", "type": "\"no_target\"", "optional": false, "description": "Why."}],
+              "source": "node/server.js:10464-10469",
+              "confirm": {"code": ["node/server.js:10466-10469", "node/server.js:10990-10994"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "disappearing_text",
+            "to": "you",
+            "when": "No target got a projectile.",
+            "summary": "A `LocalizedText` (`server.floating.no_hits`, \"NO HITS\") plus `x`, `y`, `id` (you) and `args`.",
+            "source": "node/server.js:10468, 10572",
+            "confirm": {"code": ["node/server.js:10468", "node/server.js:10572", "node/server_functions.js:3956-3997", "languages/index.js:256-258"]}
+          }
+        ]
+      },
+      {
+        "value": "partyheal",
+        "when": "A heal to each party member (to you without a party). The server does not check their distance.",
+        "source": "node/server.js:10472-10491",
+        "failures": {
+          "rows": [
+            {
+              "when": "No heal started. The reply is the `commence_attack` failure of the last member (see the **Attack** variant, with `place: \"partyheal\"`). The MP and the cooldown are spent.",
+              "code": "data",
+              "extra": [
+                {"name": "reason", "type": "string", "optional": false, "description": "The reason of the last failure.", "example": "cave_paused"},
+                {"name": "id", "type": "EntityId", "optional": true, "description": "The member, for every reason except `cave_paused`.", "example": "Priest"}
+              ],
+              "source": "node/server.js:10472-10491",
+              "confirm": {"code": ["node/server.js:10483-10491", "node/server.js:3159-3456", "node/server.js:10990-10994"], "note": "`reject` is the last failed `commence_attack` result"}
+            }
+          ]
+        },
+        "request": {"confirm": {"code": ["node/server.js:10472-10484"], "note": "Reads no field"}}
+      },
+      {
+        "name": "Area buff",
+        "value": ["darkblessing", "warcry"],
+        "when": "Adds the condition to each character within `range`. On a PvP map, only to characters that pass `is_same` level 1.",
+        "source": "node/server.js:10492-10506",
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [{"name": "type", "type": "\"darkblessing\" | \"warcry\"", "optional": false, "description": "The skill. No other field."}],
+            "example": {"type": "warcry"},
+            "source": "node/server.js:10506",
+            "confirm": {"code": ["node/server.js:10506", "node/server_functions.js:3744-3779"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10492-10506"], "note": "Reads no field"}}
+      },
+      {
+        "name": "Multi-shot",
+        "value": ["3shot", "5shot", "fanofknives"],
+        "when": "One projectile for each kept id. It skips duplicates, missing, dead, invisible or invincible targets, you, and targets out of range.",
+        "source": "node/server.js:10507-10575",
+        "request": {
+          "fields": [
+            {"name": "ids", "type": "EntityId[]", "optional": false, "coerce": "the server keeps the first `G.skills[name].max_targets` entries (`5shot` 5, `3shot` 3, `fanofknives` 5), then converts each with `String(id)`", "description": "The targets. Each kept entry must be a string or a non-negative safe integer, else the request fails with `invalid` (node/server.js:9796-9800). The server skips duplicates."}
+          ],
+          "example": {"name": "3shot", "ids": ["48213", "48214", "48219"]},
+          "confirm": {"code": ["node/server.js:9796-9800", "node/server.js:10512-10517"]}
+        },
+        "responses": [
+          {
+            "name": "Multi-shot hits",
+            "event": "game_response",
+            "code": "data",
+            "when": "At least one target got a projectile. The object is the `Action` of the first hit, plus the ids of all projectiles and targets.",
+            "extends": "Action",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"3shot\" | \"5shot\" | \"fanofknives\"", "optional": false, "description": "The skill."},
+              {"name": "pids", "type": "string[]", "optional": false, "description": "The projectile id of each hit, in hit order. Each later `hit` carries one of them."},
+              {"name": "targets", "type": "EntityId[]", "optional": false, "description": "The target of each hit, in the same order."}
+            ],
+            "example": {
+              "attacker": "Ranger",
+              "target": "48213",
+              "type": "3shot",
+              "source": "3shot",
+              "x": 512.4,
+              "y": -96,
+              "eta": 241,
+              "m": 0,
+              "pid": "Xk3pQa",
+              "projectile": "arrow",
+              "damage": 287,
+              "pids": ["Xk3pQa", "b81LwE", "Tz0dYv"],
+              "targets": ["48213", "48214", "48219"],
+              "response": "data",
+              "place": "3shot"
+            },
+            "source": "node/server.js:10547-10555",
+            "confirm": {"code": ["node/server.js:10541-10555", "node/server.js:10574", "node/server.js:3547-3612", "node/server.js:10995-10996"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No target got a projectile. You also get `disappearing_text` \"NO HITS\". The MP and the cooldown are spent. A `commence_attack` failure for one target only skips that target, but its first reply (`attack_failed`, `no_mp`, `friendly`) still comes.",
+              "code": "data",
+              "extra": [{"name": "reason", "type": "\"no_target\"", "optional": false, "description": "Why."}],
+              "source": "node/server.js:10569-10573",
+              "confirm": {"code": ["node/server.js:10570-10573", "node/server.js:10990-10994"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "`fanofknives` only, also with no hit.",
+            "fields": [
+              {"name": "type", "type": "\"fanofknives\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The targets that got a projectile."}
+            ],
+            "example": {"type": "fanofknives", "name": "Rogue", "ids": ["48213", "48214"]},
+            "source": "node/server.js:10563-10568",
+            "confirm": {"code": ["node/server.js:10563-10569", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "disappearing_text",
+            "to": "you",
+            "when": "No target got a projectile.",
+            "summary": "A `LocalizedText` (`server.floating.no_hits`, \"NO HITS\") plus `x`, `y`, `id` (you) and `args`.",
+            "source": "node/server.js:10468, 10572",
+            "confirm": {"code": ["node/server.js:10572", "node/server_functions.js:3956-3997", "languages/index.js:256-258"]}
+          }
+        ]
+      },
+      {
+        "value": "track",
+        "when": "You get `track`.",
+        "source": "node/server.js:10576-10606",
+        "responses": [
+          {"name": "Track result", "event": "track", "when": "Always: the characters in your instance within 1,440 px, nearest first. NPCs and you are not in the list. Before `skill_timeout`.", "type": "TrackEntry[]", "example": [{"sound": "rr", "dist": 612.4}, {"sound": "wmp", "dist": 980.1, "invis": true}], "source": "node/server.js:10576-10605", "confirm": {"code": ["node/server.js:10577-10605"]}}
+        ],
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [{"name": "type", "type": "\"track\"", "optional": false, "description": "The skill."}, {"name": "name", "type": "CharacterName", "optional": false, "description": "You."}],
+            "example": {"type": "track", "name": "Ranger"},
+            "source": "node/server.js:10604",
+            "confirm": {"code": ["node/server.js:10604", "node/server_functions.js:3744-3779"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10576-10606"], "note": "Reads no field"}}
+      },
+      {
+        "value": "agitate",
+        "when": "Monsters within `range` that have no target, or that target a character that passes `is_same` level 1, start to attack you.",
+        "source": "node/server.js:10607-10633",
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"agitate\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The monsters that now target you."}
+            ],
+            "example": {"type": "agitate", "name": "Warrior", "ids": ["48213", "48214"]},
+            "source": "node/server.js:10631",
+            "confirm": {"code": ["node/server.js:10631", "node/server_functions.js:3744-3779"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10607-10633"], "note": "Reads no field"}}
+      },
+      {
+        "value": "absorb",
+        "when": "Monsters that attack the target attack you instead. On a target that fails `is_same` level 1, it needs level 75 and 6 times the MP, and works only 5% of the time.",
+        "source": "node/server.js:10634-10661",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "absorb", "id": "Warrior"},
+          "confirm": {"code": ["node/server.js:9899-9909", "node/server.js:10659"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The target fails `is_same` level 1, and your level is below 75 or your `mp` is below 6 times the MP of the skill.",
+              "code": "non_friendly_target",
+              "source": "node/server.js:10637-10641",
+              "confirm": {"code": ["node/server.js:10636-10641"]}
+            },
+            {
+              "when": "The target fails `is_same` level 1, and the 95% failure roll hits. The server takes 6 times the MP and starts the cooldown first.",
+              "replies": [{"code": "non_friendly_target", "note": "after `skill_timeout` and `player`"}],
+              "source": "node/server.js:10642-10647",
+              "confirm": {"code": ["node/server.js:10642-10647", "node/server_functions.js:3448-3467"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"absorb\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The monsters that now target you."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "The `id` from the request."}
+            ],
+            "example": {"type": "absorb", "name": "Priest", "from": "Warrior", "ids": ["48213"]},
+            "source": "node/server.js:10659",
+            "confirm": {"code": ["node/server.js:10659", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "stomp",
+        "when": "Adds `stunned` to monsters within `range`, and in PvP to characters that fail `is_same` level 1.",
+        "source": "node/server.js:10662-10701",
+        "responses": [
+          {
+            "name": "Stomp",
+            "event": "game_response",
+            "code": "data",
+            "when": "Always, also when the skill stunned nothing (`ids` is empty).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"stomp\"", "optional": false, "description": "The skill."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The monsters, and in PvP the characters, that the skill stunned."}
+            ],
+            "example": {"response": "data", "place": "stomp", "success": true, "ids": ["48213", "48214"]},
+            "source": "node/server.js:10701",
+            "confirm": {"code": ["node/server.js:10701", "node/server.js:10995-10996"]}
+          },
+          {
+            "name": "Stomp immune",
+            "event": "game_response",
+            "code": "skill_immune",
+            "via": "a hitchhiker in `player`",
+            "when": "A monster in range is `immune`. One for each immune monster.",
+            "fields": [{"name": "response", "type": "\"skill_immune\"", "optional": false, "description": "The code."}, {"name": "skill", "type": "\"stomp\"", "optional": false, "description": "The skill."}],
+            "example": {"response": "skill_immune", "skill": "stomp"},
+            "source": "node/server.js:10670",
+            "confirm": {"code": ["node/server.js:10669-10671", "node/server.js:4579-4581"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"stomp\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The entities that the skill affected."}
+            ],
+            "example": {"type": "stomp", "name": "Warrior", "ids": ["48213", "48214"]},
+            "source": "node/server.js:10699",
+            "confirm": {"code": ["node/server.js:10699", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "disappearing_text",
+            "to": "nearby",
+            "when": "A monster in range is `immune`: \"IMMUNE!\" on the monster.",
+            "fields": [
+              {"name": "message", "type": "string", "optional": false, "description": "The text."},
+              {"name": "phrase", "type": "string", "optional": true, "description": "For \"IMMUNE!\": `\"server.floating.immune\"`."},
+              {"name": "phrase_args", "type": "object", "optional": true, "description": "With `phrase`: `{}`."},
+              {"name": "x", "type": "number", "optional": false, "description": "The position of the entity."},
+              {"name": "y", "type": "number", "optional": false, "description": "The position of the entity, minus 30."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The entity."},
+              {"name": "args", "type": "object", "optional": false, "description": "Display options: `c` (color: `\"red\"`, `\"mana\"`, `\"evade\"`), `from`."},
+              {"name": "nv", "type": "1", "optional": true, "description": "For \"IMMUNE!\"."}
+            ],
+            "example": {"message": "IMMUNE!", "phrase": "server.floating.immune", "phrase_args": {}, "x": 512.4, "y": -126, "id": "48213", "args": {"c": "evade", "from": "Warrior"}, "nv": 1},
+            "source": "node/server.js:10672-10677",
+            "confirm": {"code": ["node/server.js:10672-10677", "node/server_functions.js:3956-3997", "node/server_functions.js:3744-3779", "languages/index.js:256-258"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10662-10701"], "note": "Reads no field"}}
+      },
+      {
+        "value": "scare",
+        "when": "Monsters that attack you stop.",
+        "source": "node/server.js:10702-10726",
+        "responses": [
+          {
+            "name": "Scare immune",
+            "event": "game_response",
+            "code": "skill_immune",
+            "via": "a hitchhiker in `player`",
+            "when": "A monster in range is `immune`. One for each immune monster.",
+            "fields": [{"name": "response", "type": "\"skill_immune\"", "optional": false, "description": "The code."}, {"name": "skill", "type": "\"scare\"", "optional": false, "description": "The skill."}],
+            "example": {"response": "skill_immune", "skill": "scare"},
+            "source": "node/server.js:10709",
+            "confirm": {"code": ["node/server.js:10708-10710", "node/server.js:4579-4581"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"scare\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The entities that the skill affected."}
+            ],
+            "example": {"type": "scare", "name": "Ranger", "ids": ["48213"]},
+            "source": "node/server.js:10725",
+            "confirm": {"code": ["node/server.js:10725", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "disappearing_text",
+            "to": "nearby",
+            "when": "A monster that attacks you is `immune`: \"IMMUNE!\" on the monster.",
+            "fields": [
+              {"name": "message", "type": "string", "optional": false, "description": "The text."},
+              {"name": "phrase", "type": "string", "optional": true, "description": "For \"IMMUNE!\": `\"server.floating.immune\"`."},
+              {"name": "phrase_args", "type": "object", "optional": true, "description": "With `phrase`: `{}`."},
+              {"name": "x", "type": "number", "optional": false, "description": "The position of the entity."},
+              {"name": "y", "type": "number", "optional": false, "description": "The position of the entity, minus 30."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The entity."},
+              {"name": "args", "type": "object", "optional": false, "description": "Display options: `c` (color: `\"red\"`, `\"mana\"`, `\"evade\"`), `from`."},
+              {"name": "nv", "type": "1", "optional": true, "description": "For \"IMMUNE!\"."}
+            ],
+            "example": {"message": "IMMUNE!", "phrase": "server.floating.immune", "phrase_args": {}, "x": 512.4, "y": -126, "id": "48213", "args": {"c": "evade", "from": "Warrior"}, "nv": 1},
+            "source": "node/server.js:10711-10716",
+            "confirm": {"code": ["node/server.js:10711-10716", "node/server_functions.js:3956-3997", "node/server_functions.js:3744-3779", "languages/index.js:256-258"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10702-10726"], "note": "Reads no field"}}
+      },
+      {
+        "value": "huntersmark",
+        "when": "Adds `marked` to the target.",
+        "source": "node/server.js:10727-10740",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "EntityId", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target: a monster id or a character name. A number or a string. `\"052\"` is a character name; `52` and `\"52\"` are a monster id (node/server.js:9903). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "huntersmark", "id": "48213"},
+          "confirm": {"code": ["node/server.js:9899-9909"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The target is a character, you are not in PvP, and it fails `is_same` level 1.",
+              "code": "skill_cant_pve",
+              "source": "node/server.js:10728-10730",
+              "confirm": {"code": ["node/server.js:10728-10730", "node/server_functions.js:505-527", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"huntersmark\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The target."}
+            ],
+            "example": {"type": "huntersmark", "name": "Ranger", "id": "48213"},
+            "source": "node/server.js:10739",
+            "confirm": {"code": ["node/server.js:10739", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "charm",
+        "when": "Adds `charmed` to the monster with a chance of `player.a.charm.attr0` percent.",
+        "source": "node/server.js:10741-10752",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "EntityId", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target monster. A character name fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "charm", "id": "48213"},
+          "confirm": {"code": ["node/server.js:9899-9909"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The roll fails (the chance is `player.a.charm.attr0` percent). The MP and the cooldown are spent. Clients nearby get `ui` with `fail: true`.",
+              "replies": [{"code": "charm_failed", "form": "bare"}, {"see": "Success"}],
+              "source": "node/server.js:10743-10745, 10995-10996",
+              "confirm": {"code": ["node/server.js:10742-10745", "node/server.js:10995-10996"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always; `fail: true` when the roll fails.",
+            "fields": [
+              {"name": "type", "type": "\"charm\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The target."},
+              {"name": "fail", "type": "true", "optional": true, "description": "The roll failed."}
+            ],
+            "example": {"type": "charm", "name": "Ranger", "id": "48213", "fail": true},
+            "source": "node/server.js:10745, 10750",
+            "confirm": {"code": ["node/server.js:10745", "node/server.js:10750", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "name": "Cleave",
+        "value": ["cleave", "shadowstrike"],
+        "when": "One projectile for each monster within `range`, and in PvP each character that fails `is_same` level 1. With no hit, the reply is the default success.",
+        "source": "node/server.js:10753-10805",
+        "request": {
+          "fields": [
+            {"name": "num", "type": "InventoryIndex", "optional": true, "coerce": "none: used as an array key, so `3` and `\"3\"` are the same", "description": "The slot of the `shadowstone` (`shadowstrike` only; `cleave` uses no item) to use. If `num` is `undefined` or `null`, the server uses the matching item in the highest slot (node/server.js:10036-10053)."}
+          ],
+          "example": {"name": "cleave"},
+          "confirm": {"code": ["node/server.js:10034-10054"]}
+        },
+        "responses": [
+          {
+            "name": "Cleave hits",
+            "event": "game_response",
+            "code": "data",
+            "when": "At least one target got a projectile. The object is the `Action` of the first hit, plus the ids of all projectiles and targets. Else the reply is the default success.",
+            "extends": "Action",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"cleave\" | \"shadowstrike\"", "optional": false, "description": "The skill."},
+              {"name": "pids", "type": "string[]", "optional": false, "description": "The projectile id of each hit, in hit order. Each later `hit` carries one of them."},
+              {"name": "targets", "type": "EntityId[]", "optional": false, "description": "The target of each hit, in the same order."}
+            ],
+            "example": {
+              "attacker": "Warrior",
+              "target": "48213",
+              "type": "cleave",
+              "source": "cleave",
+              "x": 512.4,
+              "y": -96,
+              "eta": 180,
+              "m": 0,
+              "pid": "Xk3pQa",
+              "projectile": "momentum",
+              "damage": 287,
+              "pids": ["Xk3pQa", "b81LwE"],
+              "targets": ["48213", "48214"],
+              "response": "data",
+              "place": "cleave"
+            },
+            "source": "node/server.js:10767-10775, 10788-10796, 10802-10804",
+            "confirm": {"code": ["node/server.js:10759-10805", "node/server.js:3547-3612", "node/server.js:10995-10996"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always, also with no hit.",
+            "fields": [
+              {"name": "type", "type": "\"cleave\" | \"shadowstrike\"", "optional": false, "description": "The skill."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The entities that the skill affected."}
+            ],
+            "example": {"type": "cleave", "name": "Warrior", "ids": ["48213", "48214"]},
+            "source": "node/server.js:10801",
+            "confirm": {"code": ["node/server.js:10801", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "magiport",
+        "when": "Offer path (not PvP, `mode.pve_safe_magiports` on): the target gets `magiport` and accepts it with the `magiport` event. Other path: the server pulls the target to you.",
+        "source": "node/server.js:10806-10825",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "magiport", "id": "Priest"},
+          "confirm": {"code": ["node/server.js:9899-9925"]}
+        },
+        "responses": [
+          {
+            "name": "Magiport sent",
+            "event": "game_response",
+            "code": "magiport_sent",
+            "when": "Offer path: on a server that is not PvP, with `mode.pve_safe_magiports` on (the default), the target got the offer. The default success follows.",
+            "fields": [
+              {"name": "response", "type": "\"magiport_sent\"", "optional": false, "description": "The code."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` from the request."}
+            ],
+            "example": {"response": "magiport_sent", "id": "Priest"},
+            "source": "node/server.js:10815",
+            "confirm": {"code": ["node/server.js:10809-10815", "node/server.js:291"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "You or the target is in a generated map (the dream cave).",
+              "code": "cant_enter",
+              "place": "skill",
+              "note": "**Server bug:** the handler gives no place, so `place` is the event name.",
+              "source": "node/server.js:10807",
+              "confirm": {
+                "code": ["node/server.js:10807", "node/logic/generated_maps.js:52-54", "node/server_functions.js:3393-3419"],
+                "note": "`fail_response(\"cant_enter\")` with no place: `ls_method` is `\"skill\"`"
+              }
+            },
+            {
+              "when": "On a PvP server, or with `mode.pve_safe_magiports` off: the target is not on your account, IP address, party, coop or team, and wears a helmet; or no safe spot is near you. The MP and the cooldown are spent. **Server bug:** `ported` is an undeclared variable (node/server.js:10819-10821). While no code assigned it, the read throws, and you get `game_error` `\"ERROR!\"`; later the read gives the value of an earlier magiport.",
+              "replies": [
+                {"code": "magiport_failed", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The `id` from the request.", "example": "Priest"}]},
+                {"see": "Success"}
+              ],
+              "source": "node/server.js:10818-10823, 10995-10996",
+              "confirm": {"code": ["node/server.js:10817-10823", "node/server_functions.js:3999-4031", "node/server.js:10995-10996"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "magiport",
+            "to": "the target",
+            "when": "Offer path. The target accepts with the `magiport` event.",
+            "fields": [{"name": "name", "type": "CharacterName", "optional": false, "description": "You."}],
+            "example": {"name": "Wizard"},
+            "source": "node/server.js:10814",
+            "confirm": {"code": ["node/server.js:10814"]}
+          },
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Offer path.",
+            "fields": [{"name": "type", "type": "\"magiport\"", "optional": false, "description": "The skill."}, {"name": "name", "type": "CharacterName", "optional": false, "description": "You."}],
+            "example": {"type": "magiport", "name": "Mage"},
+            "source": "node/server.js:10816",
+            "confirm": {"code": ["node/server.js:10816", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "blink",
+        "when": "Teleports you to a safe spot near the point on your map, after 200 ms. A GM pays no MP.",
+        "source": "node/server.js:10826-10847",
+        "request": {
+          "fields": [
+            {"name": "x", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(x) || 0`", "description": "The destination on your map."},
+            {"name": "y", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(y) || 0`", "description": "The destination on your map."},
+            {"name": "direction", "type": "1 | 2 | 3", "optional": true, "default": 0, "coerce": "strict `in_arr(direction, [1, 2, 3])`: the string `\"1\"` gives 0", "description": "The direction that the character faces after the teleport (`s.blink.d`)."}
+          ],
+          "example": {"name": "blink", "x": 120, "y": -340, "direction": 1},
+          "confirm": {"code": ["node/server.js:10827-10828", "node/server.js:10839-10841"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "No safe spot near (`x`, `y`) on your map.",
+              "code": "blink_failed",
+              "source": "node/server.js:10829-10832",
+              "confirm": {"code": ["node/server.js:10829-10832", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        }
+      },
+      {
+        "value": "warp",
+        "when": "As `blink`, but to the instance `in`.",
+        "source": "node/server.js:10848-10877",
+        "request": {
+          "fields": [
+            {"name": "x", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(x) || 0`", "description": "The destination in the instance `in`."},
+            {"name": "y", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(y) || 0`", "description": "The destination in the instance `in`."},
+            {"name": "in", "type": "InstanceName", "optional": true, "default": "main", "coerce": "none: used as a key of `instances`", "description": "The instance to go to."},
+            {"name": "direction", "type": "1 | 2 | 3", "optional": true, "default": 0, "coerce": "strict `in_arr(direction, [1, 2, 3])`: the string `\"1\"` gives 0", "description": "The direction that the character faces after the teleport (`s.blink.d`)."}
+          ],
+          "example": {"name": "warp", "x": 0, "y": 0, "in": "main"},
+          "confirm": {"code": ["node/server.js:10849-10851", "node/server.js:10869-10871"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "No instance has the name `in`.",
+              "code": "blink_failed",
+              "source": "node/server.js:10852-10855",
+              "confirm": {"code": ["node/server.js:10852-10855", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The instance has a different `mount` than your instance (for example the bank).",
+              "code": "cant_in_bank",
+              "source": "node/server.js:10856-10858",
+              "confirm": {"code": ["node/server.js:10856-10858", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "No safe spot near (`x`, `y`) in that instance.",
+              "code": "blink_failed",
+              "source": "node/server.js:10859-10862",
+              "confirm": {"code": ["node/server.js:10859-10862", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        }
+      },
+      {
+        "name": "Target buff",
+        "value": ["mluck", "rspeed", "reflection"],
+        "when": "Adds the condition of the skill to the target. `mluck`: not when the target has a `strong` `mluck` from another merchant; the buff is `strong` when the target is on your account.",
+        "source": "node/server.js:10878-10910",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."}
+          ],
+          "example": {"name": "mluck", "id": "Ranger"},
+          "confirm": {"code": ["node/server.js:9899-9909"]}
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"mluck\" | \"rspeed\" | \"reflection\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "to", "type": "EntityId", "optional": false, "description": "The target."}
+            ],
+            "example": {"type": "mluck", "from": "Merchant", "to": "Ranger"},
+            "source": "node/server.js:10890, 10896, 10905",
+            "confirm": {"code": ["node/server.js:10890", "node/server.js:10896", "node/server.js:10905", "node/server_functions.js:3744-3779"]}
+          }
+        ]
+      },
+      {
+        "value": "energize",
+        "when": "Moves MP from you to the target, and adds `energized`.",
+        "source": "node/server.js:10911-10930",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "The target character. A value that looks like a number (`52`, `\"52\"`) counts as a monster id and fails with `invalid_target` (node/server.js:9903-9909). `undefined` or `null` fails with `no_target`."},
+            {"name": "mp", "type": "integer", "optional": true, "default": 10000, "coerce": "`max(1, min(your mp, parseInt(mp) || 10000))`", "description": "The MP to give. The server also limits it to the MP that the target is missing, so it can be 0 (node/server.js:10915-10919)."}
+          ],
+          "example": {"name": "energize", "id": "Priest", "mp": 500},
+          "confirm": {"code": ["node/server.js:9899-9909", "node/server.js:10915-10919"]}
+        },
+        "failures": {"rows": [{"when": "Your `mp` is 0.", "code": "no_mp", "source": "node/server.js:10912-10914", "confirm": {"code": ["node/server.js:10912-10914"]}}]},
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [
+              {"name": "type", "type": "\"energize\"", "optional": false, "description": "The skill."},
+              {"name": "from", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "to", "type": "EntityId", "optional": false, "description": "The target."}
+            ],
+            "example": {"type": "energize", "from": "Mage", "to": "Priest"},
+            "source": "node/server.js:10928",
+            "confirm": {"code": ["node/server.js:10928", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "disappearing_text",
+            "to": "nearby",
+            "when": "Always: `\"-<mp>\"` on you and `\"+<mp>\"` on the target.",
+            "fields": [
+              {"name": "message", "type": "string", "optional": false, "description": "The text."},
+              {"name": "phrase", "type": "string", "optional": true, "description": "For \"IMMUNE!\": `\"server.floating.immune\"`."},
+              {"name": "phrase_args", "type": "object", "optional": true, "description": "With `phrase`: `{}`."},
+              {"name": "x", "type": "number", "optional": false, "description": "The position of the entity."},
+              {"name": "y", "type": "number", "optional": false, "description": "The position of the entity, minus 30."},
+              {"name": "id", "type": "EntityId", "optional": false, "description": "The entity."},
+              {"name": "args", "type": "object", "optional": false, "description": "Display options: `c` (color: `\"red\"`, `\"mana\"`, `\"evade\"`), `from`."},
+              {"name": "nv", "type": "1", "optional": true, "description": "For \"IMMUNE!\"."}
+            ],
+            "example": {"message": "+500", "x": 80.5, "y": -60, "id": "Priest", "args": {"c": "mana"}},
+            "source": "node/server.js:10925-10926",
+            "confirm": {"code": ["node/server.js:10925-10926", "node/server_functions.js:3956-3997"]}
+          }
+        ]
+      },
+      {
+        "value": "alchemy",
+        "when": "Removes one unit of the first item without `l`, and gives you its value times the rate in gold.",
+        "source": "node/server.js:10931-10959",
+        "responses": [
+          {
+            "name": "Gold received",
+            "event": "game_response",
+            "code": "gold_received",
+            "when": "Always, after the `player` update. The default success follows.",
+            "fields": [
+              {"name": "response", "type": "\"gold_received\"", "optional": false, "description": "The code."},
+              {"name": "gold", "type": "number", "optional": false, "description": "The value of one unit of the first item without `l`, times a rate of 0.8 (below level 50) to 1.12 (level 100 and up). Not rounded, so it can have a fraction; your `gold` gets the same fraction. `0` when no item was found."}
+            ],
+            "example": {"response": "gold_received", "gold": 1840.8},
+            "source": "node/server.js:10931-10959",
+            "confirm": {"code": ["node/server.js:10932-10959"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Always.",
+            "fields": [{"name": "type", "type": "\"alchemy\"", "optional": false, "description": "The skill."}, {"name": "name", "type": "CharacterName", "optional": false, "description": "You."}],
+            "example": {"type": "alchemy", "name": "Mage"},
+            "source": "node/server.js:10947",
+            "confirm": {"code": ["node/server.js:10947", "node/server_functions.js:3744-3779"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10931-10959"], "note": "Reads no field"}}
+      },
+      {
+        "value": "temporalsurge",
+        "when": "Each respawn timer within 160 px gets `time * 0.85 - 1000`.",
+        "source": "node/server.js:10960-10982",
+        "responses": [
+          {
+            "name": "Temporal surge",
+            "event": "game_response",
+            "code": "temporalsurge",
+            "when": "At least one respawn timer is within 160 px. The default success follows.",
+            "fields": [
+              {"name": "response", "type": "\"temporalsurge\"", "optional": false, "description": "The code."},
+              {"name": "count", "type": "integer", "optional": false, "description": "How many respawn timers changed."},
+              {"name": "times", "type": "Milliseconds[]", "optional": false, "description": "The new time left of each timer: `old * 0.85 - 1000`. It can be negative (the monster respawns at once)."}
+            ],
+            "example": {"response": "temporalsurge", "count": 2, "times": [10050, 3218.5]},
+            "source": "node/server.js:10960-10981",
+            "confirm": {"code": ["node/server.js:10961-10981"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No respawn timer is within 160 px. The MP and the cooldown are spent.",
+              "replies": [{"code": "temporalsurge_none", "form": "bare"}, {"see": "Success"}],
+              "source": "node/server.js:10978, 10995-10996",
+              "confirm": {"code": ["node/server.js:10977-10978", "node/server.js:10995-10996"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "eval",
+            "to": "nearby the respawn point",
+            "when": "One for each respawn timer that changed. The payload is a bare string of client code, not `{code}`.",
+            "type": "string",
+            "example": "assassin_smoke(312,-80,'icecrack');",
+            "source": "node/server.js:10969-10973",
+            "confirm": {"code": ["node/server.js:10969-10973"]}
+          }
+        ],
+        "request": {"confirm": {"code": ["node/server.js:10960-10982"], "note": "Reads no field"}}
+      },
+      {
+        "other": true,
+        "name": "Other",
+        "when": "Any other key of `G.skills` (and `invis` while you are invisible): no branch runs. These keys have none: `stop`, `use_hp`, `use_mp`, `use_town`, `stack`, `mtangle`, monster skills such as `fireball`, and `utility` keys such as `esc`. They pass the shared checks and get the default success with no effect, but a skill with a `cooldown` starts it (`use_hp` and `regen_hp` start the `use_hp` cooldown). **Server bug:** `\"toString\"` and `\"constructor\"` also get here (node/server.js:9788).",
+        "source": "node/server.js:10984-10996",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "EntityId", "optional": true, "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name", "description": "Read only by the shared checks, for a skill with `target` (`mtangle`)."}
+          ],
+          "example": {"name": "use_town"},
+          "confirm": {"code": ["node/server.js:9899-9903", "node/server.js:10984-10997"], "note": "No branch matches; only the shared checks read the request"}
+        }
+      }
+    ]
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The default reply: all checks pass, and the variant sets no other reply. Every variant without a reply of its own gets it.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "SkillName", "optional": false, "description": "The `name` from the request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"response": "data", "place": "huntersmark", "success": true},
+      "source": "node/server.js:9775, 10995-10996",
+      "confirm": {"code": ["node/server.js:9775", "node/server.js:10984-10997"], "note": "`resolve` is built by hand, not by `success_response`, so it never has `request_id`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place_from": "name",
+    "intro": "A failure has `place` = the skill (the `name` of the request), not `\"skill\"`. If `name` is missing, `place` is `\"skill\"` (`fail_response` falls back to the event name). These are the shared checks, in order; then the checks of the variant run. A failure in the shared checks costs no MP and starts no cooldown. The rows of each variant say when the MP or the cooldown is spent.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9765-9768", "confirm": {"code": ["node/server.js:9765-9768"]}},
+      {
+        "when": "You are disabled: dead (`rip`), or `stunned`, `fingered`, `stoned`, `deepfreezed` or `sleeping`.",
+        "code": "disabled",
+        "source": "node/server.js:9780-9782",
+        "confirm": {"code": ["node/server.js:9780-9782", "js/old_common_functions.js:768-771", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill is not `attack`, and you wear the `konami` skin or are silenced (`silenced`; a disabled character counts as silenced).",
+        "code": "skill_cant_incapacitated",
+        "source": "node/server.js:9784-9786",
+        "confirm": {"code": ["node/server.js:9784-9786", "js/old_common_functions.js:763-766", "node/server_functions.js:3393-3419"]}
+      },
+      {"when": "`name` is not a key of `G.skills`.", "code": "no_skill", "source": "node/server.js:9788-9791", "confirm": {"code": ["node/server.js:9788-9791", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "`name` is `rimeshell` or `rimeshatter` (monster skills).",
+        "code": "skill_cant_use",
+        "source": "node/server.js:9792-9794",
+        "confirm": {"code": ["node/server.js:9792-9794", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill is `3shot`, `5shot` or `fanofknives`, and `ids` is not an array, or a kept entry is not a string or a non-negative safe integer.",
+        "code": "invalid",
+        "source": "node/server.js:9796-9800",
+        "confirm": {"code": ["node/server.js:9796-9800", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill is `cburst`, and `targets` is not an array, or one of the first 16 entries is not a pair of a valid id and a number or numeric string.",
+        "code": "invalid",
+        "source": "node/server.js:9801-9815",
+        "confirm": {"code": ["node/server.js:9801-9815", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "`ikissyou` (the only emote that the anniversary code reads) that your account does not own (`p.acx`), unless you are a guest of the featured character. `anniversary_state()` always returns the event controller, so this form applies also when no anniversary event runs (then `reason` is `\"no_round\"`).",
+        "code": "skill_cant_use",
+        "extra": [
+          {"name": "reason", "type": "string", "optional": false, "description": "The anniversary status: `\"no_round\"`, `\"claimed\"`, `\"realmfatigue\"`, `\"hopsickness\"`, `\"merchant_home\"`, `\"host\"`, `\"no_visit\"`, `\"target_unavailable\"` or `\"wrong_target\"`.", "example": "wrong_target"},
+          {"name": "rewarded", "type": "false", "optional": false, "description": "Always `false`."},
+          {"name": "message", "type": "string", "optional": false, "description": "The English text of `phrase`.", "example": "This round's rewards are only for kissing the featured player."},
+          {"name": "phrase", "type": "string", "optional": false, "description": "`\"interface.anniversary_status.<reason>\"`.", "example": "interface.anniversary_status.wrong_target"},
+          {"name": "phrase_args", "type": "object", "optional": false, "description": "Always `{}`.", "example": {}}
+        ],
+        "source": "node/server.js:9816-9837",
+        "confirm": {
+          "code": [
+            "node/server.js:9816-9837",
+            "node/server_functions.js:2267-2280",
+            "node/logic/anniversary_event.js:53-59",
+            "node/logic/anniversary_event.js:96-108",
+            "languages/index.js:256-258",
+            "node/server_functions.js:3393-3419"
+          ],
+          "note": "`localization.message(id, {}, {reason, rewarded: false})` gives `reason`, `rewarded`, `message`, `phrase`, `phrase_args`"
+        }
+      },
+      {
+        "when": "An emote skill other than `ikissyou` that your account does not own (`p.acx`).",
+        "code": "skill_cant_use",
+        "source": "node/server.js:9827, 9838",
+        "confirm": {"code": ["node/server.js:9816", "node/server.js:9827", "node/server.js:9838", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "Your `mp` is less than `G.skills[name].mp * (100 - mp_reduction) / 100`. A GM can `blink` with no MP.",
+        "code": "no_mp",
+        "source": "node/server.js:9841-9847",
+        "confirm": {"code": ["node/server.js:9841-9847", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "Your level is less than `G.skills[name].level`.",
+        "code": "no_level",
+        "source": "node/server.js:9849-9851",
+        "confirm": {"code": ["node/server.js:9849-9851", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill is on cooldown. A skill with `share` uses the cooldown of the shared skill times `cooldown_multiplier`. A skill with only `reuse_cooldown` (`invis`, `pickpocket`, `fishing`, `mining`) uses that.",
+        "code": "cooldown",
+        "extra": [
+          {"name": "skill", "type": "SkillName", "optional": false, "description": "The `name` from the request (not the shared skill).", "example": "supershot"},
+          {"name": "id", "type": "EntityId", "optional": true, "description": "The `id` from the request. Absent when the request has none.", "example": "48213"},
+          {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time left.", "example": 18240}
+        ],
+        "source": "node/server.js:9853-9869",
+        "confirm": {"code": ["node/server.js:9853-9869", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill has a `class` list, your class is not in it, and you are not a GM.",
+        "code": "skill_cant_use",
+        "source": "node/server.js:9871-9873",
+        "confirm": {"code": ["node/server.js:9871-9873", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill has a `wtype`, and the item in your `mainhand` is not of that type (or the slot is empty).",
+        "code": "skill_cant_wtype",
+        "source": "node/server.js:9875-9887",
+        "confirm": {"code": ["node/server.js:9875-9887", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill has an `offhand_type` (`shield_slam`: a shield), and your `offhand` is not of that type.",
+        "code": "skill_cant_slot",
+        "source": "node/server.js:9889-9891",
+        "confirm": {"code": ["node/server.js:9889-9891", "node/server.js:3615-3618", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill is `hostile`, and your map is `safe`.",
+        "code": "skill_cant_safe",
+        "source": "node/server.js:9893-9896",
+        "confirm": {"code": ["node/server.js:9893-9896", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill has a `target`, and `id` is `undefined` or `null`.",
+        "code": "no_target",
+        "source": "node/server.js:9899-9902",
+        "confirm": {"code": ["node/server.js:9899-9902", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The kind of `id` (monster id or character name) is not the kind that `G.skills[name].target` allows (`\"monster\"`, `\"player\"`, or `true` for both).",
+        "code": "invalid_target",
+        "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The `id` from the request.", "example": "Priest"}],
+        "source": "node/server.js:9903-9909",
+        "confirm": {"code": ["node/server.js:9903-9909", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "A `hostile` skill, and `id` is your own name.",
+        "code": "no_target",
+        "source": "node/server.js:9910-9915",
+        "confirm": {"code": ["node/server.js:9910-9915", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "No character has that name, and no monster with that id is in your instance.",
+        "replies": [{"event": "disappear", "example": {"id": "48213", "place": "supershot", "reason": "not_there"}, "note": "`place` is the skill; no `game_response`"}],
+        "source": "node/server.js:9916-9921",
+        "confirm": {"code": ["node/server.js:9916-9921"]}
+      },
+      {
+        "when": "The target is invisible (`invis` or `ethereal`), or more than `B.max_vision` (1,000 px) from you. A `global` skill (`magiport`) skips the distance part.",
+        "replies": [{"event": "disappear", "example": {"id": "Rogue", "place": "huntersmark", "reason": "not_there"}, "note": "no `game_response`"}],
+        "source": "node/server.js:9922-9925",
+        "confirm": {"code": ["node/server.js:9922-9925", "node/server_functions.js:469-474"]}
+      },
+      {
+        "when": "An emote skill with `no_self` (`highfive`, `ikissyou`), and the target is you.",
+        "code": "no_target",
+        "source": "node/server.js:9927-9930",
+        "confirm": {"code": ["node/server.js:9927-9930", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "An emote skill with a target: the target is in another instance; or, except for `ikissyou`, the target is not in your party, not on your account and not a friend of your account.",
+        "code": "non_friendly_target",
+        "source": "node/server.js:9931-9936",
+        "confirm": {"code": ["node/server.js:9931-9936", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill is `ikissyou`, and the target is an NPC, disconnected, dead or at 0 HP; or you are dead; or the target is on another map or farther than 80 px.",
+        "code": "invalid_target",
+        "source": "node/server.js:9937-9951",
+        "confirm": {"code": ["node/server.js:9937-9951", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill has `requirements` (character stats, for example `mentalburst` needs `int` 64), and one of your stats is lower.",
+        "code": "skill_cant_requirements",
+        "source": "node/server.js:9954-9960",
+        "confirm": {"code": ["node/server.js:9954-9960", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The skill has a `slot` list, and you do not wear any of the listed items in the listed slot.",
+        "code": "skill_cant_slot",
+        "source": "node/server.js:9962-9989",
+        "confirm": {"code": ["node/server.js:9962-9989", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The worn item has `charge` in `G.items`, and its `charges` are less than that. If it has enough, the server takes the charges here, also if a later check fails.",
+        "code": "skill_cant_charges",
+        "source": "node/server.js:9971-9992",
+        "confirm": {"code": ["node/server.js:9971-9992", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The target is farther than the range: the `range` of the skill (else your `range`), times `range_multiplier`, plus `range_bonus`, plus your level for `throw`, plus your `xrange` (not for a `fixed_range` skill). Before this check, the server removed your `invincible` condition.",
+        "code": "too_far",
+        "extra": [
+          {"name": "dist", "type": "number", "optional": false, "description": "The distance to the target in px.", "example": 612.3},
+          {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the target.", "example": "48213"}
+        ],
+        "source": "node/server.js:9995-10031",
+        "confirm": {"code": ["node/server.js:9995-10031", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "A skill with `consume`: the slot `num` (or, without `num`, every slot) does not hold that item. If it does, the server removes one.",
+        "code": "skill_cant_item",
+        "source": "node/server.js:10034-10061",
+        "confirm": {"code": ["node/server.js:10034-10061", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "action",
+      "to": "nearby",
+      "when": "A skill that uses `commence_attack` (the variants Attack, selfheal, cburst, partyheal, Multi-shot, Cleave) starts a projectile: one `action` for each hit. Every client whose view holds you, and the target.",
+      "type": "Action",
+      "example": {"attacker": "Ranger", "target": "48213", "type": "supershot", "source": "supershot", "x": 512.4, "y": -96, "eta": 180, "m": 0, "pid": "Qm7Zr2", "projectile": "arrow", "damage": 1236},
+      "source": "node/server.js:3603",
+      "confirm": {"code": ["node/server.js:3547-3612", "node/server_functions.js:3744-3779"], "note": "`xy_emit(attacker, \"action\", action, target.id)`: clients that see you, and the target"}
+    },
+    {
+      "event": "hit",
+      "to": "nearby",
+      "when": "Later: each projectile arrives, after `eta` ms.",
+      "summary": "The result of the hit. Look for the `pid` of the `Action`.",
+      "confirm": {"code": ["node/server.js:4343"], "note": "The payload of `hit` is in its own entry"}
+    },
+    {
+      "event": "skill_timeout",
+      "to": "you",
+      "when": "After the variant, when the skill has a `cooldown` (a skill with `share`: the shared skill). Not after a `commence_attack` failure of a single-target skill, and not for skills with only `reuse_cooldown` (`invis`, `pickpocket`, `fishing`, `mining`: they get it later from the effect).",
+      "fields": [
+        {"name": "name", "type": "SkillName", "optional": false, "description": "The skill whose cooldown starts. For a skill with `share` it is the shared skill (`3shot` gives `attack`, `quickstab` gives `quickpunch`)."},
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The cooldown times `cooldown_multiplier`, plus `penalty`."},
+        {"name": "penalty", "type": "Milliseconds", "optional": false, "description": "`penalty_cd`, up to 10,000."}
+      ],
+      "example": {"name": "supershot", "ms": 30000, "penalty": 0},
+      "source": "node/server_functions.js:3448-3467",
+      "confirm": {"code": ["node/server.js:10984-10986", "node/server_functions.js:3448-3467"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "When the skill changed your state (MP, conditions, items, position). Usually after `skill_timeout`. Some variants send it earlier (`blink`, `cleansing_light`, `guardians_oath`, `mluck`, `rspeed`, `reflection`, `energize`, `alchemy`).",
+      "summary": "Your new state. `reopen: true` after an item was used or thrown, or gold changed. Its `hitchhikers` can hold `skill_immune`.",
+      "source": "node/server.js:10987-10989",
+      "confirm": {"code": ["node/server.js:10987-10989", "node/server.js:4550-4594"]}
+    },
+    {
+      "event": "player",
+      "to": "each character that the skill changes",
+      "when": "A skill that changes another character: buffs (`mluck`, `rspeed`, `reflection`, `energize`, `guardians_oath`, `beacon_of_resolve`, `darkblessing`, `warcry`), `cleansing_light`, `4fingers`, `entangle`, `huntersmark`, `stomp`, `throw`, `revive`, a pull by `magiport`.",
+      "summary": "The new state of that character, sent to its own socket.",
+      "confirm": {
+        "code": [
+          "node/server.js:10231",
+          "node/server.js:10252",
+          "node/server.js:10271",
+          "node/server.js:10349",
+          "node/server.js:10385",
+          "node/server.js:10399",
+          "node/server.js:10415",
+          "node/server.js:10502",
+          "node/server.js:10691",
+          "node/server.js:10734",
+          "node/server.js:10891",
+          "node/server.js:10897",
+          "node/server.js:10906",
+          "node/server.js:10929",
+          "node/server_functions.js:4025"
+        ]
+      }
+    },
+    {
+      "event": "ui",
+      "to": "nearby",
+      "when": "Any skill that spends MP through `consume_mp`, when the `restore_mp` attribute roll hits: you get twice the MP back instead of paying.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "You."},
+        {"name": "type", "type": "\"restore_mp\"", "optional": false, "description": "Always `\"restore_mp\"`."},
+        {"name": "amount", "type": "number", "optional": false, "description": "The MP added: 2 times the MP of the skill."}
+      ],
+      "example": {"id": "Wizard", "type": "restore_mp", "amount": 800},
+      "source": "node/server_functions.js:3375-3377",
+      "confirm": {"code": ["node/server_functions.js:3364-3383", "node/server_functions.js:3744-3779"]}
+    }
+  ],
+  "order": [
+    "the events of the variant: `action`, `emote`, `ui`, `light`, `disappear` or `magiport` to others; `track`, `eval`, `magiport_sent`, `gold_received`, `temporalsurge`, `charm_failed` to you",
+    "`skill_timeout` to you (when the skill has a `cooldown`)",
+    "`player` to you (when your state changed; some variants send it earlier)",
+    "`game_response` to you: the reply of the variant, else the default success",
+    "later, `hit` for each projectile, and the result of a channel (`pickpocket`, `fishing`, `mining`, `revive`)"
+  ]
+}

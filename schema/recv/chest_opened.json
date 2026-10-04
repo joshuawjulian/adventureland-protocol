@@ -1,0 +1,61 @@
+{
+  "event": "chest_opened",
+  "to": "the opener (no party), or every member of the party of the opener, in any instance. A contributor outside that party gets its own copy. A cave chest goes to every run member",
+  "payload": {"type": "ChestOpenedResult | ChestOpenedGone", "confirm": {"code": ["node/server.js:11392", "node/server.js:11552", "node/server.js:11555", "node/logic/encouragement.js:500", "node/logic/cave_of_many_dreams.js:567"], "note": "The five emits of `chest_opened`; each variant cites the lines that build it"}},
+  "variants": [
+    {
+      "name": "Solo",
+      "type": "ChestOpenedResult",
+      "when": "The opener has no party, or the chest is a reserved encouragement chest (`chest.character`). The server deletes `items` when it is empty (node/server.js:11388-11390).",
+      "reply_to": ["open_chest"],
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "goldm": 1.2, "opener": "Warrior", "items": [{"name": "hpbelt", "level": 0, "looter": "Warrior"}], "gold": 3184},
+      "source": "node/server.js:11311-11392",
+      "confirm": {"code": ["node/server.js:11280", "node/server.js:11286-11301", "node/server.js:11311-11392", "node/server_functions.js:715-728", "node/server_functions.js:4234-4259", "node/logic/encouragement.js:445-501"], "note": "Encouragement items of the opener are pushed into the same `r` before `items` is deleted when empty"}
+    },
+    {
+      "name": "Party",
+      "type": "ChestOpenedResult",
+      "has": ["party"],
+      "when": "The opener has a party. Each member gets the same object, with `gold` set to the share of that member. `items` stays, also when it is empty.",
+      "reply_to": ["open_chest"],
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "goldm": 1.2, "opener": "Warrior", "items": [], "party": true, "gold": 1061},
+      "source": "node/server.js:11393-11553",
+      "confirm": {"code": ["node/server.js:11280", "node/server.js:11286-11301", "node/server.js:11393-11553", "node/server_functions.js:715-728", "node/server_functions.js:4234-4259"], "note": "One object `r` for the whole party; `r.gold` is set to each member's share just before each emit"}
+    },
+    {
+      "name": "Contributor",
+      "type": "ChestOpenedResult",
+      "when": "A character that helped kill the monster (encouragement) is not a looter of this chest, and it got gold, items or shells. `items` is absent when empty.",
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "goldm": 1.2, "opener": "Warrior", "gold": 212},
+      "source": "node/logic/encouragement.js:474-501",
+      "confirm": {"code": ["node/logic/encouragement.js:474-501"], "note": "`goldm` is copied from the opener's `r`, so it is not always 1"}
+    },
+    {
+      "name": "Cave",
+      "type": "ChestOpenedResult",
+      "has": ["cave"],
+      "when": "A cave chest (`chest.cave`). The gold and amber go to the purse of the run, not to a character.",
+      "reply_to": ["open_chest"],
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "opener": "Warrior", "gold": 0, "goldm": 1, "items": [], "cave": {"gold": 25000, "amber": 3, "shared": true}},
+      "source": "node/logic/cave_of_many_dreams.js:566-567",
+      "confirm": {"code": ["node/server.js:11280-11285", "node/logic/cave_of_many_dreams.js:540-567"]}
+    },
+    {
+      "name": "Gone",
+      "type": "ChestOpenedGone",
+      "has": ["gone"],
+      "when": "No chest has this `id` (another character opened it, or it never existed).",
+      "reply_to": ["open_chest"],
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "gone": true},
+      "source": "node/server.js:11555",
+      "confirm": {"code": ["node/server.js:11555"]}
+    }
+  ],
+  "senders": [
+    {"what": "The `open_chest` handler, no party: to the opener.", "source": "node/server.js:11392"},
+    {"what": "The `open_chest` handler, party: to each member of the party.", "source": "node/server.js:11552"},
+    {"what": "The `open_chest` handler: no chest has the id.", "source": "node/server.js:11555"},
+    {"what": "`encouragement_loot`: to a contributor that is not a looter of the chest.", "source": "node/logic/encouragement.js:500"},
+    {"what": "`cave_open_chest` (from `open_chest`): to every run member.", "source": "node/logic/cave_of_many_dreams.js:567"}
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "event": "trade_history",
+  "source": "node/server.js:9177-9184",
+  "request": {
+    "fields": [],
+    "note": "No payload. The server ignores any data, also `null`.", "confirm": {"code": ["node/server.js:9177-9184"], "note": "The handler never reads `data`"}
+  },
+  "responses": [
+    {
+      "name": "History",
+      "event": "trade_history",
+      "when": "You have a character. The array is `player.p.trade_history`, oldest line first, or `[]`.",
+      "type": "TradeHistoryEntry[]",
+      "example": [["buy", "MerchantBob", {"name": "staff", "level": 8, "q": 1}, 2500000], ["sell", "MerchantBob", {"name": "hpot0", "q": 5}, 5000], ["swap", "MerchantBob", {"name": "staff", "level": 8}, 0, {"name": "candypop", "q": 20}]],
+      "source": "node/server.js:9183", "confirm": {"code": ["node/server.js:9183", "node/server_functions.js:342-363"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "trade_history",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9179-9181", "confirm": {"code": ["node/server.js:9178-9181"]}}
+    ]
+  },
+  "order": [
+    "`trade_history` (an array) to you"
+  ]
+}

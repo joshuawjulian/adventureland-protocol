@@ -1,0 +1,82 @@
+{
+  "event": "booster",
+  "source": "node/server.js:9713-9740",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key (`player.items[num]`), so a number or a numeric string; any other value is an empty slot", "description": "The slot of the booster: `xpbooster`, `luckbooster` or `goldbooster`."},
+      {"name": "action", "type": "\"activate\" | \"shift\"", "optional": true, "coerce": "compared with `==`", "description": "The sub-action. Each value is a variant (below). `activate` starts the time of the booster. `shift` changes the booster to the type in `to`. Any other value (or none) changes nothing, but sends the success reply."}
+    ],
+    "others": "ignored",
+    "example": {"num": 3, "action": "activate"}, "confirm": {"code": ["node/server.js:9718-9719", "node/server.js:9724", "node/server.js:9728-9729"], "note": "The handler reads only `num`, `action` and `to`"}
+  },
+  "variants": {
+    "key": "action",
+    "list": [
+      {
+        "value": "activate",
+        "when": "Starts the time of the booster: `expires` is now plus 30 days plus 2 days per level of the item. On a booster that has `expires` already, nothing changes.",
+        "request": {
+          "example": {"num": 3, "action": "activate"}, "confirm": {"code": ["node/server.js:9724-9726"]}
+        },
+        "source": "node/server.js:9724-9727"
+      },
+      {
+        "value": "shift",
+        "when": "Changes the booster to the type in `to`. It also sets `xpm`, `goldm` and `luckm` to 1, and adds 240 ms to `penalty_cd` (up to 120,000 ms).",
+        "request": {
+          "fields": [
+            {"name": "to", "type": "\"xpbooster\" | \"luckbooster\" | \"goldbooster\"", "optional": false, "coerce": "strict: `booster_items.includes(to)`, so it must be one of these strings", "description": "The new booster type. It can be the same type."}
+          ],
+          "example": {"num": 3, "action": "shift", "to": "goldbooster"}, "confirm": {"code": ["node/server.js:9728-9735", "js/old_common_functions.js:107"]}
+        },
+        "failures": {
+          "rows": [
+            {"when": "`to` is not a booster name.", "code": "invalid", "source": "node/server.js:9729-9731", "confirm": {"code": ["node/server.js:9729-9731", "js/old_common_functions.js:107", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "source": "node/server.js:9728-9735"
+      },
+      {
+        "other": true,
+        "name": "Other",
+        "when": "Any other value, or no `action`: nothing changes, but the success reply comes.",
+        "request": {
+          "fields": [
+            {"name": "action", "type": "string", "optional": true, "coerce": "compared with `==`", "description": "Any value other than `\"activate\"` and `\"shift\"`, or no value."}
+          ],
+          "example": {"num": 3}, "confirm": {"code": ["node/server.js:9724", "node/server.js:9728", "node/server.js:9737-9739"], "note": "Neither branch runs; the success reply still comes"}
+        }
+      }
+    ]
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The checks pass. Also for `activate` on a booster that has `expires` already, and for an unknown `action`: then nothing changes.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"booster\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "name", "type": "\"xpbooster\" | \"luckbooster\" | \"goldbooster\"", "optional": false, "description": "The name of the booster now (after a `shift`, the new type)."}
+      ],
+      "example": {"name": "goldbooster", "success": true, "response": "data", "place": "booster"},
+      "source": "node/server.js:9739", "confirm": {"code": ["node/server.js:9739", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "booster",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9715-9717", "confirm": {"code": ["node/server.js:9714-9717"]}},
+      {"when": "The payload is `null` (or another falsy value). This handler checks it, so there is no `game_error`.", "code": "invalid", "source": "node/server.js:9718", "confirm": {"code": ["node/server.js:9718", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot is empty, or the item is not a booster.", "code": "invalid", "source": "node/server.js:9719-9723", "confirm": {"code": ["node/server.js:9719-9723", "js/old_common_functions.js:107", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {"event": "player", "to": "you", "when": "Success, before the `game_response`.", "summary": "Your state with `reopen: true`. The booster in `items[num]` has its new `name` or `expires`.", "source": "node/server.js:9738", "confirm": {"code": ["node/server.js:9737-9738", "node/server.js:4550-4594"]}}
+  ],
+  "order": ["`player` with `reopen: true` to you", "`game_response` `data` with `name` to you"]
+}

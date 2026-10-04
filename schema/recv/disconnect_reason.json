@@ -1,0 +1,21 @@
+{
+  "event": "disconnect_reason",
+  "to": "the socket that the server disconnects next; for a shutdown, every socket (`broadcast`)",
+  "payload": {"type": "\"limitdc\" | \"limits\" | \"blocked\" | string", "confirm": {"code": ["node/server.js:4846", "node/server.js:4942", "node/server.js:4960", "node/server.js:11915", "node/server.js:13157", "adventure_functions.js:1581", "adventure_functions.js:1762"], "note": "Every emit passes a string literal except `shutdown`, which passes `data.reason` with no type check."}},
+  "variants": [
+    {"name": "Call cost", "type": "\"limitdc\"", "when": "The call cost of the socket went above its limit. `limitdcreport` comes first.", "example": "limitdc", "source": "node/server.js:4942, 4960", "confirm": {"code": ["node/server.js:4938-4943", "node/server.js:4947-4961"]}},
+    {"name": "Limits at login", "type": "\"limits\"", "when": "`auth`: `is_player_allowed` returns false for the character.", "reply_to": ["auth"], "example": "limits", "source": "node/server.js:11914-11916", "confirm": {"code": ["node/server.js:11914-11916"]}},
+    {"name": "Limits from the web server", "type": "\"limits\"", "when": "`enforce_limitations` on the web server: too many characters for one IP address or one account. A merchant counts on its own.", "example": "limits", "source": "adventure_functions.js:1745-1764", "confirm": {"code": ["adventure_functions.js:1735-1764"]}},
+    {"name": "Blocked", "type": "\"blocked\"", "when": "`block_account` on the web server: an admin blocks the account. Each character of the account gets it.", "example": "blocked", "source": "adventure_functions.js:1581", "confirm": {"code": ["adventure_functions.js:1577-1583"]}},
+    {"name": "Loose connections", "type": "string", "when": "A new socket connects and more than 5 sockets without a character, the new one included, have the same IP address. Each older socket without a character gets this text.", "example": "Too many loose connections from your network. Simply reload to play.", "source": "node/server.js:4830-4852", "confirm": {"code": ["node/server.js:4830-4852", "node/server.js:4871", "node/server.js:4878-4880"], "note": "`is_socket_allowed` counts the new socket too: it is in `sockets` already."}},
+    {"name": "Shutdown", "type": "string", "when": "An admin sends `shutdown` with a `reason`. The text is that reason. The server stops 10 s later.", "reply_to": ["shutdown"], "example": "Server update, back in 5 minutes", "source": "node/server.js:13152-13160", "confirm": {"code": ["node/server.js:13152-13160"], "note": "`data.reason` is not checked: any truthy JSON value from the admin is sent as is."}},
+    {"name": "Check-in (dead code)", "type": "string", "when": "Never: the code is inside an `if (0 && ...)` block.", "example": "Failed to check in. Your network might be too slow.", "source": "node/server.js:16046-16048", "confirm": {"code": ["node/server.js:16043-16049"]}}
+  ],
+  "senders": [
+    {"what": "The wrapper of every handler: the call-cost check, and the check after a handler error.", "source": "node/server.js:4939-4961"},
+    {"what": "`disconnect_old_sockets`, on a new connection.", "source": "node/server.js:4843-4852"},
+    {"what": "The `auth` handler.", "source": "node/server.js:11914-11916"},
+    {"what": "The `shutdown` handler (admin).", "source": "node/server.js:13152-13160"},
+    {"what": "The web server through `server_eval`: `block_account` and `enforce_limitations`.", "source": "adventure_functions.js:1581, 1762"}
+  ]
+}

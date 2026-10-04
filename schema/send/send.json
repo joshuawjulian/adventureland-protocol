@@ -1,0 +1,252 @@
+{
+  "event": "send",
+  "source": "node/server.js:8463-8628",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "CharacterName", "optional": false, "coerce": "`name_to_id[name || \"\"]`", "description": "The character that receives. It must be online on this server."},
+      {"name": "num", "type": "InventoryIndex", "optional": true, "coerce": "`max(0, parseInt(num) || 0)`: a string works; `null`, `NaN` and a negative value become slot 0", "description": "Selects item mode: the server checks this field first. Any value other than `undefined` selects item mode, also `null`."}
+    ],
+    "others": "ignored",
+    "example": {"name": "Ranger", "num": 3},
+    "confirm": {"code": ["node/server.js:8465", "node/server.js:8477-8478", "node/server.js:8551", "node/server.js:8588"], "note": "The handler reads `name`, then `num` / `q`, `gold` or `cx` by mode"}
+  },
+  "responses": [],
+  "failures": {
+    "event": "game_response",
+    "place": "send",
+    "rows": [
+      {"when": "No character, or the character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:8468-8470", "confirm": {"code": ["node/server.js:8468-8470", "node/server_functions.js:3393-3419"]}},
+      {"when": "No character with that `name` is online on this server, or the receiver is in the bank.", "code": "receiver_unavailable", "source": "node/server.js:8471-8473", "confirm": {"code": ["node/server.js:8465", "node/server.js:8471-8473", "node/server_functions.js:3393-3419"]}},
+      {"when": "The receiver is on another map, or more than `B.dist` (400 px) from you.", "code": "distance", "source": "node/server.js:8474-8476", "confirm": {"code": ["node/server.js:8474-8476", "node/server.js:219", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [],
+  "variants": {
+    "key": "num",
+    "intro": "The server picks the mode by the first of `num`, `gold` and `cx` that is not `undefined`.",
+    "list": [
+      {
+        "name": "Item",
+        "match": "`num` is not `undefined`",
+        "when": "Sends an item, or `q` units of a stack.",
+        "request": {
+          "fields": [
+            {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "`max(0, parseInt(num) || 0)`: a string works; `null`, `NaN` and a negative value become slot 0", "description": "The slot of the item. Any value other than `undefined` selects item mode, also `null`."},
+            {"name": "q", "type": "integer", "optional": true, "default": 1, "coerce": "`min(q_of_stack || 1, max(1, parseInt(q || 1) || 1))`", "description": "How many units of the stack."}
+          ],
+          "example": {"name": "Ranger", "num": 3, "q": 1},
+          "confirm": {"code": ["node/server.js:8477-8478", "node/server.js:8492"], "note": "`data.q` is always 1 or more, so the `no_item` return at 8493-8495 cannot run"}
+        },
+        "responses": [
+          {
+            "name": "Item sent",
+            "event": "game_response",
+            "code": "item_sent",
+            "when": "All checks pass. The server moves the item, or `q` units of a stack, to the receiver. A stack arrives as a new item with only `name`, `q`, `level`, `v`, `data`, `p` and `ps` (`create_new_sitem`).",
+            "fields": [
+              {"name": "response", "type": "\"item_sent\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "The receiver."},
+              {"name": "item", "type": "ItemName", "optional": false, "description": "The name of the item (a string, not an object)."},
+              {"name": "q", "type": "integer", "optional": false, "description": "The quantity sent."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "Your slot, after the conversion of `num`."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its code event."},
+              {"name": "place", "type": "\"send\"", "optional": false, "description": "The request."}
+            ],
+            "example": {"response": "item_sent", "name": "Ranger", "item": "hpot0", "q": 1, "num": 3, "cevent": true, "place": "send"},
+            "source": "node/server.js:8542-8550",
+            "confirm": {"code": ["node/server.js:8542-8550"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "The slot is empty.", "code": "send_no_item", "source": "node/server.js:8480-8482", "confirm": {"code": ["node/server.js:8479-8482", "node/server_functions.js:3393-3419"]}},
+            {"when": "The item is a placeholder: an upgrade or compound runs on the slot.", "code": "item_placeholder", "source": "node/server.js:8483-8485", "confirm": {"code": ["node/server.js:8483-8485", "node/server_functions.js:3393-3419"]}},
+            {"when": "The item has the lock `l`, or it has `acl` and the receiver has another owner.", "code": "item_locked", "source": "node/server.js:8486-8488", "confirm": {"code": ["node/server.js:8486-8488", "node/server_functions.js:3393-3419"]}},
+            {"when": "The item has the flag `b`.", "code": "item_blocked", "source": "node/server.js:8489-8491", "confirm": {"code": ["node/server.js:8489-8491", "node/server_functions.js:3393-3419"]}},
+            {"when": "The receiver has no space for the item.", "code": "send_no_space", "source": "node/server.js:8496-8498", "confirm": {"code": ["node/server.js:8496-8498", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "Every client whose view holds you.",
+            "fields": [
+              {"name": "type", "type": "\"item_sent\"", "optional": false, "description": "An item went from one character to another."},
+              {"name": "receiver", "type": "CharacterName", "optional": false, "description": "The receiver."},
+              {"name": "sender", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item, with `q` set to the quantity sent."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot of the receiver that got the item."},
+              {"name": "fnum", "type": "InventoryIndex", "optional": false, "description": "Your slot."},
+              {"name": "event", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"type": "item_sent", "receiver": "Ranger", "sender": "Wizard", "item": {"name": "hpot0", "q": 1}, "num": 8, "fnum": 3, "event": true},
+            "source": "node/server.js:8522-8530",
+            "confirm": {"code": ["node/server.js:8507-8513", "node/server.js:8522-8530", "node/server_functions.js:4234-4260", "node/server_functions.js:3744-3791"], "note": "The override `{q}` gives `item` a `q` also for an item that does not stack"}
+          },
+          {"event": "player", "to": "you and the receiver", "when": "Before the `game_response` replies.", "summary": "The state of each character with `reopen: true`.", "source": "node/server.js:8532-8533", "confirm": {"code": ["node/server.js:8532-8533", "node/server.js:4550-4594"]}},
+          {
+            "event": "game_response",
+            "to": "the receiver",
+            "when": "Before `item_sent`.",
+            "fields": [
+              {"name": "response", "type": "\"item_received\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You, the sender."},
+              {"name": "item", "type": "ItemName", "optional": false, "description": "The name of the item."},
+              {"name": "q", "type": "integer", "optional": false, "description": "The quantity."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot of the receiver that got the item."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its code event."}
+            ],
+            "example": {"response": "item_received", "name": "Wizard", "item": "hpot0", "q": 1, "num": 8, "cevent": true},
+            "source": "node/server.js:8534-8541",
+            "code": "item_received",
+            "confirm": {"code": ["node/server.js:8534-8541"]}
+          }
+        ],
+        "order": [
+          "`ui` to clients nearby",
+          "`player` to you, then to the receiver",
+          "`game_response` `item_received` to the receiver",
+          "`game_response` `item_sent` to you"
+        ],
+        "source": "node/server.js:8477-8551"
+      },
+      {
+        "name": "Gold",
+        "match": "no `num`, and `gold` is not `undefined`",
+        "when": "Sends gold.",
+        "request": {
+          "fields": [
+            {"name": "gold", "type": "integer", "optional": false, "coerce": "`min(gold_you_have, max(1, parseInt(gold || 1) || 1)) || gold_you_have`", "description": "The amount. The server clamps it to 1 to your gold."}
+          ],
+          "example": {"name": "Ranger", "gold": 10000},
+          "confirm": {"code": ["node/server.js:8551-8552"]}
+        },
+        "responses": [
+          {
+            "name": "Gold sent",
+            "event": "game_response",
+            "code": "gold_sent",
+            "when": "All checks pass. You lose `gold`. The receiver gets 97.5% of it (`parseInt`), except when the amount is 1 or when you and the receiver are the same account or IP (`is_same`).",
+            "fields": [
+              {"name": "response", "type": "\"gold_sent\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "The receiver."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The gold that the receiver got, after the fee. You lost more than this when there was a fee."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its code event."},
+              {"name": "place", "type": "\"send\"", "optional": false, "description": "The request."}
+            ],
+            "example": {"response": "gold_sent", "name": "Ranger", "gold": 9750, "cevent": true, "place": "send"},
+            "source": "node/server.js:8581-8587",
+            "confirm": {"code": ["node/server.js:8556-8560", "node/server.js:8581-8587", "node/server_functions.js:505-511"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "You have no gold.", "code": "invalid", "source": "node/server.js:8552-8555", "confirm": {"code": ["node/server.js:8552-8555", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {"event": "ui", "to": "nearby", "when": "Every client whose view holds you.", "summary": "`{type: \"gold_sent\", receiver, sender, gold, event: true}`. `gold` is the amount after the fee.", "source": "node/server.js:8565-8571", "confirm": {"code": ["node/server.js:8565-8571", "node/server_functions.js:3744-3791"]}},
+          {"event": "player", "to": "you and the receiver", "when": "Before the `game_response` replies.", "summary": "The state of each character with `reopen: true`.", "source": "node/server.js:8573-8574", "confirm": {"code": ["node/server.js:8573-8574", "node/server.js:4550-4594"]}},
+          {
+            "event": "game_response",
+            "to": "the receiver",
+            "when": "Before `gold_sent`.",
+            "source": "node/server.js:8575-8580",
+            "code": "gold_received",
+            "fields": [
+              {"name": "response", "type": "\"gold_received\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You, the sender."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The amount after the fee."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its code event."}
+            ],
+            "example": {"response": "gold_received", "name": "Wizard", "gold": 9750, "cevent": true},
+            "confirm": {"code": ["node/server.js:8575-8580"]}
+          }
+        ],
+        "order": [
+          "`ui` to clients nearby",
+          "`player` to you, then to the receiver",
+          "`game_response` `gold_received` to the receiver",
+          "`game_response` `gold_sent` to you"
+        ],
+        "source": "node/server.js:8552-8587"
+      },
+      {
+        "name": "Cosmetic",
+        "match": "no `num` and no `gold`, and `cx` is not `undefined`",
+        "when": "Sends one copy of a cosmetic to a character of your account.",
+        "request": {
+          "fields": [
+            {"name": "cx", "type": "string", "optional": false, "description": "The cosmetic to send."}
+          ],
+          "example": {"name": "Ranger", "cx": "hat221"},
+          "confirm": {"code": ["node/server.js:8588-8591"]}
+        },
+        "responses": [
+          {
+            "name": "Cosmetic sent",
+            "event": "game_response",
+            "code": "cx_sent",
+            "when": "All checks pass. The server moves one copy. It sends no `player` update.",
+            "fields": [
+              {"name": "response", "type": "\"cx_sent\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "The receiver."},
+              {"name": "cx", "type": "string", "optional": false, "description": "`cx` from the request."},
+              {"name": "acx", "type": "Record<string, integer>", "optional": false, "description": "All your cosmetics now: name to count."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its code event."},
+              {"name": "place", "type": "\"send\"", "optional": false, "description": "The request."}
+            ],
+            "example": {"response": "cx_sent", "name": "Ranger", "cx": "hat221", "acx": {"hat222": 1}, "cevent": true, "place": "send"},
+            "source": "node/server.js:8619-8626",
+            "confirm": {"code": ["node/server.js:8598-8602", "node/server.js:8619-8626"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "You do not own `cx`, or every copy is in use (in `cx` or as the skin).", "code": "send_no_cx", "source": "node/server.js:8589-8593", "confirm": {"code": ["node/server.js:8589-8593", "node/server_functions.js:3393-3419"]}},
+            {"when": "The receiver has another owner.", "code": "send_diff_owner", "source": "node/server.js:8595-8597", "confirm": {"code": ["node/server.js:8595-8597", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {"event": "ui", "to": "nearby", "when": "Every client whose view holds you.", "summary": "`{type: \"cx_sent\", receiver, sender, cx, event: true}`.", "source": "node/server.js:8604-8610", "confirm": {"code": ["node/server.js:8604-8610", "node/server_functions.js:3744-3791"]}},
+          {
+            "event": "game_response",
+            "to": "the receiver",
+            "when": "Before `cx_sent`.",
+            "source": "node/server.js:8612-8618",
+            "code": "cx_received",
+            "fields": [
+              {"name": "response", "type": "\"cx_received\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You, the sender."},
+              {"name": "cx", "type": "string", "optional": false, "description": "`cx` from the request."},
+              {"name": "acx", "type": "Record<string, integer>", "optional": false, "description": "All cosmetics of the receiver now: name to count."},
+              {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its code event."}
+            ],
+            "example": {"response": "cx_received", "name": "Wizard", "cx": "hat221", "acx": {"hat221": 1}, "cevent": true},
+            "confirm": {"code": ["node/server.js:8612-8618"]}
+          }
+        ],
+        "order": [
+          "`ui` to clients nearby",
+          "`game_response` `cx_received` to the receiver",
+          "`game_response` `cx_sent` to you"
+        ],
+        "source": "node/server.js:8588-8627"
+      },
+      {
+        "name": "None",
+        "match": "none of `num`, `gold` and `cx`",
+        "when": "The server changes nothing.",
+        "request": {
+          "fields": [],
+          "example": {"name": "Ranger"},
+          "confirm": {"code": ["node/server.js:8477", "node/server.js:8551", "node/server.js:8588"], "note": "`num`, `gold` and `cx` are all `undefined`, so no branch runs"}
+        },
+        "responses": [
+          {"name": "Nothing", "kind": "none", "when": "After the shared checks pass. The server sends nothing and changes nothing.", "source": "node/server.js:8627-8628", "confirm": {"code": ["node/server.js:8477", "node/server.js:8551", "node/server.js:8588", "node/server.js:8627-8628"]}}
+        ]
+      }
+    ]
+  }
+}

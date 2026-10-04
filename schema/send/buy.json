@@ -1,0 +1,76 @@
+{
+  "event": "buy",
+  "source": "node/server.js:8409-8461",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "ItemName", "optional": false, "description": "The item to buy. An NPC on some map must sell it (`can_buy`, js/old_common_functions.js:246). NPCs do not sell `cash` items for gold, except `p2w` items."},
+      {"name": "quantity", "type": "integer", "optional": true, "default": 1, "coerce": "`min(max(parseInt(quantity) || 0, 1), G.items[name].s || 9999)`", "description": "How many to buy. The server sets it to 1 for an item that does not stack."}
+    ],
+    "others": "ignored",
+    "example": {"name": "hpot0", "quantity": 100},
+    "confirm": {"code": ["node/server.js:8415-8416", "node/server.js:8439-8441"], "note": "The handler reads only `name` and `quantity`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "buy_success",
+      "when": "All checks pass. The server takes the gold and adds the item.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"buy_success\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"buy\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item."},
+        {"name": "q", "type": "integer", "optional": false, "description": "The quantity bought, after the server corrected it."},
+        {"name": "cost", "type": "number", "optional": false, "description": "The gold paid: `q * G.items[name].g`, times `G.inflation` for a `p2w` item."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot that got the item. For a stackable item it is the slot of the stack that grew."},
+        {"name": "cevent", "type": "\"buy\"", "optional": false, "description": "Tells the official client to fire its `buy` code event."}
+      ],
+      "example": {"cost": 2000, "num": 4, "name": "hpot0", "q": 100, "cevent": "buy", "success": true, "response": "buy_success", "place": "buy"},
+      "source": "node/server.js:8461",
+      "confirm": {"code": ["node/server.js:8461", "node/server_functions.js:3421-3446", "node/server.js:8442-8445", "node/server.js:8451", "node/server.js:4886"], "note": "`success_response` adds `success`, `response` and `place` (`ls_method`: the event name)"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "buy",
+    "rows": [
+      {"when": "No character, or the character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:8412-8414", "confirm": {"code": ["node/server.js:8412-8414", "node/server_functions.js:3393-3419"]}},
+      {"when": "No NPC sells `name` (`can_buy[name]` is false), and `gameplay` is not `\"test\"`.", "code": "buy_cant_npc", "source": "node/server.js:8420-8422", "confirm": {"code": ["node/server.js:8420-8422", "node/server_functions.js:3393-3419"]}},
+      {"when": "The inventory has no space for the item (`can_add_item`).", "code": "buy_cant_space", "source": "node/server.js:8423-8425", "confirm": {"code": ["node/server.js:8423-8425", "node/server_functions.js:3393-3419"]}},
+      {"when": "No NPC on your map that sells `name` is nearer than `B.sell_dist` (400 px). A character with a `computer` passes this check.", "code": "distance", "source": "node/server.js:8426-8436", "confirm": {"code": ["node/server.js:8426-8436", "node/server.js:220", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your gold is less than the cost.", "code": "buy_cost", "source": "node/server.js:8446-8448", "confirm": {"code": ["node/server.js:8446-8448", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "ui",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds the NPC; usually that includes you.",
+      "fields": [
+        {"name": "type", "type": "\"+$\"", "optional": false, "description": "A purchase."},
+        {"name": "id", "type": "string", "optional": false, "description": "The id of the NPC."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The buyer."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item bought, with the quantity bought."},
+        {"name": "event", "type": "\"buy\"", "optional": false, "description": "Always `\"buy\"`."}
+      ],
+      "example": {"type": "+$", "id": "fancypots", "name": "Wizard", "item": {"name": "hpot0", "q": 100}, "event": "buy"},
+      "source": "node/server.js:8452-8458",
+      "confirm": {"code": ["node/server.js:8452-8458", "node/server.js:1981-1990", "node/server_functions.js:3744-3779"], "note": "`xy_emit` reaches every player whose vision box holds the NPC"}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "The new state of your character, with `reopen: true`. `items`, `esize` and `gold` show the purchase.",
+      "source": "node/server.js:8460",
+      "confirm": {"code": ["node/server.js:8460", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`ui` to clients nearby",
+    "`player` to you",
+    "`game_response` `buy_success` to you"
+  ]
+}

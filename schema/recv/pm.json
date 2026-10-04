@@ -1,0 +1,86 @@
+{
+  "event": "pm",
+  "to": "the sender (a copy) and the recipient, on any server",
+  "payload": {"type": "PmMessage | PmDeliveryFailed", "confirm": {"code": ["node/logic/chat.js:75-111"]}},
+  "example": {"owner": "Wizard", "message": "need a magiport?", "id": "Wizard"},
+  "variants": [
+    {
+      "name": "To the recipient",
+      "type": "PmMessage",
+      "when": "The recipient is on the same server as the sender.",
+      "example": {"owner": "Wizard", "message": "need a magiport?", "id": "Wizard"},
+      "source": "node/logic/chat.js:85",
+      "confirm": {"code": ["node/logic/chat.js:85"]}
+    },
+    {
+      "name": "From another server",
+      "type": "PmMessage",
+      "when": "The recipient is on another server. That server runs the emit through `server_eval_direct`. `id` is the name of the sender.",
+      "example": {"owner": "Wizard", "message": "need a magiport?", "id": "Wizard", "xserver": true},
+      "source": "node/logic/chat.js:99-110",
+      "confirm": {"code": ["node/logic/chat.js:99-110"]}
+    },
+    {
+      "name": "Copy to the sender",
+      "type": "PmMessage",
+      "has": ["to"],
+      "when": "Always first, before the server looks for the recipient. `xserver` is `true` when the recipient is not on this server.",
+      "reply_to": ["say"],
+      "example": {"owner": "Wizard", "to": "Arrow", "message": "need a magiport?", "id": "Wizard"},
+      "source": "node/logic/chat.js:77-84",
+      "confirm": {"code": ["node/logic/chat.js:77-84"]}
+    },
+    {
+      "name": "Delivery failed",
+      "type": "PmDeliveryFailed",
+      "has": ["phrase"],
+      "when": "No character has the name `to`. The sender gets it after its copy.",
+      "reply_to": ["say"],
+      "example": {"owner": "Wizard", "to": "Nobody", "id": "Wizard", "xserver": true, "message": "(FAILED)", "phrase": "server.pm.delivery_failed", "phrase_args": {}},
+      "source": "node/logic/chat.js:86-97",
+      "confirm": {"code": ["node/logic/chat.js:86-97", "languages/index.js:256-258"]}
+    }
+  ],
+  "types": {
+    "PmMessage": {
+      "summary": "A private message, or the copy of it that the sender gets.",
+      "fields": [
+        {"name": "owner", "type": "CharacterName", "optional": false, "description": "The name of the sender."},
+        {"name": "to", "type": "string", "optional": true, "description": "Only in the copy of the sender: the recipient name, as the sender wrote it in `say`."},
+        {"name": "message", "type": "string", "optional": false, "description": "The text, at most 1,200 characters. The server removes some characters first (`strip_string`)."},
+        {
+          "name": "id",
+          "type": "string",
+          "optional": false,
+          "description": "The id of the sender: the character name. From the web Communicator it is `\"comm:\"` plus the database id of the character (api.js:1195), except on another server."
+        },
+        {"name": "xserver", "type": "true", "optional": true, "description": "The recipient is not on this server: in the copy of the sender, or in the message from another server."}
+      ],
+      "source": "node/logic/chat.js:75-111",
+      "confirm": {
+        "code": ["node/logic/chat.js:77-85", "node/logic/chat.js:104-109", "node/server.js:5098", "api.js:1179", "api.js:1195"],
+        "note": "`message` is `strip_string(...).substr(0, 1200)` in both `say` and `communicator_say`"
+      }
+    },
+    "PmDeliveryFailed": {
+      "summary": "A notice to the sender: no character has the name of the recipient.",
+      "extends": "LocalizedText",
+      "fields": [
+        {"name": "phrase", "type": "\"server.pm.delivery_failed\"", "optional": false, "description": "The phrase key. `phrase_args` is `{}`."},
+        {"name": "owner", "type": "CharacterName", "optional": false, "description": "The name of the sender: you."},
+        {"name": "to", "type": "string", "optional": false, "description": "The recipient name, as you wrote it."},
+        {"name": "id", "type": "string", "optional": false, "description": "Your id."},
+        {"name": "xserver", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "source": "node/logic/chat.js:86-97",
+      "confirm": {"code": ["node/logic/chat.js:86-97", "languages/index.js:256-258"]}
+    }
+  },
+  "senders": [
+    {
+      "what": "`deliver_chat_message` with a recipient name: the `say` handler with `name`, or a private message from the web Communicator (`communicator_say`; then the sender gets no copy).",
+      "source": "node/logic/chat.js:75-113"
+    },
+    {"what": "The server of the recipient, through `server_eval_direct`.", "source": "node/logic/chat.js:104-109"}
+  ]
+}

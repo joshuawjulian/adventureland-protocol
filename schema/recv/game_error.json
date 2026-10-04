@@ -1,0 +1,63 @@
+{
+  "event": "game_error",
+  "to": "you: only the socket that sent the request",
+  "payload": {"type": "\"ERROR!\" | GameErrorText", "confirm": {"code": ["node/server.js:4964", "node/server.js:11587", "node/server.js:11640-11649", "node/server.js:11874", "node/server.js:11880", "node/server.js:11975", "languages/index.js:256-258"]}},
+  "example": "ERROR!",
+  "variants": [
+    {"name": "Exception", "type": "\"ERROR!\"", "when": "A handler threw an exception (the socket wrapper adds 16 to the call cost), or the login of `auth` failed with an exception.", "example": "ERROR!", "source": "node/server.js:4964, 11975", "confirm": {"code": ["node/server.js:4947-4966", "node/server.js:11971-11977"]}},
+    {
+      "name": "Server full",
+      "type": "GameErrorText",
+      "when": "`auth`: the server has `max_players` characters. The server checks before and after the login claim.",
+      "reply_to": ["auth"],
+      "example": {"message": "Can't accept more than 200 players at this time", "phrase": "server.game_error.capacity", "phrase_args": {"count": 200}},
+      "source": "node/server.js:11587, 11880",
+      "confirm": {"code": ["node/server.js:11586-11589", "node/server.js:11879-11882", "languages/index.js:256-258", "languages/en/server.js:657"]}
+    },
+    {
+      "name": "Claim failed",
+      "type": "GameErrorText",
+      "has": ["reason"],
+      "when": "`auth`: the login claim of the character failed. `phrase` is `server.game_error.poker_hand_active` when `reason` is `\"poker_hand_active\"`, else `server.game_error.authentication_failed`.",
+      "reply_to": ["auth"],
+      "example": {
+        "reason": "poker_hand_active",
+        "message": "Your poker hand is still running on another server. Wait for it to finish, or reconnect there.",
+        "phrase": "server.game_error.poker_hand_active",
+        "phrase_args": {"reason": "poker_hand_active"}
+      },
+      "source": "node/server.js:11639-11649",
+      "confirm": {"code": ["node/server.js:11608-11632", "node/server.js:11639-11649", "common:mongodb_functions.js:71-74", "common:mongodb_functions.js:89-96", "languages/index.js:256-258", "languages/en/server.js:659"], "note": "`tx` runs once (no `tries` argument): a thrown error that is not an `ex()` gives the reason `\"exception\"`."}
+    },
+    {
+      "name": "Characters not confirmed",
+      "type": "GameErrorText",
+      "when": "`auth`: `encouragement_login` refused the login.",
+      "reply_to": ["auth"],
+      "example": {"message": "Could not confirm your other characters. Please try again.", "phrase": "server.game_error.characters_unconfirmed", "phrase_args": {}},
+      "source": "node/server.js:11874",
+      "confirm": {"code": ["node/server.js:11873-11877", "languages/index.js:256-258", "languages/en/server.js:661"]}
+    }
+  ],
+  "types": {
+    "GameErrorText": {
+      "summary": "A localized `game_error` message.",
+      "extends": "LocalizedText",
+      "fields": [
+        {"name": "reason", "type": "\"no_character\" | \"password_issue\" | \"mainframe_issue\" | \"ingame\" | \"poker_hand_active\" | \"cancelled\" | \"exception\"", "optional": true, "description": "Only when the login claim failed: the reason from the claim (an `ex()` call in the claim transaction, or `\"exception\"` when it threw), also in `phrase_args`."}
+      ],
+      "example": {
+        "reason": "poker_hand_active",
+        "message": "Your poker hand is still running on another server. Wait for it to finish, or reconnect there.",
+        "phrase": "server.game_error.poker_hand_active",
+        "phrase_args": {"reason": "poker_hand_active"}
+      },
+      "source": "node/server.js:11639-11649",
+      "confirm": {"code": ["node/server.js:11640-11649", "node/server.js:11608-11632", "common:mongodb_functions.js:89-96", "languages/index.js:256-258"]}
+    }
+  },
+  "senders": [
+    {"what": "The socket wrapper: a handler threw an exception, and the call cost is still under the limit. Above the limit the socket gets `limitdcreport` and `disconnect_reason` instead.", "source": "node/server.js:4947-4966"},
+    {"what": "The `auth` handler: the server is full, the claim failed, the characters are not confirmed, or an exception.", "source": "node/server.js:11587, 11639-11649, 11874, 11880, 11975"}
+  ]
+}

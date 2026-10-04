@@ -1,0 +1,29 @@
+{
+  "event": "list_pvp",
+  "source": "node/server.js:12909-12918",
+  "request": {
+    "fields": [
+      {"name": "code", "type": "any", "optional": true, "coerce": "`data && data.code`: copied with no change", "description": "A value that the server copies into the reply as `code`. The handler accepts a `null` payload; then `code` is `null`."}
+    ],
+    "others": "ignored",
+    "example": {"code": 1},
+    "confirm": {"code": ["node/server.js:12917"]}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "pvp_list",
+      "when": "Always. The handler needs no character.",
+      "fields": [
+        {"name": "code", "type": "any", "optional": true, "description": "Your `code`. Absent from the JSON when you sent none."},
+        {"name": "list", "type": "[CharacterName, CharacterName][]", "optional": false, "description": "The most recent PvP kills on this server since it started, newest first: `[attacker, victim]` pairs, up to 200."}
+      ],
+      "example": {"code": 1, "list": [["Ranger", "Warrior"], ["Rogue", "Priest"]]},
+      "source": "node/server.js:12910-12917, 3021",
+      "confirm": {"code": ["node/server.js:12910-12917", "node/server.js:182-183", "node/server.js:3021"], "note": "No character check. `code` is `null` (present) for a `null` payload, absent for a payload without `code`"}
+    }
+  ],
+  "order": [
+    "`pvp_list` to you"
+  ]
+}

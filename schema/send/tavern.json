@@ -1,0 +1,68 @@
+{
+  "event": "tavern",
+  "source": "node/server.js:12867-12874",
+  "request": {
+    "fields": [
+      {"name": "event", "type": "\"info\"", "optional": false, "coerce": "compared with `==`", "description": "The only request. Any other value gets no reply."},
+      {"name": "game", "type": "any", "optional": true, "coerce": "tested for truthiness, then copied with no change", "description": "Copied into the reply as `game` when it is truthy. The server does not read it otherwise."},
+      {"name": "request_id", "type": "any", "optional": true, "coerce": "tested for truthiness", "description": "With it, the reply is a `game_response`. Without it, the reply is a `tavern` event."}
+    ],
+    "others": "ignored",
+    "example": {"event": "info", "game": "dice"},
+    "confirm": {"code": ["node/server.js:12868-12872"]}
+  },
+  "responses": [
+    {
+      "name": "Info",
+      "event": "game_response",
+      "when": "`event` is `\"info\"`.",
+      "with_request_id": {
+        "code": "data",
+        "extends": "GameResponseSuccess",
+        "fields": [
+          {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+          {"name": "place", "type": "\"tavern\"", "optional": false, "description": "The request."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`."},
+          {"name": "event", "type": "\"info\"", "optional": false, "description": "Always `\"info\"`."},
+          {"name": "edge", "type": "number", "optional": false, "description": "As in the `tavern` reply."},
+          {"name": "max", "type": "integer", "optional": false, "description": "As in the `tavern` reply."},
+          {"name": "game", "type": "any", "optional": true, "description": "Your `game`, when it is truthy."}
+        ],
+        "example": {"request_id": "t1", "event": "info", "edge": 2, "max": 384000000, "success": true, "response": "data", "place": "tavern"},
+        "confirm": {"code": ["node/server.js:12869-12871", "node/server_functions.js:3421-3446", "node/server_functions.js:1364-1396"], "note": "`success_response(\"data\", \"tavern\", ...)` adds `success`, `response` and `place`"}
+      },
+      "without_request_id": {
+        "event": "tavern",
+        "fields": [
+          {"name": "event", "type": "\"info\"", "optional": false, "description": "The kind of `tavern` event."},
+          {"name": "edge", "type": "number", "optional": false, "description": "`house_edge()`: the house cut in percent. 0.5 when the free gold of the house (`S.gold - house_debt()`) is above 5,000,000,000; 1 above 2,000,000,000; 1.5 above 1,000,000,000; else 2."},
+          {"name": "max", "type": "integer", "optional": false, "description": "`parseInt((S.gold - house_debt()) * 0.4)`: the largest net win that dice and wheel accept now. It can be negative."},
+          {"name": "game", "type": "any", "optional": true, "description": "Your `game`, when it is truthy."}
+        ],
+        "example": {"event": "info", "edge": 2, "max": 384000000, "game": "dice"},
+        "confirm": {"code": ["node/server.js:12869-12870", "node/server.js:12872", "node/server_functions.js:1364-1396"]}
+      },
+      "source": "node/server.js:12869-12872; node/server_functions.js:1364-1396"
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "tavern",
+    "intro": "The handler needs no character and does not check your map.",
+    "rows": [
+      {"when": "`event` is not `\"info\"`.", "replies": [], "source": "node/server.js:12868", "confirm": {"code": ["node/server.js:12867-12874"]}},
+      {
+        "when": "The server has no `tavern` instance. Then `tavern.dice` is not set, and `house_debt` throws when it reads `tavern.dice.players`.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "the wrapper error, +16 call cost"}
+        ],
+        "source": "node/server.js:184; node/server_functions.js:1314-1342, 1366",
+        "confirm": {"code": ["node/server.js:184", "node/server_functions.js:1310-1314", "node/server_functions.js:1366", "node/server.js:4947-4966"], "note": "`tavern` stays `{}` when `init_tavern` finds no instance; the wrapper's catch adds 16 call cost and emits `game_error`"}
+      }
+    ]
+  },
+  "order": [
+    "`tavern` `{event: \"info\", ...}` to you, or `game_response` with the same fields when the request has `request_id`"
+  ]
+}

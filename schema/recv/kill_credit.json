@@ -1,0 +1,17 @@
+{
+  "event": "kill_credit",
+  "to": "you: each character that gets credit for the kill",
+  "payload": {
+    "fields": [
+      {"name": "mtype", "type": "string", "optional": false, "description": "The monster type, a key of `G.monsters`."}
+    ],
+    "confirm": {"code": ["node/server.js:2738-2740", "node/server.js:2790-2792", "node/server.js:2831-2833", "node/logic/cave_of_many_dreams.js:1269-1276"]}
+  },
+  "example": {"mtype": "goo"},
+  "senders": [
+    {"what": "`issue_monster_awards`, for a cooperative monster: each online character with a share of the points above 0.0025. It comes before the drops and the XP.", "source": "node/server.js:2717-2741"},
+    {"what": "`issue_monster_award`, when the character has no party: the character that the monster targets. That is the killer only if the monster had no target, or on servers with `B.free_last_hits` (hardcore, dungeon).", "source": "node/server.js:2778-2792"},
+    {"what": "`issue_monster_award`, when that character has a party: each online member of the party, on any map.", "source": "node/server.js:2825-2833"},
+    {"what": "A kill in the Cave of Many Dreams: each cave player in the instance, within 800 px of the monster.", "source": "node/logic/cave_of_many_dreams.js:1269-1276"}
+  ]
+}

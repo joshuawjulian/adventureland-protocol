@@ -1,0 +1,25 @@
+{
+  "event": "pvp_list",
+  "to": "you: only the socket that sent `list_pvp`",
+  "payload": {
+    "fields": [
+      {"name": "code", "type": "any", "optional": true, "description": "A copy of `code` from the request (`data && data.code`). Absent when the request has no `code`, `null` when the request data is `null`."},
+      {"name": "list", "type": "PvpListKill[]", "optional": false, "description": "Up to 200 PvP kills on this server since it started, newest first."}
+    ],
+    "confirm": {"code": ["node/server.js:12909-12918", "node/server.js:182-183", "node/server.js:3021"]}
+  },
+  "example": {"code": true, "list": [["Warrior", "Ranger"], ["Rogue", "Merchant"]]},
+  "types": {
+    "PvpListKill": {
+      "type": "[CharacterName, CharacterName]",
+      "summary": "One PvP kill in `pvp_list`: `[victor, victim]`.",
+      "description": "`issue_player_award` adds it to a ring of 200 entries (node/server.js:3021). The victor is the character with the `block` of the victim, if any, else the killer. Kills in `duelland` and team kills in `abtesting` return before this line, so they are not in the list (node/server.js:2934-2947).",
+      "example": ["Warrior", "Ranger"],
+      "source": "node/server.js:3021",
+      "confirm": {"code": ["node/server.js:3021", "node/server.js:2902-2909", "node/server.js:4503-4508", "node/server.js:2933-2947"]}
+    }
+  },
+  "senders": [
+    {"what": "The `list_pvp` handler.", "source": "node/server.js:12909-12918"}
+  ]
+}

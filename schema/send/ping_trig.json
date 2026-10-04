@@ -1,0 +1,20 @@
+{
+  "event": "ping_trig",
+  "source": "node/server.js:5126-5128",
+  "request": {
+    "type": "any",
+    "note": "Any payload: an object, a string, a number or `null`. The server does not read it and sends it back unchanged in `ping_ack`. A missing payload becomes `{}` (node/server.js:4893-4895).",
+    "example": {"id": 17}, "confirm": {"code": ["node/server.js:4893-4895", "node/server.js:5126-5128"]}
+  },
+  "responses": [
+    {
+      "name": "Echo",
+      "event": "ping_ack",
+      "when": "Always, at once. `ping_trig` also passes while a cave conversation pauses your instance.",
+      "type": "any",
+      "example": {"id": 17},
+      "source": "node/server.js:5127", "confirm": {"code": ["node/server.js:5127", "node/logic/instance_pause.js:69-77"]}
+    }
+  ],
+  "order": ["`ping_ack` with your payload"]
+}

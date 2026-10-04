@@ -1,0 +1,175 @@
+{
+  "event": "disappear",
+  "to": "the clients that have the entity, plus the clients in the instance that can see it (`remove_entity_emit`). The `outside` and `not_there` forms go to one socket; `left` goes to the instance",
+  "payload": {"type": "DisappearOutside | DisappearTransport | DisappearMagiport | DisappearInvis | DisappearReason | DisappearNotThere | DisappearRemoval | DisappearBare", "confirm": {"code": ["node/server_functions.js:3834-3854"], "note": "Every emit of `disappear` is listed in `senders`; each variant cites the lines that build its object. `remove_entity_emit` sends the object unchanged"}},
+  "variants": [
+    {
+      "name": "Outside",
+      "type": "DisappearOutside",
+      "has": ["outside"],
+      "when": "The entity left the vision box of the receiver, died or became invisible. Also before each `type: \"all\"` `entities` frame, for each entity that is not in the new frame.",
+      "example": {"id": "48213", "outside": true},
+      "source": "node/server.js:13699, 13726; node/server_functions.js:3699",
+      "confirm": {"code": ["node/server.js:13697-13700", "node/server.js:13724-13727", "node/server_functions.js:3696-3700"]}
+    },
+    {
+      "name": "Transport",
+      "type": "DisappearTransport",
+      "has": ["reason"],
+      "when": "A character or an NPC moved to another place (`transport_player_to`, `transport_npc_to`).",
+      "example": {"id": "Wizard", "reason": "transport", "to": "winterland", "s": 0, "effect": 1},
+      "source": "node/server.js:4652-4660; node/server_functions.js:1761",
+      "confirm": {"code": ["node/server.js:4652-4660", "node/server_functions.js:1761"]}
+    },
+    {
+      "name": "Magiport",
+      "type": "DisappearMagiport",
+      "has": ["reason"],
+      "when": "A monster moved to another place (`transport_monster_to`): a monster skill, an event monster or a cave actor.",
+      "example": {"id": "48213", "effect": "magiport", "to": "main", "s": 0, "reason": "magiport"},
+      "source": "node/server.js:4596-4603",
+      "confirm": {"code": ["node/server.js:4596-4603"]}
+    },
+    {
+      "name": "Invisible",
+      "type": "DisappearInvis",
+      "has": ["invis"],
+      "when": "A rogue used `invis`.",
+      "example": {"id": "Rogue", "invis": true, "reason": "invis"},
+      "source": "node/server.js:10122",
+      "confirm": {"code": ["node/server.js:10122"]}
+    },
+    {
+      "name": "Disconnect or left",
+      "type": "DisappearReason",
+      "has": ["reason"],
+      "when": "`\"disconnect\"`: a character disconnected. `\"left\"`: an event NPC (the anniversary baker) left; the server sends it to every player in the instance (`instance_emit`).",
+      "example": {"id": "Wizard", "reason": "disconnect"},
+      "source": "node/server.js:13087; node/server_functions.js:2330",
+      "confirm": {"code": ["node/server.js:13087", "node/server_functions.js:2330"]}
+    },
+    {
+      "name": "Not there",
+      "type": "DisappearNotThere",
+      "has": ["reason"],
+      "when": "The target of a `skill` (or `attack`, `heal`) does not exist, is invisible or is too far. Only to your socket, instead of a `game_response`.",
+      "reply_to": ["skill", "attack"],
+      "example": {"id": "48213", "place": "attack", "reason": "not_there"},
+      "source": "node/server.js:9920, 9924",
+      "confirm": {"code": ["node/server.js:9900-9925"]}
+    },
+    {
+      "name": "Removal",
+      "type": "DisappearRemoval",
+      "has": ["luckm"],
+      "when": "`remove_monster` with `method: \"disappear\"` (an event monster expired, a summoned monster, an irregular monster that the server moves) or with `silent` (the instance closed). Same fields as `death`.",
+      "example": {"id": "48213", "luckm": 1},
+      "source": "node/server.js:13395-13401",
+      "confirm": {"code": ["node/server.js:13350-13357", "node/server.js:13385-13401", "node/server.js:13870", "node/server.js:14612", "node/server.js:14626", "node/server_functions.js:2011", "node/server_functions.js:2497", "node/server_functions.js:3834-3854"]}
+    },
+    {
+      "name": "Bare",
+      "type": "DisappearBare",
+      "when": "A pet that `whistle` calls, or an event monster (Slenderman, the tiger) that the server moves to another map. No `reason`.",
+      "example": {"id": "48213"},
+      "source": "node/server.js:12901; node/server_functions.js:2425, 2470",
+      "confirm": {"code": ["node/server.js:12901", "node/server_functions.js:2425", "node/server_functions.js:2470"]}
+    }
+  ],
+  "types": {
+    "DisappearOutside": {
+      "summary": "`disappear`: the entity is out of view of this receiver.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The entity id: a monster id or a character name."},
+        {"name": "outside", "type": "true", "optional": false, "description": "The entity can still exist. The receiver does not see it now."}
+      ],
+      "example": {"id": "48213", "outside": true},
+      "confirm": {"code": ["node/server.js:13699", "node/server.js:13726", "node/server_functions.js:3699"]}
+    },
+    "DisappearTransport": {
+      "summary": "`disappear`: a character or an NPC moved to another place.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The character. An NPC id starts with `$`."},
+        {"name": "reason", "type": "\"transport\"", "optional": false, "description": "The entity moved."},
+        {"name": "to", "type": "MapName", "optional": true, "description": "Characters only: the destination instance. Absent when the character is invisible or stealthed, or when the destination is not a normal map (a private instance)."},
+        {"name": "s", "type": "integer | number[]", "optional": true, "description": "Characters only, with `to`: the spawn index on the destination map, or the `[x, y]` (or `[x, y, direction, scatter]`) point. Absent when the code gives no spawn (node/server.js:4653-4656)."},
+        {"name": "effect", "type": "0 | 1 | \"blink\" | \"magiport\"", "optional": true, "description": "The effect to draw. A character has it only when there is an effect: `1` (town, respawn, cave doors), `\"blink\"` or `\"magiport\"`. An NPC always has `1` or `0`."}
+      ],
+      "example": {"id": "Wizard", "reason": "transport", "to": "winterland", "s": 0, "effect": 1},
+      "confirm": {"code": ["node/server.js:4651-4660", "node/server_functions.js:1761"]}
+    },
+    "DisappearMagiport": {
+      "summary": "`disappear`: a monster moved to another place.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The monster id."},
+        {"name": "effect", "type": "\"magiport\"", "optional": false, "description": "The effect to draw."},
+        {"name": "to", "type": "MapName", "optional": false, "description": "The destination map."},
+        {"name": "s", "type": "0", "optional": false, "description": "Always `0`."},
+        {"name": "reason", "type": "\"magiport\"", "optional": false, "description": "The monster moved."}
+      ],
+      "example": {"id": "48213", "effect": "magiport", "to": "main", "s": 0, "reason": "magiport"},
+      "confirm": {"code": ["node/server.js:4596-4603"]}
+    },
+    "DisappearInvis": {
+      "summary": "`disappear`: a character became invisible.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "invis", "type": "true", "optional": false, "description": "The character became invisible."},
+        {"name": "reason", "type": "\"invis\"", "optional": false, "description": "The `invis` skill."}
+      ],
+      "example": {"id": "Rogue", "invis": true, "reason": "invis"},
+      "confirm": {"code": ["node/server.js:10122"]}
+    },
+    "DisappearReason": {
+      "summary": "`disappear`: a character disconnected, or an event NPC left.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The character or the NPC (its id starts with `$`)."},
+        {"name": "reason", "type": "\"disconnect\" | \"left\"", "optional": false, "description": "Why the entity is gone."}
+      ],
+      "example": {"id": "Wizard", "reason": "disconnect"},
+      "confirm": {"code": ["node/server.js:13087", "node/server_functions.js:2330"]}
+    },
+    "DisappearNotThere": {
+      "summary": "`disappear`: the target of a skill is not there.",
+      "fields": [
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` of the request, unchanged: a number if the request sent a number."},
+        {"name": "place", "type": "SkillName", "optional": false, "description": "The skill of the request (`name`)."},
+        {"name": "reason", "type": "\"not_there\"", "optional": false, "description": "The target does not exist, is invisible or is farther than `B.max_vision`."}
+      ],
+      "example": {"id": "48213", "place": "attack", "reason": "not_there"},
+      "confirm": {"code": ["node/server.js:9900-9925"]}
+    },
+    "DisappearRemoval": {
+      "summary": "`disappear`: `remove_monster` removed a monster without a death.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The monster id."},
+        {"name": "luckm", "type": "number", "optional": false, "description": "The luck multiplier of the character that the monster targeted, or 1."},
+        {"name": "points", "type": "Record<string, number>", "optional": true, "description": "Only for a cooperative monster: the contribution points, keyed by character name."}
+      ],
+      "example": {"id": "48213", "luckm": 1},
+      "confirm": {"code": ["node/server.js:13385-13401"]}
+    },
+    "DisappearBare": {
+      "summary": "`disappear` with only the id: a pet or an event monster moved.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The monster id."}
+      ],
+      "example": {"id": "48213"},
+      "confirm": {"code": ["node/server.js:12901", "node/server_functions.js:2425", "node/server_functions.js:2470"]}
+    }
+  },
+  "senders": [
+    {"what": "The tick of the instance (`send_xy_updates`): an entity left the view of the receiver", "source": "node/server.js:13697-13700, 13724-13727"},
+    {"what": "`send_all_xy` (`send_updates`, `loaded`, `new_map`, `start`): entities that are not in the new frame", "source": "node/server_functions.js:3698-3700"},
+    {"what": "`transport_player_to`: `transport`, `town`, `enter`, `leave`, `respawn`, `join`, `duel`, the `magiport` and `blink` skills, jail, cave doors, bank entry and exit", "source": "node/server.js:4652-4660"},
+    {"what": "`transport_npc_to`: an NPC moved to another instance", "source": "node/server_functions.js:1761"},
+    {"what": "`transport_monster_to`: a monster moved", "source": "node/server.js:4596-4603"},
+    {"what": "The `skill` handler: `invis`", "source": "node/server.js:10122"},
+    {"what": "The `skill` handler: the target is not there", "source": "node/server.js:9920, 9924"},
+    {"what": "The `whistle` handler: the pet moves to you", "source": "node/server.js:12901"},
+    {"what": "The `disconnect` handler", "source": "node/server.js:13087"},
+    {"what": "`remove_monster` with `method: \"disappear\"` or `silent`", "source": "node/server.js:13401"},
+    {"what": "The event loop: an event NPC left", "source": "node/server_functions.js:2330"},
+    {"what": "The event loop: Slenderman or the tiger moved to another map", "source": "node/server_functions.js:2425, 2470"}
+  ]
+}

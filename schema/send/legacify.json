@@ -1,0 +1,31 @@
+{
+  "event": "legacify",
+  "source": "node/server.js:13028-13039",
+  "request": {
+    "fields": [],
+    "note": "No payload. The handler reads no field.",
+    "confirm": {"code": ["node/server.js:13028-13039"], "note": "The handler never reads `data`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "player",
+      "when": "You have a character and you are alive. No item changes: the item test starts with `0 &&`. There is no `game_response`.",
+      "summary": "Your state (`resend \"reopen\"`), with no change.",
+      "example": {"id": "Merlin", "reopen": true},
+      "example_trimmed": true,
+      "source": "node/server.js:13033-13038",
+      "confirm": {"code": ["node/server.js:13033-13038", "node/server.js:4550-4594"], "note": "The loop test starts with `0 &&`, so no item changes; `\"reopen\"` adds `reopen: true` and does not bump `cid`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "legacify",
+    "rows": [
+      {"when": "No character, or you are dead (`player.rip`).", "replies": [], "source": "node/server.js:13030-13032", "confirm": {"code": ["node/server.js:13030-13032"]}}
+    ]
+  },
+  "order": [
+    "`player` with `reopen: true` to you (no `game_response`)"
+  ]
+}

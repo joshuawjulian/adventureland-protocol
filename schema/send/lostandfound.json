@@ -1,0 +1,115 @@
+{
+  "event": "lostandfound",
+  "source": "node/server.js:7974-7996",
+  "request": {
+    "type": "\"info\" | LostandfoundQuery",
+    "note": "The bare string `\"info\"` asks for the donated gold total of the server (the `Info` reply). An object, or no payload, asks for the list of lost items. A string has no `request_id`, so the replies to `\"info\"` are those without `request_id`.",
+    "example": {"request_id": "r1"},
+    "confirm": {"code": ["node/server.js:7976", "node/server.js:7981"], "note": "The handler compares the payload with `\"info\"` and reads `request_id`"}
+  },
+  "responses": [
+    {
+      "name": "Info",
+      "event": "game_response",
+      "code": "lostandfound_info",
+      "when": "The payload is the string `\"info\"` and you have a character. The server sends it before the donation and distance checks.",
+      "fields": [
+        {"name": "response", "type": "\"lostandfound_info\"", "optional": false, "description": "The code."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gold that players donated on this server (`S.gold`)."}
+      ],
+      "example": {"response": "lostandfound_info", "gold": 912400000},
+      "source": "node/server.js:7981-7983",
+      "confirm": {"code": ["node/server.js:7981-7983"]}
+    },
+    {
+      "name": "List",
+      "event": "game_response",
+      "when": "The payload is not `\"info\"`, and all checks pass.",
+      "with_request_id": {
+        "code": "data",
+        "extends": "GameResponseSuccess",
+        "fields": [
+          {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+          {"name": "place", "type": "\"lostandfound\"", "optional": false, "description": "The request."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+          {"name": "items", "type": "ResaleItem[]", "optional": false, "description": "The same list, in reverse order."}
+        ],
+        "example": {
+          "request_id": "r1",
+          "items": [
+            {"name": "hpbelt", "level": 1, "rid": "x8PwN"},
+            {"name": "staff", "level": 6, "rid": "Qe2Lm"}
+          ],
+          "success": true,
+          "response": "data",
+          "place": "lostandfound"
+        }
+      },
+      "without_request_id": {
+        "event": "lostandfound",
+        "type": "ResaleItem[]",
+        "summary": "The lost items (`cfound`), in the order of `S.found`. Each has a `rid` for `sbuy` with `f: true`.",
+        "example": [{"name": "staff", "level": 6, "rid": "Qe2Lm"}, {"name": "hpbelt", "level": 1, "rid": "x8PwN"}]
+      },
+      "source": "node/server.js:7993-7995",
+      "confirm": {"code": ["node/server.js:7993-7995", "node/server_functions.js:645", "node/server_functions.js:667-668", "node/server_functions.js:3191", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "lostandfound",
+    "rows": [
+      {
+        "when": "No character. The `\"info\"` payload has no `request_id`, so it gets nothing.",
+        "code": "invalid",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"}
+          ]
+        },
+        "without_request_id": {"none": true},
+        "source": "node/server.js:7977-7980",
+        "confirm": {"code": ["node/server.js:7977-7980", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You did not donate 1,000,000 gold or more at one time on this server since you logged in (`player.donation`, see `donate`).",
+        "code": "lostandfound_donate",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "reason", "type": "\"donation_required\"", "optional": false, "description": "Why."}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:7984-7988",
+        "confirm": {"code": ["node/server.js:7984-7988", "node/server.js:8648", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You are more than 500 px from the `lostandfound` NPC on `woffice`.",
+        "code": "distance",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:7989-7992",
+        "confirm": {"code": ["node/server.js:7989-7992", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "order": ["without `request_id`: `lostandfound` to you; with `request_id`: `game_response` `data` to you"],
+  "types": {
+    "LostandfoundQuery": {
+      "summary": "The object payload of `lostandfound`: a request for the list of lost items.",
+      "description": "The server ignores other fields. With no payload (`socket.emit(\"lostandfound\")`), the server acts as for an object without `request_id`.",
+      "fields": [
+        {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. The replies become `game_response` objects that carry it."}
+      ],
+      "example": {"request_id": "r1"},
+      "source": "node/server.js:7976",
+      "confirm": {"code": ["node/server.js:7976"]}
+    }
+  }
+}

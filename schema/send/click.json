@@ -1,0 +1,21 @@
+{
+  "event": "click",
+  "source": "node/server.js:10999-11002",
+  "request": {
+    "fields": [],
+    "note": "No payload. The server ignores any data.", "confirm": {"code": ["node/server.js:10999-11002"], "note": "The handler never reads `data`"}
+  },
+  "responses": [
+    {
+      "name": "Deprecated",
+      "event": "game_log",
+      "when": "Always. The handler does nothing else.",
+      "type": "LocalizedText",
+      "example": {"message": "'click' method is deprecated.", "phrase": "server.game_log.click_method_is_deprecated", "phrase_args": {}},
+      "source": "node/server.js:11001", "confirm": {"code": ["node/server.js:11001", "languages/index.js:256-258", "languages/en/server.js:170"]}
+    }
+  ],
+  "order": [
+    "`game_log` (a `LocalizedText`) to you"
+  ]
+}

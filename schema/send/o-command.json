@@ -1,0 +1,34 @@
+{
+  "event": "o:command",
+  "source": "node/server.js:5066-5076",
+  "request": {
+    "type": "any",
+    "note": "Any payload (an object, a string, a number). The server does not read it: it sends it with no change to the socket of the followed character. Observer sockets only.",
+    "example": {"command": "1+1"},
+    "confirm": {"code": ["node/server.js:5066-5076", "node/server.js:4893-4895"], "note": "The wrapper turns an `undefined` payload into `{}`"}
+  },
+  "responses": [
+    {"name": "Success", "kind": "none", "when": "All checks pass. The payload goes to the followed character as `code_eval` (see below); the observer gets nothing.", "source": "node/server.js:5075", "confirm": {"code": ["node/server.js:5075"]}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "o:command",
+    "intro": "No check sends a reply.",
+    "rows": [
+      {"when": "The socket is not an observer (no `observers[socket.id]`).", "replies": [], "source": "node/server.js:5067-5070", "confirm": {"code": ["node/server.js:5067-5070"]}},
+      {"when": "The observer follows no character, or the character disconnected (`player.dc`). A broadcast observer (`broadcast=1` query) follows no character, so it always ends here (node/test/observer_broadcast.test.js:102).", "replies": [], "source": "node/server.js:5071-5074", "confirm": {"code": ["node/server.js:5071-5074", "node/server.js:5041-5043", "node/server.js:4989-4996"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "code_eval",
+      "to": "the socket of the followed character",
+      "when": "All checks pass. The payload is your payload, with no change (`{}` when you sent none).",
+      "type": "any",
+      "example": {"command": "1+1"},
+      "source": "node/server.js:5075",
+      "confirm": {"code": ["node/server.js:5075", "node/server.js:4893-4895"]}
+    }
+  ],
+  "order": ["`code_eval` with your payload to the character (nothing to you)"]
+}

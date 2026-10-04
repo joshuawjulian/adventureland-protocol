@@ -1,0 +1,148 @@
+{
+  "event": "bless_server",
+  "source": "node/server.js:8231-8325",
+  "request": {
+    "fields": [
+      {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. The server then also sends a `bless_result` reply with it."}
+    ],
+    "others": "ignored",
+    "example": {"request_id": "r1"},
+    "confirm": {"code": ["node/server.js:8236", "node/server.js:8243"], "note": "The handler reads only `request_id`"}
+  },
+  "responses": [
+    {
+      "name": "Started",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. The server starts the payment of 1,200 shells in the account database. The result comes later.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"bless_server\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the result comes later."},
+        {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": false, "in_progress": true, "response": "data", "place": "bless_server"},
+      "source": "node/server.js:8324",
+      "confirm": {"code": ["node/server.js:8324", "node/server_functions.js:3421-3446"]}
+    },
+    {"name": "Blessed", "event": "game_response", "code": "blessed", "when": "Later: the payment succeeds. The server sets `S.blessed_minutes` to 4,320 and `S.blessed_by` to your name. A blessing that runs already restarts. Not sent if your socket has no character now.", "type": "\"blessed\"", "example": "blessed", "source": "node/server.js:8235, 8295", "confirm": {"code": ["node/server.js:8233-8235", "node/server.js:8288-8289", "node/server.js:8295"], "live_needed": "Sent after an async database transaction on the account; needs a capture with 1,200 shells spent"}},
+    {
+      "name": "Result",
+      "event": "game_response",
+      "code": "bless_result",
+      "when": "Later, right after `blessed` or `blessed_fail`, only when the request has a truthy `request_id`.",
+      "with_request_id": {
+        "fields": [
+          {"name": "response", "type": "\"bless_result\"", "optional": false, "description": "The code."},
+          {"name": "result", "type": "\"blessed\" | \"blessed_fail\"", "optional": false, "description": "The result."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+          {"name": "cevent", "type": "\"blessed\" | \"blessed_fail\"", "optional": false, "description": "The same as `result`."},
+          {"name": "success", "type": "true", "optional": true, "description": "On success."},
+          {"name": "failed", "type": "true", "optional": true, "description": "On failure."},
+          {"name": "reason", "type": "\"nouser\" | \"not_enough\" | \"exception\" | \"coms_failure\" | \"purchase_failed\"", "optional": true, "description": "On failure: `\"nouser\"` (no account), `\"not_enough\"` (fewer than 1,200 shells), `\"exception\"` (a database error in the transaction, common:mongodb_functions.js:86-95), `\"coms_failure\"` (another error), or `\"purchase_failed\"` (a failure without a reason)."},
+          {"name": "cost", "type": "integer", "optional": false, "description": "Always 1200."},
+          {"name": "blessed_by", "type": "CharacterName", "optional": true, "description": "On success: your name."},
+          {"name": "minutes", "type": "integer", "optional": true, "description": "On success: `S.blessed_minutes`, 4,320."}
+        ],
+        "example": {"response": "bless_result", "result": "blessed", "request_id": "r1", "cevent": "blessed", "success": true, "cost": 1200, "blessed_by": "Wizard", "minutes": 4320}
+      },
+      "without_request_id": {"none": true},
+      "source": "node/server.js:8236-8247, 8295",
+      "confirm": {"code": ["node/server.js:8233-8249", "node/server.js:8264", "node/server.js:8282", "node/server.js:8295", "node/server.js:8321"], "live_needed": "Sent after an async database transaction on the account"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "bless_server",
+    "rows": [
+      {"when": "No character, the character is in the bank, or the server has `hardcore` or `test` gameplay.", "code": "cant_in_bank", "source": "node/server.js:8250-8252", "confirm": {"code": ["node/server.js:8250-8252", "node/server_functions.js:3393-3419"]}},
+      {"when": "A blessing payment of this character runs already (`player.blessing`).", "code": "in_progress", "source": "node/server.js:8254-8256", "confirm": {"code": ["node/server.js:8254-8256", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "Later, after the `data` reply: the payment fails (no account, too few shells, or the transaction fails). Not sent if your socket has no character now.",
+        "replies": [
+          {
+            "event": "game_log",
+            "example": {"message": "Purchase failed", "phrase": "server.game_log.purchase_failed", "phrase_args": {}}
+          },
+          {"code": "blessed_fail", "form": "bare"},
+          {
+            "code": "bless_result",
+            "with_request_id": {
+              "form": "plain",
+              "extra": [
+                {"name": "result", "type": "\"blessed_fail\"", "optional": false, "description": "The result."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+                {"name": "cevent", "type": "\"blessed_fail\"", "optional": false, "description": "The same as `result`."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"nouser\" | \"not_enough\" | \"exception\" | \"purchase_failed\"", "optional": false, "description": "Why: `\"nouser\"` (no account), `\"not_enough\"` (fewer than 1,200 shells), `\"exception\"` (a database error in the transaction, common:mongodb_functions.js:86-95), or `\"purchase_failed\"` (a failure without a reason).", "example": "not_enough"},
+                {"name": "cost", "type": "integer", "optional": false, "description": "Always 1200.", "example": 1200}
+              ]
+            },
+            "without_request_id": {"none": true}
+          }
+        ],
+        "source": "node/server.js:8261-8265, 8280-8283",
+        "confirm": {"code": ["node/server.js:8233-8249", "node/server.js:8260-8266", "node/server.js:8267-8284", "common:mongodb_functions.js:71-74", "common:mongodb_functions.js:86-95", "languages/index.js:256-258"]}
+      },
+      {
+        "when": "Later: the payment code throws an error. Not sent if your socket has no character now. There is no `game_log` here.",
+        "replies": [
+          {"code": "blessed_fail", "form": "bare"},
+          {
+            "code": "bless_result",
+            "with_request_id": {
+              "form": "plain",
+              "extra": [
+                {"name": "result", "type": "\"blessed_fail\"", "optional": false, "description": "The result."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+                {"name": "cevent", "type": "\"blessed_fail\"", "optional": false, "description": "The same as `result`."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"coms_failure\"", "optional": false, "description": "Always `\"coms_failure\"` here.", "example": "coms_failure"},
+                {"name": "cost", "type": "integer", "optional": false, "description": "Always 1200.", "example": 1200}
+              ]
+            },
+            "without_request_id": {"none": true}
+          }
+        ],
+        "source": "node/server.js:8318-8321",
+        "confirm": {"code": ["node/server.js:8233-8249", "node/server.js:8318-8322"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "game_log",
+      "to": "you",
+      "when": "Later: the payment succeeds, before `blessed`.",
+      "type": "LocalizedText",
+      "example": {"message": "Spent 1,200 shells", "phrase": "server.game_log.spent_shells", "phrase_args": {"amount": "1,200"}},
+      "source": "node/server.js:8291-8294",
+      "confirm": {"code": ["node/server.js:8291-8294", "languages/index.js:256-258"]}
+    },
+    {"event": "player", "to": "you", "when": "Later: the payment succeeds, after `blessed` (and `bless_result`).", "summary": "Your state with `reopen: true` and the new `cash`.", "source": "node/server.js:8297", "confirm": {"code": ["node/server.js:8297", "node/server.js:4550-4594"]}},
+    {"event": "player", "to": "every character on the server without `patronsgrace`", "when": "Later: the payment succeeds. `bless_loop` gives every character the condition `patronsgrace` (`f`: your name) and sends the update to those that did not have it. It runs again each minute.", "summary": "The state of that character with `patronsgrace` in `s`.", "source": "node/server.js:8298, 15694-15718", "confirm": {"code": ["node/server.js:8298", "node/server.js:15694-15718", "node/server.js:4550-4594"]}},
+    {
+      "event": "server_message",
+      "to": "everyone on every server of the realm",
+      "when": "Later: the payment succeeds.",
+      "type": "LocalizedText",
+      "example": {
+        "color": "#8F70D8",
+        "message": "Wizard blessed EU I",
+        "phrase": "server.server_message.blessed",
+        "phrase_args": {"player": "Wizard", "region": "EU", "server_name": "I"},
+        "sname": "EU I"
+      },
+      "source": "node/server.js:8302-8309; node/server_functions.js:3489-3492",
+      "confirm": {"code": ["node/server.js:8302-8309", "node/server_functions.js:3489-3492", "node/server_functions.js:3495-3496", "languages/index.js:256-258"]}
+    }
+  ],
+  "order": [
+    "now: `game_response` `data` with `in_progress: true` to you",
+    "later: `game_log` to you",
+    "`game_response` `blessed` (a bare string) to you, then `bless_result` with `request_id`",
+    "`player` to you, and to each character that gets `patronsgrace`",
+    "`server_message` to every server of the realm"
+  ]
+}

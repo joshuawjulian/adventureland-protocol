@@ -1,0 +1,51 @@
+{
+  "event": "imove",
+  "source": "node/server.js:9220-9256",
+  "request": {
+    "fields": [
+      {"name": "a", "type": "InventoryIndex", "optional": true, "default": 0, "coerce": "`max(0, parseInt(a) || 0)`, so a missing or non-numeric value is slot 0", "description": "The first slot. If the two items stack, this slot gets the stack."},
+      {"name": "b", "type": "InventoryIndex", "optional": true, "default": 0, "coerce": "`max(0, parseInt(b) || 0)`, so a missing or non-numeric value is slot 0", "description": "The second slot. If the two items stack, this slot becomes empty."}
+    ],
+    "others": "ignored",
+    "example": {"a": 0, "b": 5}, "confirm": {"code": ["node/server.js:9225-9226"], "note": "The handler reads only `a` and `b`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. If the two items can stack (`can_stack`: same stackable item, the same title unless G marks the title `stackable`, the same `data` for a `cxjar`, the same PvP flag, neither locked nor on a stand, and the total fits in one stack), slot `a` gets the sum and slot `b` becomes empty. Else, the two slots swap. A move to an empty slot is a swap.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"imove\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "imove"},
+      "source": "node/server.js:9243-9255", "confirm": {"code": ["node/server.js:9243-9255", "js/old_common_functions.js:407-419", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "imove",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9222-9224", "confirm": {"code": ["node/server.js:9221-9224"]}},
+      {"when": "`a` and `b` are the same slot after the conversion.", "code": "invalid", "source": "node/server.js:9227-9229", "confirm": {"code": ["node/server.js:9225-9229", "node/server_functions.js:3393-3419"]}},
+      {"when": "The higher of the two slots is not below `isize` (42) and not below the length of `items`.", "code": "invalid", "source": "node/server.js:9233-9235", "confirm": {"code": ["node/server.js:9230-9235", "node/server_functions.js:3393-3419"]}},
+      {"when": "One of the two slots holds a placeholder (an upgrade or a compound runs on it).", "code": "item_placeholder", "source": "node/server.js:9237-9242", "confirm": {"code": ["node/server.js:9237-9242", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true` and the two slots changed in `items`.",
+      "source": "node/server.js:9254", "confirm": {"code": ["node/server.js:9252-9254", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`player` to you",
+    "`game_response` `data` to you"
+  ]
+}

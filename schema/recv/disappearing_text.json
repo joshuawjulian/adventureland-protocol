@@ -1,0 +1,93 @@
+{
+  "event": "disappearing_text",
+  "to": "clients and observers near the entity (`xy_emit`) when the call sets `xy`, else only the socket that the call gives. Each sender below says which",
+  "payload": {"type": "DisappearingTextHelper | DisappearingTextDirect", "confirm": {"code": ["node/server_functions.js:3986-3996", "node/server.js:3059-3064", "node/server.js:3096-3101", "node/server.js:3108-3113", "node/server.js:3137-3142", "node/server.js:3148-3153", "node/server.js:11382-11387", "node/server.js:11544-11549", "node/server.js:16026-16031", "node/server_functions.js:2593-2598"], "note": "The helper's four emits plus every direct emit; no other code emits `disappearing_text`"}},
+  "example": {
+    "message": "IMMUNE!",
+    "phrase": "server.floating.immune",
+    "phrase_args": {},
+    "x": 512.4,
+    "y": -126,
+    "id": "48213",
+    "args": {"c": "evade", "from": "Wizard"},
+    "nv": 1
+  },
+  "variants": [
+    {
+      "name": "Helper",
+      "type": "DisappearingTextHelper",
+      "has": ["id"],
+      "when": "The `disappearing_text` helper: almost all call sites.",
+      "example": {"message": "+5,000", "x": -120.5, "y": 380, "id": "Wizard", "args": {"c": "#5DAC40", "s": "cash", "sz": "huge"}},
+      "source": "node/server_functions.js:3956-3996",
+      "confirm": {"code": ["node/server_functions.js:3956-3996", "languages/index.js:256-258"], "note": "A localized text comes from `localization.message` (`message`, `phrase`, `phrase_args`); a plain text is `{message: text}`"}
+    },
+    {
+      "name": "Direct",
+      "type": "DisappearingTextDirect",
+      "when": "Direct emits for rewards to one character: PvP gold and XP, chest gold, marketing XP, the hardcore gold of the `woffice` map.",
+      "example": {"message": "+1200", "x": 300, "y": -50, "args": {"color": "+gold", "size": "large"}},
+      "source": "node/server.js:3096-3101",
+      "confirm": {"code": ["node/server.js:3059-3064", "node/server.js:3096-3101", "node/server.js:3108-3113", "node/server.js:3137-3142", "node/server.js:3148-3153", "node/server.js:11382-11387", "node/server.js:11544-11549", "node/server.js:16026-16031", "node/server_functions.js:2593-2598"]}
+    }
+  ],
+  "types": {
+    "DisappearingTextHelper": {
+      "summary": "A floating text from the `disappearing_text` helper.",
+      "description": "With a localized text, the payload is the `LocalizedText` plus `x`, `y`, `id` and `args`. With a plain text, `message` is the text.",
+      "fields": [
+        {"name": "message", "type": "string | number", "optional": false, "description": "The text. A number in one case: a potion that takes HP (`snakeoil`) sends the amount as a number, for example `-100` (node/server.js:7849)."},
+        {"name": "phrase", "type": "string", "optional": true, "description": "Only for a localized text: the phrase key."},
+        {"name": "phrase_args", "type": "object", "optional": true, "description": "Only for a localized text: the values for the phrase."},
+        {"name": "x", "type": "number", "optional": false, "description": "The `x` of the entity."},
+        {"name": "y", "type": "number", "optional": false, "description": "The `y` of the entity minus 30."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the entity."},
+        {"name": "args", "type": "DisappearingTextArgs", "optional": false, "description": "The style. Can be `{}`."},
+        {"name": "nv", "type": "1", "optional": true, "description": "Only when the call sets both `xy` and `nv` (node/server_functions.js:3987-3989). The meaning is unclear from the server."}
+      ],
+      "example": {"message": "+5,000", "x": -120.5, "y": 380, "id": "Wizard", "args": {"c": "#5DAC40", "s": "cash", "sz": "huge"}},
+      "source": "node/server_functions.js:3956-3996",
+      "confirm": {"code": ["node/server_functions.js:3956-3996", "languages/index.js:256-258"]}
+    },
+    "DisappearingTextArgs": {
+      "summary": "The style of a `disappearing_text` from the helper. The helper renames the fields of the call to short keys.",
+      "fields": [
+        {"name": "c", "type": "string", "optional": true, "description": "The color: a CSS color or a color name of the client (`\"red\"`, `\"heal\"`, `\"evade\"`). Absent when the call gives no color."},
+        {"name": "s", "type": "string", "optional": true, "description": "A sound, for example `\"hp\"`, `\"mp\"`, `\"cash\"`."},
+        {"name": "sz", "type": "string", "optional": true, "description": "The size: `\"large\"` or `\"huge\"`."},
+        {"name": "from", "type": "EntityId", "optional": true, "description": "The entity that caused the text, for example the attacker of an `immune` text."}
+      ],
+      "example": {"c": "evade", "from": "Wizard"},
+      "source": "node/server_functions.js:3966-3979",
+      "confirm": {"code": ["node/server_functions.js:3963-3979"]}
+    },
+    "DisappearingTextDirect": {
+      "summary": "A floating text that a call site sends without the helper. It has no `id`, and `args` has long keys.",
+      "fields": [
+        {"name": "message", "type": "string", "optional": false, "description": "The text, for example `\"+1200\"`."},
+        {"name": "x", "type": "number", "optional": false, "description": "The `x` of the entity or the chest."},
+        {"name": "y", "type": "number", "optional": false, "description": "A point above the entity: its `y` minus 10 to 40."},
+        {"name": "args", "type": "DisappearingTextDirectArgs", "optional": false, "description": "The style."}
+      ],
+      "example": {"message": "+1200", "x": 300, "y": -50, "args": {"color": "+gold", "size": "large"}},
+      "source": "node/server.js:3096-3101",
+      "confirm": {"code": ["node/server.js:3059-3064", "node/server.js:3096-3101", "node/server.js:3108-3113", "node/server.js:3137-3142", "node/server.js:3148-3153", "node/server.js:11382-11387", "node/server.js:11544-11549", "node/server.js:16026-16031", "node/server_functions.js:2593-2598"]}
+    },
+    "DisappearingTextDirectArgs": {
+      "summary": "The style of a direct `disappearing_text`.",
+      "fields": [
+        {"name": "color", "type": "string", "optional": false, "description": "A CSS color or a color name of the client (`\"+gold\"`, `\"gold\"`, `\"gray\"`)."},
+        {"name": "size", "type": "string", "optional": true, "description": "`\"large\"`."}
+      ],
+      "example": {"color": "+gold", "size": "large"},
+      "confirm": {"code": ["node/server.js:3059-3064", "node/server.js:3096-3101", "node/server.js:3108-3113", "node/server.js:3137-3142", "node/server.js:3148-3153", "node/server.js:11382-11387", "node/server.js:11544-11549", "node/server.js:16026-16031", "node/server_functions.js:2593-2598"]}
+    }
+  },
+  "senders": [
+    {"what": "The helper with `xy`, to clients near the entity. Examples: conditions (`stun`, `freeze`, `poison`, `burn`), `immune`, potions, `regen_hp`, `regen_mp`, shells, `throw`, `energize`, burn ticks.", "source": "node/server_functions.js:3277-3322"},
+    {"what": "`harakiri`: the text `SEPPUKU` with `xy`, so clients near the character get it too.", "source": "node/server.js:12975-12979"},
+    {"what": "The helper without `xy` (only the socket of the character): `no_hits` of `skill`, `no_space` of `sbuy`, the party XP share of a kill.", "source": "node/server.js:2859-2864, 8374, 10468, 10572"},
+    {"what": "The helper from `merrit_gift`: a text over the Merrit NPC, to the merchant only.", "source": "node/logic/market_patron_runtime.js:234-241"},
+    {"what": "Direct emits to one socket: PvP loss and win (gold, XP), chest gold, marketing XP, the hardcore gold of the `woffice` map.", "source": "node/server.js:3059-3152, 11382, 11544, 16026; node/server_functions.js:2593"}
+  ]
+}

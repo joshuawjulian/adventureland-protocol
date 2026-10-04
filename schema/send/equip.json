@@ -1,0 +1,243 @@
+{
+  "event": "equip",
+  "source": "node/server.js:7643-7916",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": true, "default": 0, "coerce": "`to_number`: `round(parseInt(num))`. A negative value, a missing value or `NaN` becomes 0, so the server uses slot 0", "description": "The slot of the item."},
+      {"name": "slot", "type": "string", "optional": true, "description": "The target slot. An open trade slot (`trade1` to `trade30`, see `get_trade_slots`) with no `consume` selects the variant Trade listing: the item goes on your stand. Any other value (or none) selects the variant Use or equip."},
+      {"name": "consume", "type": "boolean", "optional": true, "description": "Any truthy value. The server skips the trade listing and the gear path: only potions, elixirs, `cxjar`, licences and spawners work (the variant Use or equip)."}
+    ],
+    "others": "ignored",
+    "example": {"num": 0, "slot": "mainhand"},
+    "confirm": {"code": ["node/server.js:7649", "node/server.js:7674", "node/server.js:7677", "node/server.js:7881", "js/old_common_functions.js:1750-1758"], "note": "The handler reads `num`, `slot`, `consume`, and in the trade path `price`, `q`, `want`, `giveaway`, `minutes`"}
+  },
+  "variants": {
+    "key": "slot",
+    "list": [
+      {
+        "name": "Trade listing",
+        "match": "`slot` is an open trade slot, and no `consume`",
+        "when": "Lists the item on your merchant stand, for gold, as a swap offer (`want`) or as a giveaway.",
+        "request": {
+          "fields": [
+            {"name": "slot", "type": "string", "optional": false, "coerce": "must be in `get_trade_slots(player)`", "description": "An open trade slot (`trade1` to `trade30`, see `get_trade_slots`)."},
+            {"name": "consume", "type": "false", "optional": true, "description": "Absent or a false value. A true value selects the variant Use or equip."},
+            {"name": "price", "type": "integer", "optional": true, "default": 1, "coerce": "`round(min(99999999999, max(parseInt(price) || 1, 1)))`: a string works, a fraction goes away, 0 and `NaN` become 1", "description": "The gold for each unit, 1 to 99,999,999,999. The server uses 1 for a giveaway."},
+            {"name": "q", "type": "integer", "optional": true, "default": 1, "coerce": "`max(1, parseInt(q) || 1)`", "description": "How many units of the stack to list. It is not clamped to the stack: a larger value fails with `not_enough`."},
+            {"name": "want", "type": "ItemName | TradeWant", "optional": true, "coerce": "`trade_want_normalize` (see `TradeWant`). Any value other than `undefined` counts as present, also `null`", "description": "List the item as a swap offer for this item, not for gold. A string is the same as `{name}`."},
+            {"name": "giveaway", "type": "boolean", "optional": true, "description": "Any truthy value lists the item as a giveaway."},
+            {"name": "minutes", "type": "integer", "optional": true, "default": 5, "coerce": "`max(5, min(600, parseInt(minutes) || 5))`", "description": "Giveaway only: the duration in minutes, 5 to 600."}
+          ],
+          "example": {"num": 4, "slot": "trade1", "price": 2500000},
+          "confirm": {"code": ["node/server.js:7677", "node/server.js:7682-7699", "js/old_common_functions.js:469-481", "node/server_functions.js:4282-4295"]}
+        },
+        "responses": [
+          {
+            "name": "Listed",
+            "event": "game_response",
+            "code": "data",
+            "when": "A stack moves `q` units into a new item in the slot. Another item moves whole. The slot item gets `price` (or `want`) and a random 4-character `rid`. A giveaway also gets `giveaway: minutes` and `list: []`.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"equip\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after `to_number`."},
+              {"name": "slot", "type": "string", "optional": false, "description": "The trade slot."}
+            ],
+            "example": {"num": 4, "slot": "trade1", "success": true, "response": "data", "place": "equip"},
+            "source": "node/server.js:7677-7788, 7915",
+            "confirm": {"code": ["node/server.js:7665", "node/server.js:7703-7716", "node/server.js:7746-7760", "node/server.js:7788", "node/server.js:7915", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "The item has `acl` or `v`.", "code": "item_locked", "source": "node/server.js:7678-7680", "confirm": {"code": ["node/server.js:7678-7680", "node/server_functions.js:3393-3419"]}},
+            {"when": "`q` is more than the units of the item (`q || 1`).", "code": "not_enough", "source": "node/server.js:7685-7688", "confirm": {"code": ["node/server.js:7685-7688", "node/server_functions.js:3393-3419"]}},
+            {"when": "Not a giveaway: `want` does not name an item of `G.items` (or names `placeholder`), or its `p` is not a key of `G.titles`.", "code": "trade_offer_invalid", "source": "node/server.js:7691-7695", "confirm": {"code": ["node/server.js:7691-7695", "js/old_common_functions.js:469-478", "node/server_functions.js:3393-3419"]}},
+            {"when": "The trade slot holds an item already (a listing, or a wishlist entry with `b`). The code has this spelling.", "code": "slot_occuppied", "source": "node/server.js:7700-7702", "confirm": {"code": ["node/server.js:7700-7702", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "game_log",
+            "to": "you",
+            "when": "The listing text, before the `player` update. The phrase is `server.game_log.listed_at_gold_each` (a stack), `listed_at_gold` (one item), `listed_to_giveaway` or `listed_to_giveaway_2` (a giveaway), or `offered_for` or `offered_for_or_higher` (a swap).",
+            "type": "LocalizedText",
+            "example": {"message": "Listed Wand +7 at 2,500,000 gold", "phrase": "server.game_log.listed_at_gold", "phrase_args": {"item": "Wand +7", "amount": "2,500,000"}},
+            "source": "node/server.js:7718-7743, 7763-7787",
+            "confirm": {"code": ["node/server.js:7718-7743", "node/server.js:7763-7787", "languages/index.js:256-258"]}
+          }
+        ],
+        "order": [
+          "`game_log` (the listing text) to you",
+          "`player` to you",
+          "`game_response` `data` with `slot` to you"
+        ],
+        "source": "node/server.js:7677-7788"
+      },
+      {
+        "name": "Use or equip",
+        "match": "any other request",
+        "when": "Uses the item (elixir, `cxjar`, licence, spawner, potion) or, without `consume`, equips it. The type of the item picks the path.",
+        "request": {
+          "fields": [
+            {"name": "slot", "type": "string", "optional": true, "description": "The equipment slot, for example `\"mainhand\"` or `\"ring1\"`. When absent, the server uses the type of the item. Only the gear path reads it."}
+          ],
+          "example": {"num": 0, "slot": "mainhand"},
+          "confirm": {"code": ["node/server.js:7677", "node/server.js:7789", "node/server.js:7807", "node/server.js:7814", "node/server.js:7820", "node/server.js:7823", "node/server.js:7879-7881"]}
+        },
+        "responses": [
+          {
+            "name": "Equipped",
+            "event": "game_response",
+            "code": "data",
+            "when": "Gear: `can_equip_item` accepts the item for the slot. The server swaps it with the item in the slot (a displaced item with `b` is deleted), and adds 120 ms to `penalty_cd` (at most 120,000 ms).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"equip\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after `to_number`."},
+              {"name": "slot", "type": "string", "optional": false, "description": "The equipment slot that got the item. It can differ from `slot` in the request, for example `weapon` becomes `mainhand` or `offhand`."}
+            ],
+            "example": {"num": 0, "slot": "mainhand", "success": true, "response": "data", "place": "equip"},
+            "source": "node/server.js:7879-7907, 7915",
+            "confirm": {"code": ["node/server.js:7879-7907", "node/server.js:7912-7915", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Elixir",
+            "event": "game_response",
+            "code": "elixir",
+            "when": "The item is of type `elixir`. The server puts it in `slots.elixir` with `expires`. The same elixir again sets the time left to the full duration plus 97.5% of the old time left. An old elixir with `withdrawal` gives you that condition. A new elixir with `withdrawal` removes the condition `withdrawal`.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"elixir\"", "optional": false, "description": "The code."},
+              {"name": "place", "type": "\"equip\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after `to_number`."}
+            ],
+            "example": {"num": 7, "success": true, "response": "elixir", "place": "equip"},
+            "source": "node/server.js:7789-7806, 7915",
+            "confirm": {"code": ["node/server.js:7789-7806", "node/server.js:7912-7915", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Potion",
+            "event": "game_response",
+            "code": "data",
+            "when": "The item has `gives` (a potion). The server adds each `[stat, amount]` of `gives` to you, at least 1 for each stat. `poisoned` halves the amounts. A `debuff` potion also removes the debuff conditions. The potion cooldown starts: `def.cooldown`, else 2,000 ms, or 0.1 ms for an XP potion.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"equip\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after `to_number`."},
+              {"name": "used", "type": "ItemName", "optional": false, "description": "The potion."}
+            ],
+            "example": {"num": 1, "used": "hpot0", "success": true, "response": "data", "place": "equip"},
+            "source": "node/server.js:7823-7878, 7915",
+            "confirm": {"code": ["node/server.js:7823-7878", "node/server.js:7912-7915", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Used",
+            "event": "game_response",
+            "code": "data",
+            "when": "`cxjar` (adds the cosmetic in `data`), an item of type `licence` (adds 7 minutes to `licenced`), or an item of type `spawner` (spawns the trap monster `spawn` at your position, with you as owner). The server removes one unit.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"equip\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after `to_number`."}
+            ],
+            "example": {"num": 5, "success": true, "response": "data", "place": "equip"},
+            "source": "node/server.js:7807-7822, 7915",
+            "confirm": {"code": ["node/server.js:7807-7822", "node/server.js:7912-7915", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Cosmetic",
+            "event": "game_response",
+            "code": "cx_new",
+            "when": "`cxjar`, before the `player` update.",
+            "fields": [
+              {"name": "response", "type": "\"cx_new\"", "optional": false, "description": "The code."},
+              {"name": "acx", "type": "Record<string, integer>", "optional": false, "description": "All your cosmetics now: name to count."},
+              {"name": "name", "type": "string", "optional": false, "description": "The cosmetic from `data` of the jar."},
+              {"name": "from", "type": "\"cxjar\"", "optional": false, "description": "Always `\"cxjar\"`."}
+            ],
+            "example": {"response": "cx_new", "acx": {"makeawish": 1}, "name": "makeawish", "from": "cxjar"},
+            "source": "node/server.js:7812",
+            "confirm": {"code": ["node/server.js:7811-7812"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "Elixir: the item has the lock `l`.", "code": "item_locked", "source": "node/server.js:7790-7792", "confirm": {"code": ["node/server.js:7790-7792", "node/server_functions.js:3393-3419"]}},
+            {"when": "`cxjar`: the jar has no `data`, or it has the lock `l`.", "code": "item_locked", "source": "node/server.js:7808-7810", "confirm": {"code": ["node/server.js:7808-7810", "node/server_functions.js:3393-3419"]}},
+            {"when": "Licence: the item has the lock `l`.", "code": "item_locked", "source": "node/server.js:7815-7817", "confirm": {"code": ["node/server.js:7815-7817", "node/server_functions.js:3393-3419"]}},
+            {
+              "when": "Potion: the potion cooldown runs.",
+              "code": "not_ready",
+              "extra": [
+                {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time left.", "example": 1240}
+              ],
+              "source": "node/server.js:7825-7830",
+              "confirm": {"code": ["node/server.js:7825-7830", "node/server_functions.js:3393-3419"]}
+            },
+            {"when": "Potion: the item has the lock `l`.", "code": "item_locked", "source": "node/server.js:7831-7833", "confirm": {"code": ["node/server.js:7831-7833", "node/server_functions.js:3393-3419"]}},
+            {"when": "Gear: `can_equip_item` refuses the item for the slot. For a two-handed weapon while you hold an offhand item, a `game_log` comes first.", "code": "cant_equip", "note": "after a `player` update", "source": "node/server.js:7884-7896", "confirm": {"code": ["node/server.js:7883-7896", "node/server_functions.js:3393-3419"]}},
+            {"when": "`consume` is set and the item is none of the kinds above.", "code": "cant_consume", "source": "node/server.js:7908-7910", "confirm": {"code": ["node/server.js:7908-7910", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "game_log",
+            "to": "you",
+            "when": "Gear: before `cant_equip`, when the slot is `weapon`, `mainhand` or `tool`, you hold an offhand item, and the item is a two-handed weapon for your class.",
+            "type": "LocalizedText",
+            "example": {
+              "message": "Unequip your offhand item to use this two-handed weapon.",
+              "phrase": "server.game_log.unequip_your_offhand_item_to_use_this_two_handed_weapon",
+              "phrase_args": {}
+            },
+            "source": "node/server.js:7885-7893",
+            "confirm": {"code": ["node/server.js:7885-7893", "languages/index.js:256-258"]}
+          },
+          {"event": "disappearing_text", "to": "nearby", "when": "Potion, for each `hp`, `mp` or `xp` amount.", "summary": "`{message, x, y, id, args: {c, s}}` over your character: `\"+200\"` for HP (a negative amount without `+`), `\"+<amount>\"` for MP, `\"+1M\"` for XP (with `sz: \"large\"`).", "source": "node/server.js:7845-7861", "confirm": {"code": ["node/server.js:7845-7860", "node/server_functions.js:3956-3996"], "note": "For a negative HP amount `message` is the number itself, not a string"}},
+          {
+            "event": "eval",
+            "to": "you",
+            "when": "Potion, after the stats change.",
+            "fields": [
+              {"name": "code", "type": "string", "optional": false, "description": "`\"pot_timeout(<ms>)\"`: the cooldown for the official client. For an XP potion it is `pot_timeout(120)`."}
+            ],
+            "example": {"code": "pot_timeout(2000)"},
+            "source": "node/server.js:7878",
+            "confirm": {"code": ["node/server.js:7834-7836", "node/server.js:7855-7859", "node/server.js:7871-7878"]}
+          }
+        ],
+        "order": [
+          "a potion: `disappearing_text` to clients nearby and `eval` to you; a `cxjar`: `game_response` `cx_new` to you",
+          "`player` to you",
+          "`game_response` `data` (or `elixir`) to you"
+        ],
+        "source": "node/server.js:7789-7911"
+      }
+    ]
+  },
+  "failures": {
+    "event": "game_response",
+    "place": "equip",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:7645-7647", "confirm": {"code": ["node/server.js:7645-7647"]}},
+      {"when": "`num` is the inventory length or more. The server stopped your channeled actions (`c`) already.", "code": "invalid", "source": "node/server.js:7648-7652", "confirm": {"code": ["node/server.js:7648-7652", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot is empty.", "code": "no_item", "source": "node/server.js:7653-7656", "confirm": {"code": ["node/server.js:7653-7656", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the flag `b`.", "code": "item_blocked", "source": "node/server.js:7657-7659", "confirm": {"code": ["node/server.js:7657-7659", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item is a placeholder: an upgrade or compound runs on the slot.", "code": "item_placeholder", "source": "node/server.js:7660-7662", "confirm": {"code": ["node/server.js:7660-7662", "node/server_functions.js:3393-3419"]}},
+      {"when": "`want` is present, and `consume` is set or `slot` is not an open trade slot.", "code": "invalid", "source": "node/server.js:7674-7676", "confirm": {"code": ["node/server.js:7674-7676", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {"event": "player", "to": "you", "when": "Success, before the `game_response`.", "summary": "Your state with `reopen: true`. The server recalculates your stats, except for a potion that gives no XP.", "source": "node/server.js:7912-7914", "confirm": {"code": ["node/server.js:7664", "node/server.js:7875-7877", "node/server.js:7912-7914", "node/server.js:4550-4594"]}}
+  ]
+}

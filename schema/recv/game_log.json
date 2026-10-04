@@ -1,0 +1,50 @@
+{
+  "event": "game_log",
+  "to": "usually you only. Some call sites use `party_emit` (the party), `instance_emit` (everyone in the instance; on hardcore servers everyone) or `xy_emit` (clients near a point); see Sent by",
+  "payload": {"type": "GameLogText | GameLogPlain | string", "confirm": {"code": ["languages/index.js:256-258", "node/server_functions.js:4576-4600", "node/logic/cave_of_many_dreams.js:54-60", "node/logic/generated_maps.js:168", "node/server.js:11181", "node/server.js:6312"], "note": "About 140 call sites. Every object comes from `localization.message`, `item_message` or `kill_message`, except `cave_say` with a string. `exchange` has a plain `{message, color}` branch (node/server_functions.js:4130-4136), but no caller passes a `phrase` that reaches it."}},
+  "example": {"message": "Not enough gold", "phrase": "server.game_log.not_enough_gold", "phrase_args": {}},
+  "variants": [
+    {
+      "name": "Localized",
+      "type": "GameLogText",
+      "has": ["phrase"],
+      "when": "Almost all call sites: `localization.message`, `item_message` or `kill_message`.",
+      "example": {"color": "gray", "message": "You killed a Goo", "phrase": "server.kill.you.a", "phrase_args": {"player": "Wizard", "monster": "Goo"}},
+      "source": "node/server_functions.js:4591-4600",
+      "confirm": {"code": ["languages/index.js:256-258", "node/server_functions.js:4576-4600", "node/server.js:16124-16132", "node/logic/tavern.js:114"], "note": "Every call site adds only `color`, or `color` and `confetti` (the giveaway lines), as extra fields."}
+    },
+    {
+      "name": "Plain object",
+      "type": "GameLogPlain",
+      "when": "Text with no phrase key: cave messages from a string (for example the stairway of a generated map).",
+      "example": {"color": "#D4BB88", "message": "The stairway is opening. Stay near the landing."},
+      "source": "node/logic/cave_of_many_dreams.js:54-60",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:54-60", "node/logic/generated_maps.js:168"], "note": "The only string passed to `cave_say` is the stairway text of node/logic/generated_maps.js:168."}
+    },
+    {"name": "Bare string", "type": "string", "when": "`mreport` (the distance to the point, as text) and `random_look` (a fixed code string).", "reply_to": ["mreport", "random_look"], "example": "241.3", "source": "node/server.js:11181", "confirm": {"code": ["node/server.js:11171-11182", "node/server.js:6311-6313"]}}
+  ],
+  "types": {
+    "GameLogPlain": {
+      "summary": "A `game_log` line with no phrase key: `message` and `color` only.",
+      "fields": [
+        {"name": "message", "type": "string", "optional": false, "description": "The English text."},
+        {"name": "color", "type": "string", "optional": false, "description": "A CSS color."}
+      ],
+      "example": {"color": "#D4BB88", "message": "The stairway is opening. Stay near the landing."},
+      "source": "node/logic/cave_of_many_dreams.js:54-60",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:54-60", "node/logic/generated_maps.js:168"]}
+    }
+  },
+  "senders": [
+    {"what": "About 130 call sites send it to the socket of one character. Examples: failures without a response code, gold, XP, loot, purchases, tavern results.", "source": "node/server.js:1353"},
+    {"what": "`kill_monster`: the kill line goes to the killer, or with `party_emit` to the whole party.", "source": "node/server.js:2877-2882"},
+    {"what": "`open_chest` in a party: loot lines with `party_emit`.", "source": "node/server.js:11442-11519"},
+    {"what": "The `party` handler, `kick`: `party_emit` to the party.", "source": "node/server.js:12533"},
+    {"what": "`enter` of a duel as a spectator: `instance_emit` to the duel instance.", "source": "node/server.js:6090"},
+    {"what": "The tavern closes: `instance_emit` to the tavern.", "source": "node/logic/tavern.js:114"},
+    {"what": "A giveaway ends: `xy_emit` near the merchant, with `confetti`.", "source": "node/server.js:16125-16133, 16202-16210"},
+    {"what": "Cave and generated-map messages: each cave player of the run.", "source": "node/logic/cave_of_many_dreams.js:54-60"},
+    {"what": "`mreport` replies with a bare string: the distance to the point `x`, `y`.", "source": "node/server.js:11171-11182"},
+    {"what": "`random_look` replies with a bare string and stops. The rest of the handler never runs.", "source": "node/server.js:6312"}
+  ]
+}

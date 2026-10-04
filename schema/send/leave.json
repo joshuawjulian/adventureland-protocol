@@ -1,0 +1,87 @@
+{
+  "event": "leave",
+  "source": "node/server.js:5864-5886",
+  "request": {"fields": [], "note": "No payload. The handler does not read `data`.", "confirm": {"code": ["node/server.js:5864-5886"], "note": "The handler never reads `data`"}},
+  "responses": [
+    {
+      "name": "Cave exit",
+      "event": "cave",
+      "when": "You are in a map of the Cave of Many Dreams. The server settles the purse of the run (unspent Amber becomes a cave award) and removes you from the run. There is no `can_walk` check.",
+      "fields": [
+        {"name": "type", "type": "\"ended\"", "optional": false, "description": "Your run ended."},
+        {"name": "reason", "type": "\"exit\"", "optional": false, "description": "You left."},
+        {"name": "state", "type": "object | null", "optional": false, "description": "The last state of the cave for you (`cave_snapshot`), or `null`. See the `cave` entry."}
+      ],
+      "example": {"type": "ended", "reason": "exit", "state": null},
+      "source": "node/server.js:5869-5872, node/logic/generated_maps.js:230-241", "confirm": {"code": ["node/server.js:5869-5872", "node/logic/generated_maps.js:26-28", "node/logic/generated_maps.js:230-241"]}
+    },
+    {
+      "name": "Moved",
+      "event": "new_map",
+      "when": "All checks pass. From a cave: to `main` at the exit spawn of the cave (816, 1200), with `effect: 1`; the server also restores your HP, and your MP to at least half. Else: to `B.start_map` (`main`) at spawn 0 (a random spot up to 50 px from 0, 0), with `effect: 0`. A `player` update follows.",
+      "type": "NewMapData",
+      "example": {"name": "main", "in": "main", "x": 0, "y": 0, "direction": 0, "effect": 0, "info": {}, "m": 13, "entities": {"players": [], "monsters": [], "type": "all", "in": "main", "map": "main"}},
+      "source": "node/server.js:5884, 4744-4755", "confirm": {"code": ["node/server.js:5884", "node/logic/generated_maps.js:239", "node/logic/generated_maps.js:525", "node/logic/generated_maps.js:253-256", "node/logic/generated_maps.js:222-225", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"]}
+    },
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "After `new_map` and `player`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"leave\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "leave"},
+      "source": "node/server.js:5872, 5885", "confirm": {"code": ["node/server.js:5872", "node/server.js:5885", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5866-5868", "confirm": {"code": ["node/server.js:5865-5868"]}},
+      {
+        "when": "Not in a cave map, and you cannot walk (`can_walk`: dead, `stunned`, `fingered`, `stoned`, `deepfreezed`, `sleeping`, or `dash`).",
+        "code": "transport_failed",
+        "source": "node/server.js:5874-5876", "confirm": {"code": ["node/server.js:5874-5876", "js/old_common_functions.js:755-770", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "More than 5 monsters target you, or your map is not `jail` or `cyberland` and your instance is not a solo instance.",
+        "code": "cant_escape",
+        "source": "node/server.js:5877-5883", "confirm": {"code": ["node/server.js:5877-5883", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "disappear",
+      "to": "nearby",
+      "when": "Success: clients that saw you at the old position.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "You."},
+        {"name": "reason", "type": "\"transport\"", "optional": false, "description": "Always `\"transport\"`."},
+        {"name": "to", "type": "MapName", "optional": true, "description": "The new map. Present only when the instance name is a map name and you are not invisible or `stealth`."},
+        {"name": "s", "type": "integer", "optional": true, "description": "The spawn, when the server knows it."},
+        {"name": "effect", "type": "integer", "optional": true, "description": "`1` for a cave exit."}
+      ],
+      "example": {"id": "MyMage", "reason": "transport", "to": "main"},
+      "source": "node/server.js:4652-4660", "confirm": {"code": ["node/server.js:5884", "node/server.js:4652-4660"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, after `new_map`.",
+      "summary": "Your character (`u+cid`) on the new map.",
+      "source": "node/server.js:4757", "confirm": {"code": ["node/server.js:4757", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "cave only: `cave` `{type: \"ended\", reason: \"exit\"}` to you",
+    "`disappear` to clients near your old position",
+    "`new_map` to you",
+    "`player` to you",
+    "`game_response` `data` to you"
+  ]
+}

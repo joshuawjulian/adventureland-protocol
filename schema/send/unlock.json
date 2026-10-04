@@ -1,0 +1,8 @@
+{
+  "event": "unlock",
+  "source": "node/server.js:6375-6440",
+  "request": {"fields": [], "note": "The handler ends on its first line (`return; // [27/06/18]`, node/server.js:6376). It reads no field and sends nothing. The dead code after it read `name` (`\"code\"`) and `num` (the slot of a `computer` item) to unlock 100 CODE slots.", "confirm": {"code": ["node/server.js:6375-6376"], "note": "The handler returns on its first line"}},
+  "responses": [
+    {"name": "Nothing", "kind": "none", "when": "Always: the handler returns before it does anything.", "source": "node/server.js:6376", "confirm": {"code": ["node/server.js:6376"]}}
+  ]
+}

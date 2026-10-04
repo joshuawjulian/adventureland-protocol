@@ -1,0 +1,22 @@
+{
+  "event": "pet",
+  "source": "node/server.js:12881-12896",
+  "request": {
+    "fields": [],
+    "note": "No payload. The handler reads no field.",
+    "confirm": {"code": ["node/server.js:12881-12896"], "note": "The handler never reads `data`"}
+  },
+  "responses": [],
+  "failures": {
+    "event": "game_response",
+    "place": "pet",
+    "intro": "**Server bug:** no code sets `player.pet`, so the handler never makes a pet.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12883-12885", "confirm": {"code": ["node/server.js:12882-12885"]}},
+      {"when": "You have a `player.monster`. Only this handler sets it, and it never succeeds.", "replies": [], "source": "node/server.js:12886", "confirm": {"code": ["node/server.js:12886-12896"], "note": "No code outside this handler sets `player.monster` or `player.pet`"}},
+      {"when": "Every other call. `new_monster` gets `type: undefined` (`player.pet`), and `get_monster_dimensions` reads `G.monsters[undefined]`. This throws.", "replies": [
+        {"event": "game_error", "example": "ERROR!", "note": "the wrapper error, +16 call cost"}
+      ], "source": "node/server.js:12887-12894, 13452; js/old_common_functions.js:695", "confirm": {"code": ["node/server.js:12887-12894", "node/server.js:13418", "node/server.js:13425", "node/server.js:13452", "js/old_common_functions.js:692-695", "node/server.js:4947-4966"], "note": "`G.monsters[undefined].size` throws; the wrapper adds 16 to the call cost and sends `game_error` `\"ERROR!\"`"}}
+    ]
+  }
+}

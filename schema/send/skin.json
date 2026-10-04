@@ -1,0 +1,37 @@
+{
+  "event": "skin",
+  "source": "node/server.js:13020-13027",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "any", "optional": false, "coerce": "none: copied to `player.tskin` with no check", "description": "The temporary skin, usually a key of `G.skins` or a monster type. The server does not validate it: a value that is not a skin name goes to every client in your `skin` field. `undefined` (no `name`) clears the temporary skin."}
+    ],
+    "others": "ignored",
+    "example": {"name": "goo"},
+    "confirm": {"code": ["node/server.js:13025"], "note": "The handler reads only `data.name`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "player",
+      "when": "`player.role` is `\"gm\"`. There is no `game_response`.",
+      "summary": "Your state (`resend \"u+cid\"`): `skin` is the new temporary skin (`tskin || skin`).",
+      "example": {"id": "Merlin", "skin": "goo", "cid": 419},
+      "example_trimmed": true,
+      "source": "node/server.js:13025-13026, 918",
+      "confirm": {"code": ["node/server.js:13025-13026", "node/server.js:4550-4594", "node/server.js:918"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "skin",
+    "rows": [
+      {"when": "No character: the handler reads `player.role` before it checks `player`, and throws.", "replies": [
+        {"event": "game_error", "example": "ERROR!", "note": "the wrapper error, +16 call cost"}
+      ], "source": "node/server.js:13021-13022", "confirm": {"code": ["node/server.js:13021-13022", "node/server.js:4947-4966"], "note": "The wrapper adds 16 to the call cost and emits `game_error` `\"ERROR!\"` unless that pushes the cost over the limit (then `limitdcreport` and a disconnect)"}},
+      {"when": "`player.role` is not `\"gm\"`.", "replies": [], "source": "node/server.js:13022-13024", "confirm": {"code": ["node/server.js:13022-13024"]}}
+    ]
+  },
+  "order": [
+    "`player` to you (no `game_response`)"
+  ]
+}

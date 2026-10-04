@@ -1,0 +1,54 @@
+# Watches the live game for updates that make the reference stale.
+#
+# Once a day it runs scripts/check-updates.py, which compares versions.json (what the reference
+# was written against: G version, live code commit, common engine commit) with the live game. If
+# anything moved, it opens an issue labelled `game-update` with the report: what changed in G
+# and which entries name the changed keys, which cited source lines moved, new handlers and
+# response codes. If an issue is already open, it updates that issue instead of opening another.
+#
+# The update pass itself is manual (or a Claude session): see docs/UPDATING.md. When it's done,
+# `python3 scripts/check-updates.py --pin` moves the pins, and the next run here is quiet again.
+name: game-update
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily, 06:17 UTC; an odd minute avoids the top-of-hour rush
+  workflow_dispatch: {} # "Run workflow" button, for checking right after a game patch
+
+permissions:
+  contents: read
+  issues: write # open or update the game-update issue
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The old source is only needed when the pinned commit moved, and check-updates.py
+      # fetches it itself in that case (scripts/fetch-source.sh). G is downloaded live.
+      - name: Check the live game against versions.json
+        id: check
+        run: |
+          set +e
+          python3 scripts/check-updates.py --report report.md
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # 0 = no change, 10 = change (report written), anything else = the check broke.
+          if [ "$code" != 0 ] && [ "$code" != 10 ]; then exit "$code"; fi
+
+      - name: Open or update the game-update issue
+        if: steps.check.outputs.code == '10'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create game-update --color B04A2A \
+            --description "The live game changed; the reference needs an update pass" 2>/dev/null || true
+          title="Game update: $(python3 -c "import json;v=json.load(open('versions.json'));print('G', v['g_version'])") is no longer live"
+          existing=$(gh issue list --label game-update --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file report.md
+            echo "updated #$existing"
+          else
+            gh issue create --title "$title" --label game-update --body-file report.md
+          fi

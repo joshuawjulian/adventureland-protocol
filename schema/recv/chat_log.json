@@ -1,0 +1,89 @@
+{
+  "event": "chat_log",
+  "to": "player chat: every socket on this server, observers too (`broadcast`). An NPC or monster line: each character and observer that can see the speaker (`xy_emit`)",
+  "payload": {
+    "type": "ChatLogPlayer | ChatLogNpc",
+    "confirm": {
+      "code": ["node/logic/chat.js:115", "node/server.js:2920-2930", "node/server.js:4518-4528", "node/server_functions.js:2753-2759", "node/server_functions.js:2875-2879", "node/server.js:13207-13211"]
+    }
+  },
+  "example": {"owner": "Wizard", "message": "anyone selling wbook0?", "id": "Wizard", "p": true},
+  "variants": [
+    {
+      "name": "Player chat",
+      "type": "ChatLogPlayer",
+      "has": ["p"],
+      "when": "A character sent `say` without `name` and without `party`, or a player used the public chat of the web Communicator.",
+      "example": {"owner": "Wizard", "message": "anyone selling wbook0?", "id": "Wizard", "p": true},
+      "source": "node/logic/chat.js:115",
+      "confirm": {"code": ["node/logic/chat.js:115", "node/server_functions.js:3495-3496"]}
+    },
+    {
+      "name": "NPC or monster line",
+      "type": "ChatLogNpc",
+      "when": "A localized line: Ace in the arena (a kill), the Grinch, or the mainframe alert in cyberland.",
+      "example": {"owner": "Grinch", "id": "4821", "color": "#418343", "message": "Come to papa", "phrase": "server.grinch.come_to_papa", "phrase_args": {}},
+      "source": "node/server_functions.js:2755-2759",
+      "confirm": {"code": ["node/server.js:2920-2930", "node/server.js:4518-4528", "node/server_functions.js:2716-2759", "node/server_functions.js:2875-2879", "languages/index.js:256-258"]}
+    },
+    {
+      "name": "Mainframe reply",
+      "type": "ChatLogNpc",
+      "when": "The reply of the mainframe to an `eval` with `command`, in cyberland. `message` is plain text; there is no `phrase`.",
+      "reply_to": ["eval"],
+      "example": {"owner": "mainframe", "message": "what?", "id": "mainframe"},
+      "source": "node/server.js:13205-13211",
+      "confirm": {"code": ["node/server.js:13205-13211"]}
+    }
+  ],
+  "types": {
+    "ChatLogPlayer": {
+      "summary": "A public chat line of a player.",
+      "fields": [
+        {"name": "owner", "type": "CharacterName", "optional": false, "description": "The name of the speaker."},
+        {"name": "message", "type": "string", "optional": false, "description": "The text, at most 1,200 characters. The server removes some characters first (`strip_string`)."},
+        {
+          "name": "id",
+          "type": "string",
+          "optional": false,
+          "description": "The id of the speaker: the character name. From the web Communicator it is `\"comm:\"` plus the database id of the character (api.js:1195)."
+        },
+        {"name": "p", "type": "true", "optional": false, "description": "Marks player chat."}
+      ],
+      "source": "node/logic/chat.js:115",
+      "confirm": {"code": ["node/logic/chat.js:115", "node/server.js:5098", "api.js:1179", "api.js:1195"]}
+    },
+    "ChatLogNpc": {
+      "summary": "A chat line of an NPC or a monster. Most lines have a phrase key for translation.",
+      "fields": [
+        {"name": "owner", "type": "string", "optional": false, "description": "The name that the client shows: `\"Ace\"` (the `pvp` NPC), `\"Grinch\"` or `\"mainframe\"`."},
+        {"name": "message", "type": "string", "optional": false, "description": "The English text."},
+        {"name": "id", "type": "string", "optional": false, "description": "`\"pvp\"`, `\"mainframe\"`, or the monster id of the Grinch."},
+        {"name": "color", "type": "string", "optional": true, "description": "Only on Grinch lines: `\"#418343\"`."},
+        {"name": "phrase", "type": "string", "optional": true, "description": "The phrase key, for example `server.chat_log.pwned`. Absent on a mainframe reply."},
+        {"name": "phrase_args", "type": "object", "optional": true, "description": "The values for the phrase. Absent on a mainframe reply."}
+      ],
+      "confirm": {
+        "code": [
+          "node/server.js:2924-2928",
+          "node/server.js:4522-4526",
+          "node/server_functions.js:2753-2759",
+          "node/server_functions.js:2875-2879",
+          "node/server.js:13207-13211",
+          "languages/index.js:256-258"
+        ]
+      }
+    }
+  },
+  "senders": [
+    {
+      "what": "`deliver_chat_message` without a recipient: the `say` handler, or the web Communicator (`communicator_say`, which runs on the game server through `server_eval`).",
+      "source": "node/logic/chat.js:114-115"
+    },
+    {"what": "A kill in the arena: Ace announces it (`server.chat_log.pwned`).", "source": "node/server.js:2920-2930"},
+    {"what": "A defeat in the arena: Ace announces it (`server.chat_log.defeated`).", "source": "node/server.js:4519-4529"},
+    {"what": "The Grinch talks (one of the `server.grinch.*` phrases).", "source": "node/server_functions.js:2711-2759"},
+    {"what": "The cyberland loop, every 10 s or more: a monster in cyberland has a target (`server.chat_log.alert`).", "source": "node/server_functions.js:2866-2880"},
+    {"what": "The `eval` handler with `command`: the mainframe reply.", "source": "node/server.js:13203-13211"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "event": "invite",
+  "to": "the invited character only",
+  "payload": {
+    "fields": [{"name": "name", "type": "CharacterName", "optional": false, "description": "The character that sent the invite. To accept, send `party` with `event: \"accept\"` and this name."}],
+    "confirm": {"code": ["node/server.js:12362-12375"]}
+  },
+  "example": {"name": "Wizard"},
+  "senders": [{"what": "The `party` handler, `event: \"invite\"`, after the checks for a full party, an invalid name and a shared party.", "source": "node/server.js:12362-12384"}]
+}

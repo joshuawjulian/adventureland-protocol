@@ -1,0 +1,16 @@
+{
+  "event": "death",
+  "to": "the clients that have the monster, plus the clients in the instance that can see it (`remove_entity_emit`)",
+  "payload": {
+    "fields": [
+      {"name": "id", "type": "string", "optional": false, "description": "The monster id."},
+      {"name": "luckm", "type": "number", "optional": false, "description": "The luck multiplier of the character that the monster targeted, or 1 when it had no target."},
+      {"name": "points", "type": "Record<string, number>", "optional": true, "description": "Only for a cooperative monster: the contribution points, keyed by character name (node/server.js:13315)."}
+    ],
+    "confirm": {"code": ["node/server.js:13350-13401", "node/server_functions.js:3834-3854"], "note": "`id` is `++total_monsters + \"\"` (node/server.js:13417); `points` is set for every monster (node/server.js:13558) but sent only for a cooperative one"}
+  },
+  "example": {"id": "48213", "luckm": 1.25},
+  "senders": [
+    {"what": "`remove_monster` with the default `method: \"death\"`. Its callers: a kill (`kill_monster`, from `attack`, `skill`, burn and other damage), a pet when its owner disconnects, a `degen` tick, a `temp` monster that the level loop removes, cave actors", "source": "node/server.js:13350-13401"}
+  ]
+}

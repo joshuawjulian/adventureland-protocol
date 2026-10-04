@@ -1,0 +1,18 @@
+{
+  "event": "tarot",
+  "source": "node/server.js:12697-12711",
+  "request": {"fields": [], "note": "No payload. The handler reads no field.", "confirm": {"code": ["node/server.js:12697-12711"]}},
+  "responses": [
+    {"name": "Success", "kind": "none", "when": "All checks pass. The handler ends here: no tarot code follows the checks.", "source": "node/server.js:12711", "confirm": {"code": ["node/server.js:12706-12711"], "note": "The handler ends after the loop with no emit"}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "tarot",
+    "intro": "The replies are bare strings. With G version 17478, no map has a `twitch` NPC, so every call with a character ends at row 2.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12699-12701", "confirm": {"code": ["node/server.js:12698-12701"]}},
+      {"when": "Your map has no `twitch` NPC (`G.maps[map].ref.twitch`), or it is more than 500 px from you.", "code": "distance", "form": "bare", "source": "node/server.js:12702-12705", "confirm": {"code": ["node/server.js:12702-12705", "js/old_common_functions.js:230-250"], "note": "`map.ref` is built from `map.npcs`; G 17478 has no `twitch` NPC on any map"}},
+      {"when": "You have a condition whose name starts with `\"tarot\"`.", "code": "tarot_exists", "form": "bare", "source": "node/server.js:12706-12710", "confirm": {"code": ["node/server.js:12706-12710"]}}
+    ]
+  }
+}

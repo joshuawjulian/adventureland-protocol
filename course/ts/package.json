@@ -1,0 +1,10 @@
+{
+  "name": "albot",
+  "private": true,
+  "type": "module",
+  "description": "The albot course library and its programs, in TypeScript. Node.js 22.18+ runs the .ts files; tsc only checks the types.",
+  "devDependencies": {
+    "@types/node": "22.10.0",
+    "typescript": "5.6.3"
+  }
+}

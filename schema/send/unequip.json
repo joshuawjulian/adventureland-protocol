@@ -1,0 +1,36 @@
+{
+  "event": "unequip",
+  "source": "node/server.js:7933-7958",
+  "request": {
+    "fields": [
+      {"name": "slot", "type": "string", "optional": false, "coerce": "none: used as an object key", "description": "A key of `slots`: an equipment slot (`\"mainhand\"`, `\"ring1\"`, ...) or a trade slot (`\"trade1\"` to `\"trade48\"`)."}
+    ],
+    "others": "ignored",
+    "example": {"slot": "offhand"},
+    "confirm": {"code": ["node/server.js:7935", "node/server.js:7943", "js/old_common_functions.js:52-53"], "note": "The handler reads only `slot`"}
+  },
+  "responses": [
+    {"name": "Success", "event": "game_response", "code": "data", "when": "All checks pass. The server empties the slot, stops your channeled actions (`c`) and adds the item to the inventory. A wishlist entry (flag `b`) is deleted and adds nothing.", "extends": "GameResponseSuccess", "fields": [{"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."}, {"name": "place", "type": "\"unequip\"", "optional": false, "description": "The request."}, {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}], "example": {"success": true, "response": "data", "place": "unequip"}, "source": "node/server.js:7957", "confirm": {"code": ["node/server.js:7950-7957", "node/server_functions.js:3421-3446"]}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "unequip",
+    "rows": [
+      {"when": "No character, `slot` is missing or falsy, or the slot is empty.", "code": "invalid", "source": "node/server.js:7935-7937", "confirm": {"code": ["node/server.js:7935-7937", "node/server_functions.js:3393-3419"]}},
+      {"when": "`slot` is `\"elixir\"`.", "code": "cant", "source": "node/server.js:7938-7940", "confirm": {"code": ["node/server.js:7938-7940", "node/server_functions.js:3393-3419"]}},
+      {"when": "`slot` is a trade slot, and its item has `giveaway`.", "code": "giveaway", "source": "node/server.js:7943-7945", "confirm": {"code": ["node/server.js:7943-7945", "js/old_common_functions.js:52-53", "node/server_functions.js:3393-3419"]}},
+      {"when": "No empty inventory slot (`esize <= 0`), and the item is not a wishlist entry (`b`).", "code": "no_space", "source": "node/server.js:7947-7949", "confirm": {"code": ["node/server.js:7947-7949", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true`, the empty slot, the item in `items` and the recalculated stats.",
+      "source": "node/server.js:7956",
+      "confirm": {"code": ["node/server.js:7953-7956", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": ["`player` to you", "`game_response` `data` to you"]
+}

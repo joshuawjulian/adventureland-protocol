@@ -1,0 +1,74 @@
+{
+  "event": "town",
+  "source": "node/server.js:6254-6270",
+  "request": {"fields": [], "note": "No payload. The handler does not read `data`.", "confirm": {"code": ["node/server.js:6254-6270"], "note": "The handler never reads `data`"}},
+  "responses": [
+    {
+      "name": "Channel",
+      "event": "player",
+      "when": "All checks pass: the server starts the channel `c.town` with `ms: 3000`. If a `town` channel runs already, it keeps the time that remains (never more than 3,000).",
+      "summary": "Your character (`u+nc`) with `c.town` `{ms}`.",
+      "example": {"id": "Merlin", "c": {"town": {"ms": 3000}}},
+      "example_trimmed": true,
+      "source": "node/server.js:6267-6268", "confirm": {"code": ["node/server.js:6267-6268", "node/server.js:4550-4594"]}
+    },
+    {
+      "name": "Started",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass, after the `player` update. The teleport comes later.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"town\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the teleport did not happen yet."},
+        {"name": "in_progress", "type": "true", "optional": false, "description": "The channel runs."}
+      ],
+      "example": {"success": false, "in_progress": true, "response": "data", "place": "town"},
+      "source": "node/server.js:6269", "confirm": {"code": ["node/server.js:6269", "node/server_functions.js:3421-3446"]}
+    },
+    {
+      "name": "Arrived",
+      "event": "new_map",
+      "when": "Later, when `c.town` reaches 0 in the game loop. The server lowers by 4,000 ms each condition that is not a debuff and has less than 60,000 ms left (`decay_s`) and sets `last.town`. Then it moves you to spawn 0 of your current instance with `effect: 1`. Then two `player` updates follow (one from the move, then a full one).",
+      "type": "NewMapData",
+      "example": {"name": "main", "in": "main", "x": 21.7, "y": -14.2, "direction": 0, "effect": 1, "info": {}, "m": 18, "entities": {"players": [], "monsters": [], "type": "all", "in": "main", "map": "main"}},
+      "source": "node/server.js:14973-14982", "confirm": {"code": ["node/server.js:14973-14983", "node/server_functions.js:527-543", "node/server.js:4640-4758", "node/server_functions.js:3675-3706", "node/server.js:4550-4594"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:6256-6258", "confirm": {"code": ["node/server.js:6255-6258"]}},
+      {
+        "when": "You are in a map of the Cave of Many Dreams.",
+        "code": "cant_escape",
+        "source": "node/server.js:6259", "confirm": {"code": ["node/server.js:6259", "node/logic/generated_maps.js:26-28", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You cannot walk (`can_walk`: dead, `stunned`, `fingered`, `stoned`, `deepfreezed`, `sleeping`, or `dash`), or you are in `jail`.",
+        "code": "transport_failed",
+        "source": "node/server.js:6261-6263", "confirm": {"code": ["node/server.js:6261-6263", "js/old_common_functions.js:755-771", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "More than 5 monsters target you.",
+        "code": "cant_escape",
+        "source": "node/server.js:6264-6266", "confirm": {"code": ["node/server.js:6264-6266", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "disappear",
+      "to": "nearby",
+      "when": "The channel ends: clients that saw you before the teleport.",
+      "summary": "`{id, reason: \"transport\", to, effect: 1}`. See the `leave` entry for the fields.",
+      "source": "node/server.js:4652-4660", "confirm": {"code": ["node/server.js:14981", "node/server.js:4652-4660"]}
+    }
+  ],
+  "order": [
+    "`player` with `c.town` to you",
+    "`game_response` `data` with `in_progress: true` to you",
+    "after 3,000 ms: `disappear` to clients near you, `new_map` to you, then two `player` updates"
+  ]
+}

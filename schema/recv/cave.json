@@ -1,0 +1,204 @@
+{
+  "event": "cave",
+  "to": "the characters of the run (see the forms). Only members that did not leave, are online, and stand on a floor of the run get it",
+  "payload": {
+    "type": "CaveUpdate | CaveCueUpdate | CaveChatUpdate | CaveEnded",
+    "confirm": {
+      "code": [
+        "node/logic/cave_of_many_dreams.js:1869-1886",
+        "node/logic/cave_of_many_dreams.js:1348-1361",
+        "node/logic/cave_of_many_dreams.js:1901-1941",
+        "node/logic/generated_maps.js:230-240",
+        "node/logic/cave_of_many_dreams.js:45-53"
+      ],
+      "note": "Every form carries `cave_snapshot(run, player)`; `cave_players` keeps members that did not leave, are online and stand on a floor of the run"
+    }
+  },
+  "variants": [
+    {
+      "name": "Snapshot",
+      "type": "CaveUpdate",
+      "when": "`cave_publish`: to each character of the run. `\"choice\"` when a vote opens, `\"result\"` when a vote ends, `\"returned\"` to a member who comes back after a disconnect, else `\"state\"`. The run loop also publishes when 1 s has passed since the last publish. The `talk` interaction also sends `\"choice\"` to the requester only.",
+      "example": {"type": "state", "state": {"run": "5f2c9a0e4b7d13a8c6e2f901", "expires": 1791160240000, "server_time": 1791159411520, "remaining_ms": 828480, "paused": false, "paused_at": null, "rewards": [{"where": "purse", "gold": 2000, "amber": 1, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "x": 704, "y": 912, "id": 7}, {"item": {"name": "scroll1", "q": 1, "p": "cavefound"}, "recipient": "Wizard", "where": "inventory", "id": 9, "slot": 12}], "level": 72, "floor": 0, "gold": 4000, "amber": 2, "limits": {"gold": 60000, "amber": 36, "gold_spawned": 6000, "amber_spawned": 3}, "supplies": ["lamp"], "roster": [{"name": "Wizard", "left": false, "disconnected": false}, {"name": "Healer", "left": false, "disconnected": true}], "doors": [{"id": 0, "x": 320, "y": 480, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "to": "main", "down": false, "locked": false}, {"id": 1, "x": 1888, "y": 1312, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "to": "zone_5f2c9a0e4b7d13a8c6e2f901_1", "down": true, "locked": true}], "objectives": [{"id": "0:0", "x": 880, "y": 736, "done": true, "floor": 0, "kind": "fight", "required": true, "name": "Guard camp", "name_message": {"phrase": "server.cave.guard_camp"}}, {"id": "0:farm:14", "x": 1240, "y": 400, "done": false, "floor": 0, "kind": "farm", "required": false, "waves": 1, "name": "Bat Roost", "name_message": {"phrase": "event.dreams.camp.0.1.name"}}], "choice": null, "hunts": [], "practice": []}},
+      "source": "node/logic/cave_of_many_dreams.js:1869-1886",
+      "confirm": {
+        "code": [
+          "node/logic/cave_of_many_dreams.js:1869-1886",
+          "node/logic/cave_of_many_dreams.js:741-773",
+          "node/logic/cave_of_many_dreams.js:816-846",
+          "node/logic/cave_of_many_dreams.js:1902-1906",
+          "node/logic/cave_of_many_dreams.js:1936-1940",
+          "node/logic/generated_maps.js:175",
+          "node/logic/generated_maps.js:345",
+          "node/logic/generated_maps.js:563",
+          "node/logic/cave_of_many_dreams.js:1715"
+        ]
+      }
+    },
+    {
+      "name": "Cue",
+      "type": "CaveCueUpdate",
+      "when": "An actor of the cave speaks or warns (a boss phase, a nest, a betrayal, a decoy). To each character of the run on the map of the actor.",
+      "example": {
+        "type": "cue",
+        "state": {"run": "5f2c9a0e4b7d13a8c6e2f901", "expires": 1791160240000, "server_time": 1791159702310, "remaining_ms": 537690, "paused": false, "paused_at": null, "rewards": [{"where": "purse", "gold": 2000, "amber": 1, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "x": 704, "y": 912, "id": 7}, {"item": {"name": "scroll1", "q": 1, "p": "cavefound"}, "recipient": "Wizard", "where": "inventory", "id": 9, "slot": 12}], "level": 72, "floor": 1, "gold": 4000, "amber": 2, "limits": {"gold": 60000, "amber": 36, "gold_spawned": 9000, "amber_spawned": 4}, "supplies": ["lamp"], "roster": [{"name": "Wizard", "left": false, "disconnected": false}, {"name": "Healer", "left": false, "disconnected": true}], "doors": [{"id": 0, "x": 288, "y": 400, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_1", "to": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "down": false, "locked": false}, {"id": 1, "x": 1696, "y": 1184, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_1", "to": "zone_5f2c9a0e4b7d13a8c6e2f901_2", "down": true, "locked": true}], "objectives": [{"id": "1:0", "x": 768, "y": 608, "done": false, "floor": 1, "kind": "fight", "required": true, "name": "Guard camp", "name_message": {"phrase": "server.cave.guard_camp"}}], "choice": null, "hunts": [], "practice": []},
+        "cue": {
+          "id": 41,
+          "actor": "1820413",
+          "text": "The nest is hatching!",
+          "text_message": {"message": "The nest is hatching!", "phrase": "server.cave.cue_nest", "phrase_args": {}},
+          "kind": "danger",
+          "x": 512,
+          "y": 640,
+          "map": "zone_5f2c9a0e4b7d13a8c6e2f901_1"
+        }
+      },
+      "source": "node/logic/cave_of_many_dreams.js:1348-1361",
+      "confirm": {
+        "code": [
+          "node/logic/cave_of_many_dreams.js:1348-1361",
+          "node/logic/cave_of_many_dreams.js:1419",
+          "node/logic/cave_of_many_dreams.js:1428",
+          "node/logic/cave_of_many_dreams.js:1436",
+          "node/logic/cave_of_many_dreams.js:1460-1465",
+          "node/logic/cave_of_many_dreams.js:1471"
+        ]
+      }
+    },
+    {
+      "name": "Chat",
+      "type": "CaveChatUpdate",
+      "when": "The `talk` interaction with a traveler (a room of kind `citizen`). To the requester only.",
+      "reply_to": ["interaction"],
+      "example": {
+        "type": "chat",
+        "state": {"run": "5f2c9a0e4b7d13a8c6e2f901", "expires": 1791160240000, "server_time": 1791159411520, "remaining_ms": 828480, "paused": false, "paused_at": null, "rewards": [{"where": "purse", "gold": 2000, "amber": 1, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "x": 704, "y": 912, "id": 7}, {"item": {"name": "scroll1", "q": 1, "p": "cavefound"}, "recipient": "Wizard", "where": "inventory", "id": 9, "slot": 12}], "level": 72, "floor": 0, "gold": 4000, "amber": 2, "limits": {"gold": 60000, "amber": 36, "gold_spawned": 6000, "amber_spawned": 3}, "supplies": ["lamp"], "roster": [{"name": "Wizard", "left": false, "disconnected": false}, {"name": "Healer", "left": false, "disconnected": true}], "doors": [{"id": 0, "x": 320, "y": 480, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "to": "main", "down": false, "locked": false}, {"id": 1, "x": 1888, "y": 1312, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "to": "zone_5f2c9a0e4b7d13a8c6e2f901_1", "down": true, "locked": true}], "objectives": [{"id": "0:0", "x": 880, "y": 736, "done": true, "floor": 0, "kind": "fight", "required": true, "name": "Guard camp", "name_message": {"phrase": "server.cave.guard_camp"}}, {"id": "0:farm:14", "x": 1240, "y": 400, "done": false, "floor": 0, "kind": "farm", "required": false, "waves": 1, "name": "Bat Roost", "name_message": {"phrase": "event.dreams.camp.0.1.name"}}], "choice": null, "hunts": [], "practice": []},
+        "chat": {
+          "name": "Pip",
+          "skin": "mbody3f",
+          "cx": {"head": "fmakeup02", "hair": "hairdo105", "back": "backpacks201"},
+          "text": "Excuse me! Heavy bag.",
+          "text_message": {"phrase": "event.dreams.traveler.Pip.says.0"}
+        }
+      },
+      "source": "node/logic/cave_of_many_dreams.js:1916-1935",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1916-1935"]}
+    },
+    {
+      "name": "Ended",
+      "type": "CaveEnded",
+      "when": "You leave the run: `leave`, the `exit` interaction, or the end of the run. To the character that leaves, before the server moves it to `main`.",
+      "reply_to": ["leave", "interaction"],
+      "example": {"type": "ended", "reason": "exit", "state": {"run": "5f2c9a0e4b7d13a8c6e2f901", "expires": 1791160240000, "server_time": 1791160051880, "remaining_ms": 188120, "paused": false, "paused_at": null, "rewards": [{"where": "purse", "gold": 2000, "amber": 1, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "x": 704, "y": 912, "id": 7}, {"item": {"name": "scroll1", "q": 1, "p": "cavefound"}, "recipient": "Wizard", "where": "inventory", "id": 9, "slot": 12}], "level": 72, "floor": 2, "gold": 31000, "amber": 0, "limits": {"gold": 60000, "amber": 36, "gold_spawned": 33000, "amber_spawned": 9}, "supplies": ["lamp"], "roster": [{"name": "Wizard", "left": false, "disconnected": false}, {"name": "Healer", "left": false, "disconnected": true}], "doors": [{"id": 0, "x": 352, "y": 448, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_2", "to": "zone_5f2c9a0e4b7d13a8c6e2f901_1", "down": false, "locked": false}], "objectives": [], "choice": null, "hunts": [], "practice": []}},
+      "source": "node/logic/generated_maps.js:230-240",
+      "confirm": {"code": ["node/logic/generated_maps.js:230-240", "node/logic/generated_maps.js:367-379", "node/logic/cave_of_many_dreams.js:1895-1898", "node/server.js:5869-5873", "node/server.js:16933"]}
+    }
+  ],
+  "types": {
+    "CaveUpdate": {
+      "summary": "A `cave` event with a new snapshot of the run.",
+      "fields": [
+        {
+          "name": "type",
+          "type": "\"state\" | \"choice\" | \"result\" | \"returned\"",
+          "optional": false,
+          "description": "`\"choice\"`: a vote opened, or you talked to an actor. `\"result\"`: the vote ended. `\"returned\"`: you came back to the run after a disconnect."
+        },
+        {"name": "state", "type": "CaveState", "optional": false, "description": "The run, as you see it."}
+      ],
+      "source": "node/logic/cave_of_many_dreams.js:1869-1886",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1879-1886", "node/logic/cave_of_many_dreams.js:1904", "node/logic/cave_of_many_dreams.js:1939"]}
+    },
+    "CaveCueUpdate": {
+      "summary": "A `cave` event with a line or a warning from an actor.",
+      "fields": [
+        {"name": "type", "type": "\"cue\"", "optional": false, "description": "The form."},
+        {"name": "state", "type": "CaveState", "optional": false, "description": "The run, as you see it."},
+        {"name": "cue", "type": "CaveCue", "optional": false, "description": "The line."}
+      ],
+      "source": "node/logic/cave_of_many_dreams.js:1348-1361",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1359-1360"]}
+    },
+    "CaveChatUpdate": {
+      "summary": "A `cave` event with what a traveler says to you.",
+      "fields": [
+        {"name": "type", "type": "\"chat\"", "optional": false, "description": "The form."},
+        {"name": "state", "type": "CaveState", "optional": false, "description": "The run, as you see it."},
+        {"name": "chat", "type": "CaveChat", "optional": false, "description": "The line of the traveler."}
+      ],
+      "source": "node/logic/cave_of_many_dreams.js:1916-1935",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1926-1933"]}
+    },
+    "CaveEnded": {
+      "summary": "A `cave` event: you left the run.",
+      "fields": [
+        {"name": "type", "type": "\"ended\"", "optional": false, "description": "The form."},
+        {
+          "name": "reason",
+          "type": "\"exit\" | \"closed\" | \"restart\"",
+          "optional": false,
+          "description": "`\"exit\"`: you left (`leave`, or the `exit` interaction). `\"closed\"`: the run ended (time out, or all members left). `\"restart\"`: the game server restarts."
+        },
+        {"name": "state", "type": "CaveState | null", "optional": false, "description": "The last snapshot. `null` when the cave state of the run does not exist."}
+      ],
+      "source": "node/logic/generated_maps.js:230-240",
+      "confirm": {
+        "code": ["node/logic/generated_maps.js:236", "node/logic/generated_maps.js:367-379", "node/logic/cave_of_many_dreams.js:1897", "node/server.js:5871", "node/server.js:16933"],
+        "note": "`reason` is `\"exit\"` (both `exit` paths), `\"closed\"` (the default of `destroy_generated_run`) or `\"restart\"`"
+      }
+    },
+    "CaveCue": {
+      "summary": "A line or a warning from an actor in a cave run.",
+      "fields": [
+        {"name": "id", "type": "integer", "optional": false, "description": "A serial number in the run."},
+        {"name": "actor", "type": "EntityId", "optional": false, "description": "The monster id of the actor."},
+        {"name": "text", "type": "string", "optional": false, "description": "The text."},
+        {
+          "name": "text_message",
+          "type": "LocalizedText",
+          "optional": false,
+          "description": "`text` as a phrase. `cave_cue` leaves it out for a plain string, but every call site in the live code passes a `localization.message` object, so it is always there."
+        },
+        {"name": "kind", "type": "\"neutral\" | \"ally\" | \"danger\"", "optional": false, "description": "The tone of the line."},
+        {"name": "x", "type": "number", "optional": false, "description": "The position of the actor."},
+        {"name": "y", "type": "number", "optional": false, "description": "The position of the actor."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "The map of the actor."}
+      ],
+      "example": {
+        "id": 41,
+        "actor": "1820413",
+        "text": "The nest is hatching!",
+        "text_message": {"message": "The nest is hatching!", "phrase": "server.cave.cue_nest", "phrase_args": {}},
+        "kind": "danger",
+        "x": 512,
+        "y": 640,
+        "map": "zone_5f2c9a0e4b7d13a8c6e2f901_1"
+      },
+      "source": "node/logic/cave_of_many_dreams.js:1348-1361",
+      "confirm": {
+        "code": [
+          "node/logic/cave_of_many_dreams.js:1348-1358",
+          "node/logic/cave_of_many_dreams.js:1419",
+          "node/logic/cave_of_many_dreams.js:1428",
+          "node/logic/cave_of_many_dreams.js:1436",
+          "node/logic/cave_of_many_dreams.js:1460-1465",
+          "node/logic/cave_of_many_dreams.js:1471",
+          "languages/index.js:256-258"
+        ]
+      }
+    }
+  },
+  "senders": [
+    {
+      "what": "`cave_publish`: a change in the run (a completed room, a door, a vote, a chest, a purchase). The run loop also publishes when 1 s has passed since the last publish (node/logic/cave_of_many_dreams.js:1715).",
+      "source": "node/logic/cave_of_many_dreams.js:1869-1886"
+    },
+    {"what": "`cave_begin_vote` (`\"choice\"`) and `cave_resolve_vote` (`\"result\"`).", "source": "node/logic/cave_of_many_dreams.js:741-847"},
+    {"what": "`cave_cue`: boss phases, nests, betrayals, decoys and new helpers.", "source": "node/logic/cave_of_many_dreams.js:1348-1361"},
+    {"what": "The `talk` interaction: `\"choice\"` (also while paused) or `\"chat\"` to the requester.", "source": "node/logic/cave_of_many_dreams.js:1901-1941"},
+    {"what": "Travel through a door to another floor.", "source": "node/logic/generated_maps.js:175"},
+    {"what": "A member comes back after a disconnect: `\"returned\"` to that member, `\"state\"` to the others.", "source": "node/logic/generated_maps.js:345"},
+    {"what": "The start of a new run.", "source": "node/logic/generated_maps.js:563"},
+    {"what": "`generated_exit` (`\"ended\"`): the `leave` handler, the `exit` interaction, and `destroy_generated_run`.", "source": "node/logic/generated_maps.js:230-240"}
+  ]
+}

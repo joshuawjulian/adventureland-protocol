@@ -1,0 +1,45 @@
+{
+  "event": "merge",
+  "source": "node/server.js:9573-9590",
+  "request": {
+    "fields": [
+      {"name": "container", "type": "string", "optional": false, "coerce": "none: used as a key of `player.slots`", "description": "The equipment slot of the container that gets the pet."},
+      {"name": "pet", "type": "string", "optional": false, "coerce": "none: used as a key of `player.slots`", "description": "The equipment slot of the container that the server removes."}
+    ],
+    "others": "ignored",
+    "example": {"container": "offhand", "pet": "mainhand"}, "confirm": {"code": ["node/server.js:9578-9579"], "note": "The handler reads only `container` and `pet`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "merge_complete",
+      "when": "The merge is done. The payload is a bare string.",
+      "type": "\"merge_complete\"",
+      "example": "merge_complete",
+      "source": "node/server.js:9588", "confirm": {"code": ["node/server.js:9586-9588"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "intro": "Every failure is the bare string `\"merge_mismatch\"`.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9575-9577", "confirm": {"code": ["node/server.js:9574-9577"]}},
+      {"when": "A slot is empty, or the item in it has no `type: \"container\"`. The check reads `type` on the item in the slot, not on `G.items`.", "code": "merge_mismatch", "form": "bare", "source": "node/server.js:9580-9582", "confirm": {"code": ["node/server.js:9578-9582"]}},
+      {"when": "The `grade` of the receiving container is lower than the grade of the other one, or the receiving container has `data` already.", "code": "merge_mismatch", "form": "bare", "source": "node/server.js:9583-9585", "confirm": {"code": ["node/server.js:9583-9585"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, after the `game_response`.",
+      "summary": "Your state with `reopen: true`. The `pet` slot is empty.",
+      "source": "node/server.js:9589", "confirm": {"code": ["node/server.js:9589", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`game_response` `\"merge_complete\"` (a bare string) to you",
+    "`player` with `reopen: true` to you"
+  ]
+}

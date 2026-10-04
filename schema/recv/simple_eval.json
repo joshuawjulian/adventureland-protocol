@@ -1,0 +1,69 @@
+{
+  "event": "simple_eval",
+  "to": "you: only the socket that sent `render`",
+  "payload": {"type": "SimpleEvalWindow | SimpleEvalJson | SimpleEvalModal", "confirm": {"code": ["node/server.js:13167-13197"]}},
+  "example": {"output": "", "code": "show_modal(\"<pre>\"+data.output+\"</pre>\")"},
+  "variants": [
+    {
+      "name": "Window",
+      "type": "SimpleEvalWindow",
+      "when": "The admin code set `window`.",
+      "reply_to": ["render"],
+      "example": {"window": {"x": 1}, "after": "", "code": "for(var id in data.window) window[id]=data.window[id]; eval(data.after);"},
+      "source": "node/server.js:13181-13186",
+      "confirm": {"code": ["node/server.js:13171-13186"]}
+    },
+    {
+      "name": "JSON",
+      "type": "SimpleEvalJson",
+      "when": "The admin code set `json_output` and not `window`.",
+      "reply_to": ["render"],
+      "example": {"output": "", "json_output": {"players": 12}, "code": "show_json(data.json_output)"},
+      "source": "node/server.js:13187-13188",
+      "confirm": {"code": ["node/server.js:13171-13178", "node/server.js:13187-13188"]}
+    },
+    {
+      "name": "Modal",
+      "type": "SimpleEvalModal",
+      "when": "The admin code set neither, or it threw: `output` is `\"Exception: <error>\"`.",
+      "reply_to": ["render"],
+      "example": {"output": "", "code": "show_modal(\"<pre>\"+data.output+\"</pre>\")"},
+      "source": "node/server.js:13189-13194",
+      "confirm": {"code": ["node/server.js:13171-13178", "node/server.js:13189-13194"]}
+    }
+  ],
+  "types": {
+    "SimpleEvalWindow": {
+      "summary": "`simple_eval`: copy values to the `window` of the client.",
+      "fields": [
+        {"name": "window", "type": "object", "optional": false, "description": "Values that the admin code put in its local `window`. The client copies them to its `window`."},
+        {"name": "after", "type": "string", "optional": false, "description": "Code to run after the copy. `\"\"` unless the admin code set it."},
+        {"name": "code", "type": "\"for(var id in data.window) window[id]=data.window[id]; eval(data.after);\"", "optional": false, "description": "The fixed code that copies `window` and runs `after`."}
+      ],
+      "source": "node/server.js:13181-13186",
+      "confirm": {"code": ["node/server.js:13171-13186"]}
+    },
+    "SimpleEvalJson": {
+      "summary": "`simple_eval`: show a JSON value.",
+      "fields": [
+        {"name": "output", "type": "string", "optional": false, "description": "Text that the admin code set, or `\"Exception: <error>\"` when it threw. The client does not show it in this form."},
+        {"name": "json_output", "type": "any", "optional": false, "description": "A value that the admin code set."},
+        {"name": "code", "type": "\"show_json(data.json_output)\"", "optional": false, "description": "The fixed code that shows `json_output`."}
+      ],
+      "source": "node/server.js:13187-13188",
+      "confirm": {"code": ["node/server.js:13171-13178", "node/server.js:13187-13188"]}
+    },
+    "SimpleEvalModal": {
+      "summary": "`simple_eval`: show `output` in a modal.",
+      "fields": [
+        {"name": "output", "type": "string", "optional": false, "description": "Text that the admin code set, or `\"Exception: <error>\"` when it threw. `\"\"` when it set nothing."},
+        {"name": "code", "type": "\"show_modal(\\\"<pre>\\\"+data.output+\\\"</pre>\\\")\"", "optional": false, "description": "The fixed code that shows `output` in a modal. `json_output` is `undefined` in this form, so JSON leaves it out."}
+      ],
+      "source": "node/server.js:13189-13194",
+      "confirm": {"code": ["node/server.js:13171-13178", "node/server.js:13189-13194"]}
+    }
+  },
+  "senders": [
+    {"what": "The admin `render` handler, after it runs `data.code` on the server with `eval`. It sends one of three forms: `window` set, `json_output` set, or neither.", "source": "node/server.js:13167-13197"}
+  ]
+}

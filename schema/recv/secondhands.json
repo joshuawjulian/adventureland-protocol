@@ -1,0 +1,13 @@
+{
+  "event": "secondhands",
+  "to": "you: only the socket that sent the request",
+  "payload": {
+    "type": "ResaleItem[]",
+    "confirm": {"code": ["node/server.js:7959-7972", "node/server.js:8326-8391", "node/server_functions.js:590-639", "node/server_functions.js:3187-3189", "node/server_functions.js:4234-4261"]}
+  },
+  "example": [{"name": "ringsj", "level": 0, "rid": "aZ3kQ"}, {"name": "hpot1", "q": 140, "rid": "Pp0xw"}, {"name": "blade", "level": 7, "p": "shiny", "rid": "Tq9eL"}],
+  "senders": [
+    {"what": "The `secondhands` handler without `request_id`: the list in the order of `S.sold`. With `request_id`, the list comes reversed as `items` in `game_response` `data` instead.", "source": "node/server.js:7969-7972"},
+    {"what": "The `sbuy` handler (without `f`) after a purchase: the new list, also with `request_id`.", "source": "node/server.js:8391"}
+  ]
+}

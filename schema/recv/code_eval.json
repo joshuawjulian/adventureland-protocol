@@ -1,0 +1,12 @@
+{
+  "event": "code_eval",
+  "to": "the socket of the character that the observer follows",
+  "payload": {
+    "type": "any",
+    "confirm": {"code": ["node/server.js:5066-5076", "node/server.js:4893-4895"], "note": "The socket wrapper turns a missing payload into `{}`."}
+  },
+  "example": {"command": "1+1"},
+  "senders": [
+    {"what": "The `o:command` handler: the payload of the observer, with no change and no check. Nothing is sent when the socket is not an observer, or when the followed character is gone or disconnected.", "source": "node/server.js:5066-5076"}
+  ]
+}

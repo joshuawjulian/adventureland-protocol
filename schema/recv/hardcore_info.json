@@ -1,0 +1,19 @@
+{
+  "event": "hardcore_info",
+  "to": "everyone: every socket on the game server, on both socket endpoints (`broadcast`). Only HARDCORE servers send it",
+  "payload": {
+    "fields": [
+      {"name": "E", "type": "ServerInfoState", "optional": false, "description": "The whole event state S. On HARDCORE it has `rewards` and `minutes` (see [rewards](#s-key-rewards) and [minutes](#s-key-minutes))."},
+      {"name": "achiever", "type": "CharacterName", "optional": true, "description": "The character who won a reward slot now. Absent in the update every 60 s."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:5670-5689", "node/server_functions.js:5882-5976", "node/server_functions.js:3105-3138", "node/server_functions.js:3495-3496"], "note": "On HARDCORE `init_server` replaces E with `{rewards, minutes}`, so E has no `schedule` there. `first_goo` is not in the initial `rewards` but a goo kill adds it; `first_wabbit` is in it but nothing fills it."}
+  },
+  "example": {"E": {"rewards": {"item8": "Wizard", "item9": null, "item10": null, "item11": null, "item12": null, "leader": "Wizard", "first_fvampire": null, "first_mvampire": null, "first_skeletor": null, "first_stompy": null, "first_franky": null, "first_ent": null, "first_wabbit": null, "accessory5": null, "accessory6": null, "first_warrior_70": null, "first_paladin_70": null, "first_priest_70": null, "first_mage_70": null, "first_ranger_70": null, "first_rogue_70": null, "!participation": "Every authorized account with a level 60+ character receives a participation award!"}, "minutes": 212}, "achiever": "Wizard"},
+  "senders": [
+    {"what": "`hardcore_loop` every 60 s: it sets `rewards.leader` to the highest-level character and decreases `minutes`. No `achiever`.", "source": "node/server_functions.js:5670-5689"},
+    {"what": "A first kill of `ent`, `stompy`, `franky`, `fvampire`, `mvampire`, `skeletor` or `goo` (the slot `first_<monster>`).", "source": "node/server_functions.js:5882-5900"},
+    {"what": "A first character of a class at level 70 (the slot `first_<class>_70`).", "source": "node/server_functions.js:5902-5920"},
+    {"what": "A first compound to level 5 or 6 (`accessory5`, `accessory6`).", "source": "node/server_functions.js:5922-5942"},
+    {"what": "A first upgrade to level 8 to 12 (`item8` to `item12`).", "source": "node/server_functions.js:5944-5976"}
+  ]
+}

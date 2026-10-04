@@ -1,0 +1,360 @@
+{
+  "event": "party",
+  "source": "node/server.js:12357-12547",
+  "request": {
+    "fields": [
+      {"name": "event", "type": "\"invite\" | \"request\" | \"accept\" | \"raccept\" | \"leave\" | \"kick\"", "optional": false, "coerce": "compared with `==`", "description": "The action. An unknown value does nothing and gets the success reply."}
+    ],
+    "others": "ignored",
+    "example": {"event": "leave"},
+    "confirm": {"code": ["node/server.js:12362", "node/server.js:12384", "node/server.js:12404", "node/server.js:12456", "node/server.js:12504", "node/server.js:12515"]}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The action is done. Also: `leave` or `kick` when you are not in a party, `kick` of a name that is not in your party, and an unknown `event`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"party\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "party"},
+      "source": "node/server.js:12546",
+      "confirm": {"code": ["node/server.js:12546", "node/server.js:12506-12508", "node/server.js:12516-12523", "node/server_functions.js:3421-3446"]}
+    },
+    {
+      "name": "Already in party",
+      "event": "game_response",
+      "code": "already_in_party",
+      "when": "`invite` or `request`: the target is in your party. `accept` or `raccept`: you and the other character are in the same party. Nothing changes.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"already_in_party\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"party\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "already_in_party", "place": "party"},
+      "source": "node/server.js:12372, 12392, 12422, 12470",
+      "confirm": {"code": ["node/server.js:12371-12373", "node/server.js:12391-12393", "node/server.js:12421-12423", "node/server.js:12469-12471", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "party",
+    "intro": "Only the checks of the action in `event` run. A full party has `limits.party_max` (10) members, or `limits.party` (9) members that are not merchants (`party_length`, node/server.js:1185).",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12359-12361", "confirm": {"code": ["node/server.js:12359-12361"]}}
+    ]
+  },
+  "variants": {
+    "key": "event",
+    "list": [
+      {
+        "value": "invite",
+        "when": "Invites a character to your party. The server does not check that you are the leader.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": true, "coerce": "none: `data.id || data.name`, used as a key of `name_to_id`", "description": "The target. The server uses it first, then `name`."},
+            {"name": "name", "type": "CharacterName", "optional": true, "coerce": "none: used as a key of `name_to_id`", "description": "The target, when `id` is absent. Give `id` or `name`."}
+          ],
+          "example": {"event": "invite", "name": "Priest"},
+          "confirm": {"code": ["node/server.js:12367"]}
+        },
+        "failures": {
+          "rows": [
+            {"when": "You are in a party, and it is full.", "code": "party_full", "source": "node/server.js:12364-12366", "confirm": {"code": ["node/server.js:12364-12366", "node/server.js:258-259", "node/server.js:1185", "node/server_functions.js:3393-3419"]}},
+            {"when": "The target is not online on this server, or it is you.", "code": "invalid", "source": "node/server.js:12367-12370", "confirm": {"code": ["node/server.js:12367-12370", "node/server_functions.js:3393-3419"]}},
+            {"when": "The target is in your party. Nothing changes.", "see": "Already in party", "source": "node/server.js:12371-12373", "confirm": {"code": ["node/server.js:12371-12373", "node/server_functions.js:3421-3446"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "invite",
+            "to": "the target",
+            "when": "Success. The invite stays open until the target accepts it.",
+            "fields": [
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You: the name to send back in `accept`."}
+            ],
+            "example": {"name": "Wizard"},
+            "source": "node/server.js:12375",
+            "confirm": {"code": ["node/server.js:12375"]}
+          },
+          {
+            "name": "Invited",
+            "event": "game_log",
+            "to": "you",
+            "when": "Success. Phrase `server.game_log.invited_to_party`, with `invited` in `phrase_args`.",
+            "type": "LocalizedText",
+            "example": {"message": "Invited Priest to party", "phrase": "server.game_log.invited_to_party", "phrase_args": {"invited": "Priest"}},
+            "source": "node/server.js:12376-12379",
+            "confirm": {"code": ["node/server.js:12376-12379", "languages/index.js:256-258", "languages/en/server.js:196"]}
+          }
+        ],
+        "order": ["`invite` to the target", "`game_log` to you", "`game_response` `data` to you"]
+      },
+      {
+        "value": "request",
+        "when": "Asks to join the party of a character.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": true, "coerce": "none: `data.id || data.name`, used as a key of `name_to_id`", "description": "The target. The server uses it first, then `name`."},
+            {"name": "name", "type": "CharacterName", "optional": true, "coerce": "none: used as a key of `name_to_id`", "description": "The target, when `id` is absent. Give `id` or `name`."}
+          ],
+          "example": {"event": "request", "name": "Priest"},
+          "confirm": {"code": ["node/server.js:12387"]}
+        },
+        "failures": {
+          "rows": [
+            {"when": "The target is not online on this server, or it is you.", "code": "invalid", "source": "node/server.js:12387-12390", "confirm": {"code": ["node/server.js:12387-12390", "node/server_functions.js:3393-3419"]}},
+            {"when": "The target is in your party. Nothing changes.", "see": "Already in party", "source": "node/server.js:12391-12393", "confirm": {"code": ["node/server.js:12391-12393", "node/server_functions.js:3421-3446"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "request",
+            "to": "the target",
+            "when": "Success. The request stays open until the target accepts it.",
+            "fields": [
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You: the name to send back in `raccept`."}
+            ],
+            "example": {"name": "Wizard"},
+            "source": "node/server.js:12395",
+            "confirm": {"code": ["node/server.js:12395"]}
+          },
+          {
+            "name": "Requested",
+            "event": "game_log",
+            "to": "you",
+            "when": "Success. Phrase `server.game_log.requested_to_join_s_party`, with `invited` in `phrase_args`.",
+            "type": "LocalizedText",
+            "example": {"message": "Requested to join Priest's party", "phrase": "server.game_log.requested_to_join_s_party", "phrase_args": {"invited": "Priest"}},
+            "source": "node/server.js:12396-12399",
+            "confirm": {"code": ["node/server.js:12396-12399", "languages/index.js:256-258", "languages/en/server.js:274"]}
+          }
+        ],
+        "order": ["`request` to the target", "`game_log` to you", "`game_response` `data` to you"]
+      },
+      {
+        "value": "accept",
+        "when": "Accepts an invite. You join the party of the inviter. The server removes you from your old party first.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "CharacterName", "optional": false, "coerce": "none: used as a key of `name_to_id`", "description": "The character that invited you (the `name` of the `invite` event)."}
+          ],
+          "example": {"event": "accept", "name": "Wizard"},
+          "confirm": {"code": ["node/server.js:12405"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The character in `name` is not online.",
+              "code": "player_gone",
+              "extra": [
+                {"name": "name", "type": "CharacterName", "optional": false, "description": "The `name` from the request.", "example": "Wizard"}
+              ],
+              "source": "node/server.js:12409-12411",
+              "confirm": {"code": ["node/server.js:12405-12411", "node/server_functions.js:3393-3419"]}
+            },
+            {"when": "The inviter is in a party, and it is full.", "code": "party_full", "source": "node/server.js:12412-12417", "confirm": {"code": ["node/server.js:12412-12417", "node/server.js:258-259", "node/server_functions.js:3393-3419"]}},
+            {"when": "The inviter did not invite you, or you used the invite already.", "code": "invitation_expired", "source": "node/server.js:12418-12420", "confirm": {"code": ["node/server.js:12418-12420", "node/server.js:12428", "node/server_functions.js:3393-3419"]}},
+            {"when": "You and the inviter are in the same party. Nothing changes.", "see": "Already in party", "source": "node/server.js:12421-12423", "confirm": {"code": ["node/server.js:12421-12423", "node/server_functions.js:3421-3446"]}},
+            {
+              "when": "The inviter had no party, and the server made one. Then the inviter went offline during the sends of the server. You left your old party already.",
+              "code": "player_gone",
+              "extra": [
+                {"name": "name", "type": "CharacterName", "optional": false, "description": "The `name` from the request.", "example": "Wizard"}
+              ],
+              "source": "node/server.js:12430-12437",
+              "confirm": {"code": ["node/server.js:12429-12437", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {"name": "Left old party", "event": "party_update", "to": "you", "when": "You were in another party, and the server removes you from it first.", "summary": "`{}`: not in a party now. A `game_log` with phrase `server.game_log.left_your_current_party` follows.", "source": "node/server.js:12424-12427", "confirm": {"code": ["node/server.js:12424-12427", "languages/index.js:256-258", "languages/en/server.js:208"]}},
+          {"name": "Member left", "event": "party_update", "to": "the members of your old party", "when": "You were in another party. Each member also gets `player`.", "summary": "A `LocalizedText` with phrase `server.party.left`, plus `leave: 1`, `list` and `party`. When fewer than 2 members stay, the party ends: `list` is `false` and `party` is `{}`.", "source": "node/server_functions.js:3603-3667", "confirm": {"code": ["node/server_functions.js:3603-3667", "languages/index.js:256-258", "node/server.js:1138-1213", "languages/en/server.js:12", "node/server.js:4550-4594"]}},
+          {
+            "name": "Joined",
+            "event": "party_update",
+            "to": "party",
+            "when": "Success. Every member of the party gets it, you too. The phrase is `server.party.joined_with_invite` when the inviter is not the leader.",
+            "extends": "LocalizedText",
+            "fields": [
+              {"name": "list", "type": "CharacterName[]", "optional": false, "description": "The members in order. The first is the leader."},
+              {"name": "party", "type": "Record<string, object>", "optional": false, "description": "Member name to `{skin, level, type, x, y, in, map, share, pdps, l, xp, luck, gold, rip?, cx?}` (`party_to_client`, node/server.js:1138-1213)."}
+            ],
+            "example": {
+              "message": "Priest joined the party",
+              "phrase": "server.party.joined",
+              "phrase_args": {"player": "Priest", "inviter": "Wizard"},
+              "list": ["Wizard", "Priest"],
+              "party": {
+                "Wizard": {"skin": "mage", "level": 80, "type": "mage", "x": 120, "y": -40, "in": "main", "map": "main", "share": 0.5, "pdps": 0, "l": 2, "xp": 10, "luck": 0, "gold": 5}
+              }
+            },
+            "source": "node/server.js:12441-12452",
+            "confirm": {"code": ["node/server.js:12439-12452", "node/server_functions.js:3553-3570", "languages/index.js:256-258", "node/server.js:1138-1213", "languages/en/server.js:8", "languages/en/server.js:10"]}
+          },
+          {"event": "player", "to": "the inviter, then you", "when": "To the inviter if the server made a new party. Then to you on success.", "summary": "The state with the new `party` value.", "source": "node/server.js:12433, 12453", "confirm": {"code": ["node/server.js:12430-12433", "node/server.js:12453", "node/server.js:4550-4594"]}}
+        ],
+        "order": [
+          "if you were in another party: `party_update` + `player` to its members, then `party_update` `{}` and `game_log` to you",
+          "if the inviter had no party: `player` to the inviter",
+          "`party_update` (joined) to every member",
+          "`player` to you",
+          "`game_response` `data` to you"
+        ]
+      },
+      {
+        "value": "raccept",
+        "when": "Accepts a request to join. The requester joins your party. The server removes the requester from its old party first.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "CharacterName", "optional": false, "coerce": "none: used as a key of `name_to_id`", "description": "The character that asked to join (the `name` of the `request` event)."}
+          ],
+          "example": {"event": "raccept", "name": "Ranger"},
+          "confirm": {"code": ["node/server.js:12457"]}
+        },
+        "failures": {
+          "rows": [
+            {
+              "when": "The character in `name` is not online.",
+              "code": "player_gone",
+              "extra": [
+                {"name": "name", "type": "CharacterName", "optional": false, "description": "The `name` from the request.", "example": "Ranger"}
+              ],
+              "source": "node/server.js:12458-12461",
+              "confirm": {"code": ["node/server.js:12457-12460", "node/server_functions.js:3393-3419"]}
+            },
+            {"when": "You are in a party, and it is full.", "code": "party_full", "source": "node/server.js:12463-12465", "confirm": {"code": ["node/server.js:12463-12465", "node/server.js:258-259", "node/server_functions.js:3393-3419"]}},
+            {"when": "The character did not ask to join you, or you accepted the request already.", "code": "request_expired", "source": "node/server.js:12466-12468", "confirm": {"code": ["node/server.js:12466-12468", "node/server.js:12479", "node/server_functions.js:3393-3419"]}},
+            {"when": "You and the requester are in the same party. Nothing changes.", "see": "Already in party", "source": "node/server.js:12469-12471", "confirm": {"code": ["node/server.js:12469-12471", "node/server_functions.js:3421-3446"]}},
+            {
+              "when": "The requester left its old party, and then went offline during the sends of the server.",
+              "code": "player_gone",
+              "extra": [
+                {"name": "name", "type": "CharacterName", "optional": false, "description": "The `name` from the request.", "example": "Ranger"}
+              ],
+              "source": "node/server.js:12472-12478",
+              "confirm": {"code": ["node/server.js:12472-12478", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {"name": "Requester left old party", "event": "party_update", "to": "the requester", "when": "The requester was in another party, and the server removes it from it first.", "summary": "`{}`: not in a party now. A `game_log` with phrase `server.game_log.left_the_party` follows.", "source": "node/server.js:12473-12475", "confirm": {"code": ["node/server.js:12472-12475", "languages/index.js:256-258", "languages/en/server.js:206"]}},
+          {"name": "Member left", "event": "party_update", "to": "the members of the old party of the requester", "when": "The requester was in another party. Each member also gets `player`.", "summary": "A `LocalizedText` with phrase `server.party.left`, plus `leave: 1`, `list` and `party`. When fewer than 2 members stay, the party ends: `list` is `false` and `party` is `{}`.", "source": "node/server_functions.js:3603-3667", "confirm": {"code": ["node/server_functions.js:3603-3667", "languages/index.js:256-258", "node/server.js:1138-1213", "languages/en/server.js:12", "node/server.js:4550-4594"]}},
+          {
+            "name": "Joined",
+            "event": "party_update",
+            "to": "party",
+            "when": "Success. Every member of the party gets it, the requester too.",
+            "extends": "LocalizedText",
+            "fields": [
+              {"name": "list", "type": "CharacterName[]", "optional": false, "description": "The members in order. The first is the leader."},
+              {"name": "party", "type": "Record<string, object>", "optional": false, "description": "Member name to `{skin, level, type, x, y, in, map, share, pdps, l, xp, luck, gold, rip?, cx?}` (`party_to_client`, node/server.js:1138-1213)."}
+            ],
+            "example": {
+              "message": "Ranger joined the party",
+              "phrase": "server.party.joined",
+              "phrase_args": {"player": "Ranger"},
+              "list": ["Wizard", "Ranger"],
+              "party": {
+                "Wizard": {"skin": "mage", "level": 80, "type": "mage", "x": 120, "y": -40, "in": "main", "map": "main", "share": 0.5, "pdps": 0, "l": 2, "xp": 10, "luck": 0, "gold": 5}
+              }
+            },
+            "source": "node/server.js:12489-12500",
+            "confirm": {"code": ["node/server.js:12487-12500", "node/server_functions.js:3553-3570", "languages/index.js:256-258", "node/server.js:1138-1213", "languages/en/server.js:8"]}
+          },
+          {"event": "player", "to": "you, then the requester", "when": "To you if the server made a new party. Then to the requester on success.", "summary": "The state with the new `party` value.", "source": "node/server.js:12484, 12501", "confirm": {"code": ["node/server.js:12480-12484", "node/server.js:12501", "node/server.js:4550-4594"]}}
+        ],
+        "order": [
+          "if the requester was in another party: `party_update` + `player` to its members, then `party_update` `{}` and `game_log` to the requester",
+          "if you had no party: `player` to you",
+          "`party_update` (joined) to every member",
+          "`player` to the requester",
+          "`game_response` `data` to you"
+        ]
+      },
+      {
+        "value": "leave",
+        "when": "Leaves your party. The server ignores `name`. A party of 2 ends when one member leaves.",
+        "request": {"fields": [], "example": {"event": "leave"}, "confirm": {"code": ["node/server.js:12504-12514"], "note": "No field besides `event` is read"}},
+        "also": [
+          {"name": "Member left", "event": "party_update", "to": "the other members", "when": "You were in a party. Each member also gets `player`.", "summary": "A `LocalizedText` with phrase `server.party.left`, plus `leave: 1`, `list` and `party`. When fewer than 2 members stay, the party ends: `list` is `false` and `party` is `{}`.", "source": "node/server_functions.js:3603-3667", "confirm": {"code": ["node/server_functions.js:3603-3667", "languages/index.js:256-258", "node/server.js:1138-1213", "languages/en/server.js:12", "node/server.js:4550-4594"]}},
+          {"name": "Left", "event": "party_update", "to": "you", "when": "Always, also when you are not in a party.", "summary": "`{}`: not in a party now. In a party, a `game_log` with phrase `server.game_log.left_the_party` follows.", "source": "node/server.js:12507, 12511-12512", "confirm": {"code": ["node/server.js:12505-12508", "node/server.js:12510-12512", "languages/index.js:256-258", "languages/en/server.js:206"]}},
+          {"event": "player", "to": "you", "when": "You were in a party.", "summary": "The state with the new `party` value.", "source": "node/server.js:12513", "confirm": {"code": ["node/server.js:12513", "node/server.js:4550-4594"]}}
+        ],
+        "order": {
+          "In a party": [
+            "`party_update` + `player` to the other members",
+            "`party_update` `{}` to you",
+            "`game_log` to you",
+            "`player` to you",
+            "`game_response` `data` to you"
+          ],
+          "Not in a party": ["`party_update` `{}` to you", "`game_response` `data` to you"]
+        },
+        "source": "node/server.js:12505-12514"
+      },
+      {
+        "value": "kick",
+        "when": "Removes a member from your party. You can remove only the members after you in `list`, and yourself. The leader is first, so the leader can remove every member.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "CharacterName", "optional": false, "coerce": "none: compared with the names in the party (`in_arr`)", "description": "The member to remove."}
+          ],
+          "example": {"event": "kick", "name": "Ranger"},
+          "confirm": {"code": ["node/server.js:12520", "node/server.js:12524", "node/server.js:12527"]}
+        },
+        "failures": {
+          "rows": [
+            {"when": "You are not in a party. Nothing changes.", "see": "Success", "source": "node/server.js:12516-12518", "confirm": {"code": ["node/server.js:12516-12518", "node/server_functions.js:3421-3446"]}},
+            {
+              "when": "`name` is not in your party. Nothing changes.",
+              "replies": [
+                {
+                  "event": "party_update",
+                  "example": {
+                    "list": ["Wizard", "Priest"],
+                    "party": {
+                      "Wizard": {"skin": "mage", "level": 80, "type": "mage", "x": 120, "y": -40, "in": "main", "map": "main", "share": 0.5, "pdps": 0, "l": 2, "xp": 10, "luck": 0, "gold": 5}
+                    }
+                  },
+                  "note": "your party now; `party` trimmed to one member"
+                },
+                {"see": "Success"}
+              ],
+              "source": "node/server.js:12520-12523",
+              "confirm": {"code": ["node/server.js:12520-12523", "node/server.js:1138-1213", "node/server_functions.js:3421-3446"]}
+            },
+            {"when": "The member is before you in the list of the party (`list`).", "code": "cant_kick", "source": "node/server.js:12524-12526", "confirm": {"code": ["node/server.js:12524-12526", "node/server_functions.js:3393-3419"]}},
+            {"when": "The member is not online. It has no `name` field.", "code": "player_gone", "source": "node/server.js:12527-12530", "confirm": {"code": ["node/server.js:12527-12530", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {"name": "Member left", "event": "party_update", "to": "the other members", "when": "Success. Each member also gets `player`.", "summary": "A `LocalizedText` with phrase `server.party.left`, plus `leave: 1`, `list` and `party`. When fewer than 2 members stay, the party ends: `list` is `false` and `party` is `{}`.", "source": "node/server_functions.js:3603-3667", "confirm": {"code": ["node/server_functions.js:3603-3667", "languages/index.js:256-258", "node/server.js:1138-1213", "languages/en/server.js:12", "node/server.js:4550-4594"]}},
+          {
+            "name": "Kicked",
+            "event": "game_log",
+            "to": "party",
+            "when": "Success, if the party still exists (it ends when 1 member stays).",
+            "type": "LocalizedText",
+            "example": {"message": "Wizard kicked Ranger", "phrase": "server.game_log.kicked", "phrase_args": {"player": "Wizard", "kicked": "Ranger"}},
+            "source": "node/server.js:12532-12541",
+            "confirm": {"code": ["node/server.js:12531-12541", "node/server_functions.js:3553-3570", "languages/index.js:256-258", "languages/en/server.js:204"]}
+          },
+          {"name": "Removed", "event": "party_update", "to": "the removed member", "when": "Success.", "summary": "`{}`: not in a party now. A `game_log` with phrase `server.game_log.you_ve_been_removed_from_the_party` follows.", "source": "node/server.js:12542-12543", "confirm": {"code": ["node/server.js:12542-12543", "languages/index.js:256-258", "languages/en/server.js:314"]}},
+          {"event": "player", "to": "the removed member", "when": "Success.", "summary": "The state with the new `party` value.", "source": "node/server.js:12544", "confirm": {"code": ["node/server.js:12544", "node/server.js:4550-4594"]}}
+        ],
+        "order": [
+          "`party_update` + `player` to the other members",
+          "`game_log` to the party",
+          "`party_update` `{}`, `game_log` and `player` to the removed member",
+          "`game_response` `data` to you"
+        ]
+      }
+    ]
+  }
+}

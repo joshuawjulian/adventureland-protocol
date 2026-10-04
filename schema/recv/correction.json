@@ -1,0 +1,16 @@
+{
+  "event": "correction",
+  "to": "you: only the socket that sent the `move`",
+  "payload": {
+    "fields": [
+      {"name": "x", "type": "number", "optional": false, "description": "The position of the character on the server."},
+      {"name": "y", "type": "number", "optional": false, "description": "The position of the character on the server."}
+    ],
+    "confirm": {"code": ["node/server.js:11248-11256", "node/logic/instance_pause.js:107"]}
+  },
+  "example": {"x": -120.5, "y": 410},
+  "senders": [
+    {"what": "The `move` handler: the `x`, `y` of the request are more than 132 px from the server position. Only when the request position is on a plain walkable cell of the map (`current == 0`) and `mode.lcorrection` is on (the default). Not for a pet `move`", "source": "node/server.js:11248-11256"},
+    {"what": "A cave pause blocks the `move` (`instance_block_action`), before the `game_response` with `cave_paused` or `cave_entering`", "source": "node/logic/instance_pause.js:107"}
+  ]
+}

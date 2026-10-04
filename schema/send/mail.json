@@ -1,0 +1,108 @@
+{
+  "event": "mail",
+  "source": "node/server.js:5708-5863",
+  "request": {
+    "fields": [
+      {"name": "to", "type": "CharacterName", "optional": false, "coerce": "`to.toLowerCase().replace(/\\s+/g, \"\")`, then compared with the lower-case name of each character in the database. A missing or non-string `to` throws (see Notes)", "description": "The character that gets the mail. It can be offline or on another server."},
+      {"name": "subject", "type": "string", "optional": true, "default": "", "coerce": "`(\"\" + (subject || \"\")).substring(0, 74)`: any value becomes a string", "description": "The subject, up to 74 characters."},
+      {"name": "message", "type": "string", "optional": true, "default": "", "coerce": "`(\"\" + (message || \"\")).substring(0, 1000)`", "description": "The text, up to 1,000 characters."},
+      {"name": "item", "type": "boolean", "optional": true, "default": false, "coerce": "tested as true or false", "description": "If truthy, the server attaches the item in inventory slot 0 (`items[0]`). An empty slot or a `placeholder` sends the mail without an item, for 48,000 gold."},
+      {"name": "request_id", "type": "any", "optional": true, "description": "Copied unchanged into the later `mail_sent` or `mail_failed` reply. Not tested as true or false."}
+    ],
+    "others": "ignored",
+    "example": {"to": "SomePlayer", "subject": "Hi", "message": "Here you go", "item": true}, "confirm": {"code": ["node/server.js:5725-5726", "node/server.js:5736", "node/server.js:5757", "node/server.js:5791-5792"]}
+  },
+  "responses": [
+    {
+      "name": "Sending",
+      "event": "game_response",
+      "code": "mail_sending",
+      "when": "All checks pass. The server took the gold (and the item) and starts the delivery. It comes after a `player` update with `reopen`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"mail_sending\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"mail\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "sucess", "type": "false", "optional": false, "description": "Always `false`. The source misspells it; `success` is `true`."},
+        {"name": "in_progress", "type": "true", "optional": false, "description": "The delivery runs."},
+        {"name": "received", "type": "\"unknown\"", "optional": false, "description": "Always `\"unknown\"`."}
+      ],
+      "example": {"sucess": false, "in_progress": true, "received": "unknown", "success": true, "response": "mail_sending", "place": "mail"},
+      "source": "node/server.js:5862", "confirm": {"code": ["node/server.js:5862", "node/server_functions.js:3421-3446"]}
+    },
+    {
+      "name": "Sent",
+      "event": "game_response",
+      "code": "mail_sent",
+      "when": "Later: the mail is in the database.",
+      "fields": [
+        {"name": "response", "type": "\"mail_sent\"", "optional": false, "description": "The code. The object has no `place`."},
+        {"name": "to", "type": "CharacterName", "optional": false, "description": "The `to` of the request, unchanged."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request."},
+        {"name": "cevent", "type": "\"mail_sent\"", "optional": false, "description": "Tells the official client to fire its code event."}
+      ],
+      "example": {"response": "mail_sent", "to": "SomePlayer", "cevent": "mail_sent"},
+      "source": "node/server.js:5718-5732, 5853", "confirm": {"code": ["node/server.js:5718-5732", "node/server.js:5852-5853"]}
+    },
+    {
+      "name": "Delivery failed",
+      "event": "game_response",
+      "code": "mail_failed",
+      "when": "Later: the delivery failed. The server keeps the gold. For `nocharacter`, `nouser` and `unknown`, it gives the item back if you are online and have a free slot. Then a `player` update with `reopen` follows. Else you lose the item. For `coms_failure`, you always lose the item. A missing or non-string `to` throws before the first `await` of the delivery, so that `mail_failed` (`coms_failure`) comes at once, before the `player` update and `mail_sending`.",
+      "fields": [
+        {"name": "response", "type": "\"mail_failed\"", "optional": false, "description": "The code. The object has no `place`."},
+        {"name": "to", "type": "any", "optional": true, "description": "The `to` of the request, unchanged. Absent when `to` was missing."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request."},
+        {"name": "cevent", "type": "\"mail_failed\"", "optional": false, "description": "Tells the official client to fire its code event."},
+        {"name": "reason", "type": "\"nocharacter\" | \"nouser\" | \"unknown\" | \"coms_failure\"", "optional": false, "description": "`nocharacter`: no character has that name. `nouser`: the account of the receiver or of the sender is missing. `unknown`: the database transaction failed. `coms_failure`: an error, for example a missing or non-string `to`."}
+      ],
+      "example": {"response": "mail_failed", "to": "Nobody", "cevent": "mail_failed", "reason": "nocharacter"},
+      "source": "node/server.js:5761-5765, 5773-5787, 5839-5843, 5854-5858", "confirm": {"code": ["node/server.js:5718-5732", "node/server.js:5757-5761", "node/server.js:5771-5773", "node/server.js:5781-5783", "node/server.js:5837-5839", "node/server.js:5854-5858"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5710-5712", "confirm": {"code": ["node/server.js:5709-5712"]}},
+      {
+        "when": "`mode.prevent_external` is on (the `HARDCORE` and `TEST` servers).",
+        "code": "not_in_this_server",
+        "source": "node/server.js:5713-5715", "confirm": {"code": ["node/server.js:5713-5715", "node/server.js:382", "node/server.js:393", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You have less than 48,000 gold.",
+        "code": "gold_not_enough",
+        "source": "node/server.js:5733-5735", "confirm": {"code": ["node/server.js:5733-5735", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "`item` is truthy, slot 0 holds an item, and the item has the lock `l`.",
+        "code": "item_locked",
+        "source": "node/server.js:5736-5739", "confirm": {"code": ["node/server.js:5736-5739", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "`item` is truthy, and the item in slot 0 is bound (`b`) or came from PvP (`v`).",
+        "code": "item_blocked",
+        "source": "node/server.js:5740-5742", "confirm": {"code": ["node/server.js:5740-5742", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "`item` is truthy, slot 0 holds an item, and you have less than 360,000 gold.",
+        "code": "gold_not_enough",
+        "source": "node/server.js:5743-5745", "confirm": {"code": ["node/server.js:5743-5745", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "All checks pass, before `mail_sending`. Again later, after `mail_failed`, when the server gives the item back.",
+      "summary": "Your character with `reopen: true`: less `gold`, and slot 0 empty when the mail has the item.",
+      "source": "node/server.js:5861, 5765", "confirm": {"code": ["node/server.js:5861", "node/server.js:5762-5765", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`player` with `reopen` to you",
+    "`game_response` `mail_sending` to you",
+    "later: `game_response` `mail_sent`, or `mail_failed` (then `player` if the item came back)"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "event": "notice",
+  "source": "node/server.js:13161-13166",
+  "request": {
+    "fields": [
+      {"name": "pass", "type": "string", "optional": false, "coerce": "compared with `!=` to `keys.ACCESS_MASTER`", "description": "The admin secret of the server."},
+      {"name": "message", "type": "any", "optional": true, "coerce": "none: sent with no change", "description": "The notice. It goes to every client."}
+    ],
+    "others": "ignored",
+    "example": {"pass": "<ACCESS_MASTER>", "message": "Server restart soon"},
+    "confirm": {"code": ["node/server.js:13162-13165"], "note": "The handler reads only `pass` and `message`"}
+  },
+  "responses": [],
+  "failures": {
+    "event": "game_response",
+    "place": "notice",
+    "intro": "Admin only. The handler needs no character.",
+    "rows": [
+      {"when": "`pass` is wrong.", "replies": [], "source": "node/server.js:13162-13164", "confirm": {"code": ["node/server.js:13162-13164"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "notice",
+      "to": "everyone, you included",
+      "when": "`pass` is correct (`broadcast`).",
+      "fields": [
+        {"name": "message", "type": "any", "optional": true, "description": "Your `message`. Absent when you sent none."}
+      ],
+      "example": {"message": "Server restart soon"},
+      "source": "node/server.js:13165",
+      "confirm": {"code": ["node/server.js:13165", "node/server_functions.js:3495-3503"], "note": "`broadcast` emits first; the `color: \"orange\"` it then sets on a `notice` is only for its own event log, the clients never get it. The msgpack encoder drops `undefined` like JSON does (node/msgpack_parser.js:53-56)"}
+    }
+  ],
+  "order": [
+    "`notice` to everyone"
+  ]
+}

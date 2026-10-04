@@ -1,0 +1,20 @@
+{
+  "event": "game_event",
+  "to": "everyone: every socket on the game server, on both socket endpoints (`broadcast`)",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "\"pinkgoo\" | \"crabxx\" | \"snowman\" | \"dragold\" | \"franky\" | \"icegolem\" | \"mrpumpkin\" | \"mrgreen\" | \"grinch\" | \"slenderman\" | \"wabbit\"", "optional": false, "description": "The monster type of the boss that spawned. It is a key of `G.monsters`."},
+      {"name": "map", "type": "MapName", "optional": false, "description": "The map of the boss."},
+      {"name": "x", "type": "number", "optional": true, "description": "A map position for the event. Absent for `pinkgoo`, `crabxx`, `slenderman` and `wabbit`. It is the top-left corner of the spawn area, except for `snowman` and `dragold`: both always send `900, -800`."},
+      {"name": "y", "type": "number", "optional": true, "description": "Sent together with `x`."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:2017-2148", "node/server_functions.js:2486-2494", "node/server_functions.js:2630-2636", "node/server_functions.js:2639-2662"], "note": "`spawn_special_monster(\"tiger\")` also sends `{name: \"tiger\", map}` (node/server_functions.js:2133), but its only caller is commented out (node/server_functions.js:2647), so it is not in `name`."}
+  },
+  "example": {"name": "icegolem", "map": "winterland", "x": 782.25, "y": 395.96},
+  "senders": [
+    {"what": "`event_loop`: a daily or nightly boss (`crabxx`, `franky`, `icegolem`) starts. `spawn_special_monster` sends the event.", "source": "node/server_functions.js:2486-2494"},
+    {"what": "`event_loop`: outside `holidayseason`, the timer of `snowman` ends.", "source": "node/server_functions.js:2630-2637"},
+    {"what": "`event_loop`: the spawn timer of a seasonal boss ends (the `eventmap` list).", "source": "node/server_functions.js:2639-2662"},
+    {"what": "`spawn_special_monster`: one `broadcast` for each boss type.", "source": "node/server_functions.js:2017-2148"}
+  ]
+}

@@ -1,0 +1,11 @@
+<!-- Echo.csproj: one program of the course. Top-level statements in Program.cs.
+     Standalone: it does not use the albot library, so it has no reference to it.
+     The run command is in the first comment of Program.cs. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>

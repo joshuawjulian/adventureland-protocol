@@ -1,0 +1,163 @@
+{
+  "event": "party_update",
+  "to": "you, or each member of the party. The member that leaves or that the leader kicks gets only an empty object",
+  "payload": {
+    "type": "PartyUpdateState | PartyUpdateJoined | PartyUpdateLeft | PartyUpdateNone",
+    "confirm": {
+      "code": [
+        "node/server.js:1215-1226",
+        "node/server.js:12440-12452",
+        "node/server.js:12488-12500",
+        "node/server_functions.js:3646-3663",
+        "node/server.js:12426",
+        "node/server.js:12474",
+        "node/server.js:12507",
+        "node/server.js:12511",
+        "node/server.js:12521",
+        "node/server.js:12542"
+      ]
+    }
+  },
+  "example": {
+    "list": ["Wizard", "Arrow", "Healer"],
+    "party": {
+      "Wizard": {"skin": "mmage", "level": 72, "type": "mage", "x": -112.5, "y": 1503, "in": "main", "map": "main", "share": 0.3412, "pdps": 18240, "l": 3, "xp": 16, "luck": 0, "gold": 5},
+      "Arrow": {"skin": "mranger", "level": 70, "type": "ranger", "x": -98, "y": 1490.25, "in": "main", "map": "main", "share": 0.3301, "pdps": 17110, "l": 3, "xp": 16, "luck": 0, "gold": 5},
+      "Healer": {"skin": "mpriest", "level": 68, "type": "priest", "x": 0, "y": 0, "in": "main", "map": "main", "share": 0.3287, "pdps": 9400, "l": 3, "xp": 16, "luck": 0, "gold": 5, "rip": true}
+    }
+  },
+  "variants": [
+    {
+      "name": "State",
+      "type": "PartyUpdateState",
+      "has": ["list"],
+      "when": "`send_party_update`: every 60 s, and after a member dies, respawns or gets a `revival`. Also the reply to a `party` `kick` of a name that is not in the party.",
+      "reply_to": ["party"],
+      "example": {
+        "list": ["Wizard", "Arrow"],
+        "party": {
+          "Wizard": {"skin": "mmage", "level": 72, "type": "mage", "x": -112.5, "y": 1503, "in": "main", "map": "main", "share": 0.5, "pdps": 18240, "l": 2, "xp": 10, "luck": 0, "gold": 5},
+          "Arrow": {"skin": "mranger", "level": 70, "type": "ranger", "x": -98, "y": 1490.25, "in": "main", "map": "main", "share": 0.5, "pdps": 17110, "l": 2, "xp": 10, "luck": 0, "gold": 5}
+        }
+      },
+      "source": "node/server.js:1215-1226",
+      "confirm": {
+        "code": [
+          "node/server.js:1215-1226",
+          "node/server.js:1137-1213",
+          "node/server_functions.js:447",
+          "node/server.js:6305",
+          "node/server.js:15111",
+          "node/server.js:16082-16090",
+          "node/server.js:12520-12522"
+        ]
+      }
+    },
+    {
+      "name": "Joined",
+      "type": "PartyUpdateJoined",
+      "has": ["message"],
+      "when": "A `party` `accept` or `raccept` added a member. Each member gets it, the new member too.",
+      "reply_to": ["party"],
+      "example": {
+        "message": "Arrow joined the party",
+        "phrase": "server.party.joined",
+        "phrase_args": {"player": "Arrow"},
+        "list": ["Wizard", "Arrow"],
+        "party": {
+          "Wizard": {"skin": "mmage", "level": 72, "type": "mage", "x": -112.5, "y": 1503, "in": "main", "map": "main", "share": 0.5, "pdps": 18240, "l": 2, "xp": 10, "luck": 0, "gold": 5},
+          "Arrow": {"skin": "mranger", "level": 70, "type": "ranger", "x": -98, "y": 1490.25, "in": "main", "map": "main", "share": 0.5, "pdps": 17110, "l": 2, "xp": 10, "luck": 0, "gold": 5}
+        }
+      },
+      "source": "node/server.js:12441-12453",
+      "confirm": {"code": ["node/server.js:12440-12452", "node/server.js:12488-12500", "node/server_functions.js:3553-3570", "languages/index.js:256-258"]}
+    },
+    {
+      "name": "Left",
+      "type": "PartyUpdateLeft",
+      "has": ["leave"],
+      "when": "A member left the party, the leader kicked a member, or a member disconnected. Each other member gets it. With fewer than 2 members left, `list` is `false` and `party` is `{}`: the party is gone.",
+      "example": {"message": "Arrow left the party", "phrase": "server.party.left", "phrase_args": {"player": "Arrow"}, "leave": 1, "list": false, "party": {}},
+      "source": "node/server_functions.js:3647-3666",
+      "confirm": {"code": ["node/server_functions.js:3603-3663", "languages/index.js:256-258"]}
+    },
+    {
+      "name": "None",
+      "type": "PartyUpdateNone",
+      "when": "You are not in a party now: you left, the leader kicked you, or you joined another party.",
+      "reply_to": ["party"],
+      "example": {},
+      "source": "node/server.js:12507",
+      "confirm": {"code": ["node/server.js:12426", "node/server.js:12474", "node/server.js:12507", "node/server.js:12511", "node/server.js:12542"]}
+    }
+  ],
+  "types": {
+    "PartyUpdateState": {
+      "summary": "The members of the party and their info.",
+      "fields": [
+        {
+          "name": "list",
+          "type": "CharacterName[]",
+          "optional": false,
+          "description": "The names of the members in order. The first name is the leader. The name of the leader is also the name of the party."
+        },
+        {
+          "name": "party",
+          "type": "Record<string, PartyUpdateMember>",
+          "optional": false,
+          "description": "The info of each member, keyed by name. A member that is not on this server now is not in it."
+        }
+      ],
+      "source": "node/server.js:1215-1226",
+      "confirm": {"code": ["node/server.js:1215-1226", "node/server.js:12521"]}
+    },
+    "PartyUpdateJoined": {
+      "summary": "A text that a member joined, with the new members and their info.",
+      "extends": "LocalizedText",
+      "fields": [
+        {
+          "name": "phrase",
+          "type": "\"server.party.joined\" | \"server.party.joined_with_invite\"",
+          "optional": false,
+          "description": "`server.party.joined_with_invite` when a member that is not the leader sent the invite (`accept`). After `accept`, `phrase_args` has `player` (the new member) and `inviter`, with either phrase; after `raccept`, it has only `player` and the phrase is `server.party.joined`."
+        },
+        {"name": "list", "type": "CharacterName[]", "optional": false, "description": "The names of the members in order. The first name is the leader."},
+        {"name": "party", "type": "Record<string, PartyUpdateMember>", "optional": false, "description": "The info of each member, keyed by name."}
+      ],
+      "source": "node/server.js:12441-12453",
+      "confirm": {"code": ["node/server.js:12440-12452", "node/server.js:12488-12500", "languages/index.js:256-258"]}
+    },
+    "PartyUpdateLeft": {
+      "summary": "A text that a member left, with the members that stay.",
+      "extends": "LocalizedText",
+      "fields": [
+        {"name": "phrase", "type": "\"server.party.left\"", "optional": false, "description": "`phrase_args` has `player`: the member that left."},
+        {"name": "leave", "type": "1", "optional": false, "description": "Always 1. It marks a member that left."},
+        {"name": "list", "type": "CharacterName[] | false", "optional": false, "description": "The members that stay, in order. `false` when fewer than 2 members stay."},
+        {"name": "party", "type": "Record<string, PartyUpdateMember>", "optional": false, "description": "The info of each member that stays. `{}` when fewer than 2 members stay."}
+      ],
+      "source": "node/server_functions.js:3647-3666",
+      "confirm": {"code": ["node/server_functions.js:3646-3663", "languages/index.js:256-258"], "note": "`list` is `newparty.length >= 2 && newparty`, so `false` for a party that is gone"}
+    },
+    "PartyUpdateNone": {
+      "summary": "An empty object: you are not in a party now.",
+      "fields": [],
+      "source": "node/server.js:12507",
+      "confirm": {"code": ["node/server.js:12426", "node/server.js:12474", "node/server.js:12507", "node/server.js:12511", "node/server.js:12542"]}
+    }
+  },
+  "senders": [
+    {"what": "`send_party_update`: the state to each member. A member that is not on this server leaves the party first.", "source": "node/server.js:1215-1226"},
+    {"what": "The party loop: `send_party_update` for each party, every 60 s.", "source": "node/server.js:16082-16090"},
+    {"what": "`rip`: a member died.", "source": "node/server_functions.js:445-447"},
+    {"what": "The `respawn` handler.", "source": "node/server.js:6304-6306"},
+    {"what": "The end of a `revival` channel.", "source": "node/server.js:15107-15112"},
+    {"what": "The `party` handler, `accept` and `raccept`: Joined to the party (`party_emit`).", "source": "node/server.js:12441-12453, node/server.js:12489-12501"},
+    {"what": "`leave_party`: Left to each other member. It runs for `party` `leave`, `kick`, `accept`, `raccept`, and on `disconnect`.", "source": "node/server_functions.js:3603-3663"},
+    {
+      "what": "The `party` handler: None to you on `accept` or `raccept` when you leave your old party, on `leave`, and to the kicked member.",
+      "source": "node/server.js:12426, node/server.js:12474, node/server.js:12507, node/server.js:12511, node/server.js:12542"
+    },
+    {"what": "The `party` handler, `kick` of a name that is not in the party: State to you.", "source": "node/server.js:12521"}
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "event": "observer_broadcast",
+  "to": "a broadcast observer: a socket that connected with `broadcast=1`, without `no_graphics=1` and without a matched `secret`. The server must be `normal` and not PvP (node/logic/observer_broadcast.js:3-6)",
+  "payload": {
+    "fields": [
+      {"name": "group", "type": "string | null", "optional": false, "description": "The group that the camera shows: `\"party:<leader>\"`, `\"solo:<name>\"`, `\"town:<map>\"`, or `null` when there is no group."},
+      {"name": "party", "type": "Record<string, PlayerSummary>", "optional": false, "description": "The members of the group, up to 10, keyed by name. It is `{}` for a town group or no group."},
+      {"name": "focus", "type": "CharacterName[]", "optional": false, "description": "The members in the camera frame. Each is in the instance of the anchor character, 230 px or less in `x` and 125 px or less in `y` from it."},
+      {"name": "map", "type": "MapName", "optional": false, "description": "The map of the camera: the map of the anchor character, or the town map."},
+      {"name": "x", "type": "number", "optional": false, "description": "The camera position: the center of the `focus` characters, or the town point when `focus` is empty."},
+      {"name": "y", "type": "number", "optional": false, "description": "The camera position."},
+      {"name": "online", "type": "integer", "optional": false, "description": "The characters online on this server, without NPCs and disconnected characters."},
+      {"name": "remaining_ms", "type": "Milliseconds", "optional": false, "description": "The time until the camera can change group. The group changes at each 30 s boundary of the server clock."},
+      {"name": "kind", "type": "\"group\" | \"town\" | \"waiting\"", "optional": false, "description": "`\"group\"`: the camera follows a character. `\"town\"`: the town square shot. `\"waiting\"`: there is nothing to show."},
+      {"name": "available", "type": "boolean", "optional": false, "description": "`false` only when `kind` is `\"waiting\"`. Then the camera does not move."},
+      {"name": "town_players", "type": "integer", "optional": false, "description": "The living characters in the town square shot. The town shot needs 6 or more."}
+    ],
+    "confirm": {"code": ["node/logic/observer_broadcast.js:49-187", "node/logic/observer_broadcast.js:3-6", "node/logic/observer_broadcast.js:203-210", "node/server.js:5049-5052", "node/server.js:15929", "node/server.js:1075-1092"], "note": "`remaining_ms` comes from `performance.now()`, so it usually has a fraction. `x`/`y` is the center of the box around the `focus` characters."}
+  },
+  "example": {"group": "party:Ranger", "party": {"Ranger": {"skin": "marmor5a", "level": 72, "type": "ranger", "x": 1240, "y": -310, "in": "main", "map": "main", "name": "Ranger", "hp": 3200, "max_hp": 3650, "cx": {"head": "makeup117", "hair": "hairdo106"}}}, "focus": ["Ranger"], "map": "main", "x": 1240, "y": -310, "online": 148, "remaining_ms": 21480.5, "kind": "group", "available": true, "town_players": 9},
+  "senders": [
+    {"what": "The `loaded` handler, once, when the socket becomes a broadcast observer.", "source": "node/server.js:5049-5052"},
+    {"what": "`broadcast_observer_loop`, every 250 ms, for each broadcast observer.", "source": "node/logic/observer_broadcast.js:203-210"}
+  ]
+}

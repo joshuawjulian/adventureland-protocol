@@ -1,0 +1,1460 @@
+{
+  "_format": "Shared types. Each key is a type name (PascalCase) that field types can use. docs/WRITING.md, 'The schema', describes every key. build.py makes one guide entry per type (id type-<name in lower case>).",
+  "types": {
+    "EntityId": {
+      "confirm": {"code": ["node/server.js:13416-13418", "node/server.js:11779", "node/server.js:9902-9903"]},
+      "type": "string | integer",
+      "summary": "A monster id or a character name.",
+      "description": "Monster ids are strings of digits (`++total_monsters + \"\"`, node/server.js:13417). A character's id is its name (node/server.js:11779). The server finds an entity by object key, so the number `48213` and the string `\"48213\"` find the same monster. `skill` (and so `attack` and `heal`) treats an id as a monster id when `\"\" + parseInt(id) === \"\" + id`, else as a character name (node/server.js:9903).",
+      "example": "48213",
+      "source": "node/server.js:13417"
+    },
+    "CharacterName": {
+      "confirm": {"code": ["node/server.js:11779"]},
+      "type": "string",
+      "summary": "The name of a character. It is also the `id` of that character.",
+      "example": "Wizard",
+      "source": "node/server.js:11779"
+    },
+    "InventoryIndex": {
+      "confirm": {"code": ["node/server.js:1450-1457"]},
+      "type": "integer",
+      "summary": "An index into `items` of the character: 0 to 41.",
+      "description": "The inventory has 42 slots (`isize`, node/server.js:1456). Each field that takes an index says how the handler reads it. Some handlers use the value as an array key with no conversion. Then the string `\"3\"` works the same as `3`.",
+      "example": 3,
+      "source": "node/server.js:1456"
+    },
+    "ItemName": {
+      "confirm": {"code": ["node/server_functions.js:4234-4261"], "live_needed": "The set of names is G.items, game data that the code does not fix."},
+      "type": "string",
+      "summary": "A key of `G.items`, for example `\"hpot0\"`.",
+      "example": "hpot0"
+    },
+    "SkillName": {
+      "confirm": {"code": ["node/server.js:9898-9903"], "live_needed": "The set of names is G.skills, game data that the code does not fix."},
+      "type": "string",
+      "summary": "A key of `G.skills`, for example `\"attack\"`.",
+      "example": "attack"
+    },
+    "MapName": {
+      "confirm": {"code": ["node/server.js:6075-6086"], "live_needed": "The set of names is G.maps, game data that the code does not fix."},
+      "type": "string",
+      "summary": "A key of `G.maps`, for example `\"main\"`.",
+      "example": "main"
+    },
+    "InstanceName": {
+      "confirm": {"code": ["node/server.js:6082"]},
+      "type": "string",
+      "summary": "The instance that an entity is in. For a normal map it is the map name. A private instance has a random 24-character name.",
+      "example": "main",
+      "source": "node/server.js:6082"
+    },
+    "Milliseconds": {
+      "confirm": {"code": ["node/logic/encouragement.js:275", "node/server.js:11814-11818"], "note": "Durations are computed (`expires - now`, timers), so they can have a fraction."},
+      "type": "number",
+      "summary": "A duration in milliseconds. It can have a fraction.",
+      "example": 1500
+    },
+    "ItemInstance": {
+      "confirm": {"code": ["node/server_functions.js:4190-4202", "node/server_functions.js:4234-4261", "node/server_functions.js:4312-4328", "node/server.js:7073-7077", "node/server.js:7797-7799", "node/server_functions.js:5846-5868"], "note": "`cache_item` copies every stored key except the ignored ones, so rarer stored keys can appear; the fields listed are those the code writes."},
+      "summary": "One item as the server sends it: an inventory slot, an equipment slot, or an item in an event.",
+      "description": "The server builds it with `cache_item`. It removes `grace, giveaway, gf, price, want, b, rid, list, o, oo, src` (node/server_functions.js:4190-4202, 4234-4261). A merchant stand slot keeps more fields (`price`, `b`, `rid`, `giveaway`, `list`); see `trade_sell`.",
+      "fields": [
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item. `\"placeholder\"` while an upgrade or a compound of this slot runs; see `PlaceholderItem`."},
+        {"name": "q", "type": "integer", "optional": true, "description": "The quantity. Only for stackable items (`G.items[name].s`)."},
+        {"name": "level", "type": "integer", "optional": true, "description": "The upgrade or compound level. New items that can be upgraded or compounded get `0` (node/server.js:1986-1988)."},
+        {"name": "p", "type": "string | object | null", "optional": true, "description": "A special property, for example `\"shiny\"`, `\"lucky\"`, `\"glitched\"`. A placeholder holds an object here. Can be `null`: a compound sets `item0.p = item0.p || item1.p || item2.p` even when no input had one (node/server.js:7073-7077), and the stored `undefined` comes back as `null`. Live captures show `p: null` on compounded rings, earrings, belts, amulets and orbs."},
+        {"name": "stat_type", "type": "string", "optional": true, "description": "The stat from a `pscroll`, for example `\"str\"`."},
+        {"name": "l", "type": "\"l\" | \"s\" | \"u\"", "optional": true, "description": "The lock state from `locksmith` (node/server.js:6820-6855). A locked item cannot be sent or upgraded with a `uscroll`."},
+        {"name": "ld", "type": "string", "optional": true, "description": "The end of the unseal wait: `JSON.stringify` of a `Date` 2 days in the future, so the string holds a quoted ISO 8601 date (for example `\"\\\"2026-10-06T12:00:00.000Z\\\"\"`). `locksmith` `unlock` sets it on a sealed item (`l: \"s\"` becomes `\"u\"`) and reads it with `JSON.parse` on the next `unlock` (node/server.js:6819-6823). The server does not delete it when the unseal completes."},
+        {"name": "m", "type": "CharacterName", "optional": true, "description": "The merchant whose luck made the item."},
+        {"name": "v", "type": "string", "optional": true, "description": "A date string. The item came from PvP."},
+        {"name": "acl", "type": "any", "optional": true, "description": "Account locked: only characters of the same owner can get the item. The server tests it as true or false; the value type is unclear from the source."},
+        {"name": "expires", "type": "string", "optional": true, "description": "An ISO 8601 date string (a `Date` from `future_s`). The item expires at this time. The `elixir` slot always has it (node/server.js:7797-7799)."},
+        {"name": "gift", "type": "any", "optional": true, "description": "The item was a gift. The value type is unclear from the source."},
+        {"name": "skin", "type": "string", "optional": true, "description": "A skin override."},
+        {"name": "charges", "type": "integer", "optional": true, "description": "Charges of an item that skills use."},
+        {"name": "data", "type": "any", "optional": true, "description": "Free data of some items, for example a `cxjar`."},
+        {"name": "ach", "type": "string", "optional": true, "description": "The item achievement this item counts toward (a key of `G.achievements`); `item_achievement_increment` sets it and deletes it when the achievement completes (node/server_functions.js:5846-5868)."},
+        {"name": "acc", "type": "integer", "optional": true, "description": "The progress count of that item achievement. Deleted when the achievement completes (node/server_functions.js:5850-5865). Live captures show it without `ach` on some items."},
+        {"name": "ex", "type": "true", "optional": true, "description": "Only on the item in the `elixir` slot: `use` of an elixir sets `{name, expires, ex: true}` (node/server.js:7799). Renewing the same elixir keeps the object and only moves `expires` (node/server.js:7797)."},
+        {"name": "ps", "type": "string[]", "optional": true, "description": "Every property the item has had, in order: `add_item_property` pushes the old `p` and the new one (node/server_functions.js:3220-3233). `cache_item` keeps it."}
+      ],
+      "example": {"name": "blade", "level": 7, "p": "shiny"},
+      "source": "node/server_functions.js:4205-4232"
+    },
+    "PlaceholderItem": {
+      "confirm": {"code": ["node/server.js:7052-7063", "node/server.js:7256-7266", "node/server.js:7303-7306", "node/server.js:7442-7452", "node/server.js:7548-7558"]},
+      "summary": "The item in an inventory slot while an `upgrade` or a `compound` of that slot runs.",
+      "description": "The server puts it in the slot of the item when the request succeeds. When the timer ends, the slot gets the result item. If the upgrade destroyed the item, the slot gets `null`.",
+      "fields": [
+        {"name": "name", "type": "\"placeholder\"", "optional": false, "description": "Always `\"placeholder\"`."},
+        {"name": "p", "type": "PlaceholderState", "optional": false, "description": "The state of the roll."}
+      ],
+      "example": {"name": "placeholder", "p": {"chance": 0.912, "name": "blade", "level": 7, "scroll": "scroll1", "nums": [4, 1]}},
+      "source": "node/server.js:7052-7063, 7256-7266, 7303-7306, 7442-7452, 7548-7558"
+    },
+    "PlaceholderState": {
+      "confirm": {"code": ["node/server.js:7052-7063", "node/server.js:7139", "node/server.js:7256-7266", "node/server.js:7303-7306", "node/server.js:7442-7452", "node/server.js:7548-7558", "node/server.js:14740-14772", "node/server.js:14776-14811"]},
+      "summary": "The `p` object of a `PlaceholderItem`: the chance and the roll digits so far.",
+      "fields": [
+        {"name": "chance", "type": "number", "optional": false, "description": "The chance of success, 0 to 1."},
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item that is in the upgrade."},
+        {"name": "level", "type": "integer", "optional": true, "description": "The level of the item before the action. A compound always has it (`item0.level || 0`, node/server.js:7057); an upgrade copies `item.level`."},
+        {"name": "scroll", "type": "ItemName | null", "optional": true, "description": "The scroll. `null` for an offering without a scroll. Absent from JSON when the value is `undefined`."},
+        {"name": "offering", "type": "ItemName | null", "optional": true, "description": "The offering, if any: `offering && offering.name` (node/server.js:7059, 7449, 7555). `null` when the request's `offering_num` points at an empty slot; absent without `offering_num`."},
+        {"name": "nums", "type": "integer[]", "optional": false, "description": "The digits of the roll that the server showed so far, 0 to 4 of them."},
+        {"name": "success", "type": "true", "optional": true, "description": "Set near the end of the timer when the result is a success."},
+        {"name": "failure", "type": "true", "optional": true, "description": "Set near the end of the timer when the result is a failure."}
+      ],
+      "example": {"chance": 0.912, "name": "blade", "level": 7, "scroll": "scroll1", "nums": [4, 1, 9, 3], "success": true},
+      "source": "node/server.js:14740-14773"
+    },
+    "QueueEntry": {
+      "confirm": {"code": ["node/server.js:6669", "node/server.js:7051", "node/server.js:7255", "node/server.js:7302", "node/server.js:7438-7441", "node/server.js:7547", "node/server_functions.js:4511-4513", "node/server.js:14735-14738"]},
+      "summary": "One timer in `q`, the queue of upgrade, compound and exchange actions of a character.",
+      "fields": [
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time left."},
+        {"name": "len", "type": "Milliseconds", "optional": false, "description": "The full length of the timer."},
+        {"name": "num", "type": "InventoryIndex | string", "optional": false, "description": "The slot of the placeholder. It is the value from the request (`data.item_num` or `data.items[0]`) with no conversion, so a numeric string in the request stays a string here. `exchange` sets its own integer (node/server.js:6669)."},
+        {"name": "silent", "type": "true", "optional": true, "description": "The server does not announce the result (a shiny attempt with an offering, node/server.js:7255)."},
+        {"name": "stale", "type": "true", "optional": true, "description": "The character left the game while the timer ran (node/server_functions.js:4512)."},
+        {"name": "nums", "type": "integer[]", "optional": true, "description": "Only on a `compound` timer: always `[]` (node/server.js:7051). The server never fills it. The digits of the roll (0 to 9 each, up to 4) go in `p.nums` of the `PlaceholderItem` (node/server.js:14740-14798)."}
+      ],
+      "example": {"ms": 6215.4, "len": 7905.7, "num": 3},
+      "source": "node/server.js:7438"
+    },
+    "Condition": {
+      "confirm": {"code": ["node/logic/encouragement.js:258-277"], "note": "Each condition's other keys come from where it is added (`add_condition`, skills, encouragement); the type is open."},
+      "summary": "One condition in `s` (a buff, a debuff or a state), keyed by its name.",
+      "description": "Almost every condition has `ms`, the time left. `encouragement_lonewolf` has none: it is `{gold_multiplier: 3, xp_multiplier: 3, luck_multiplier: 3}` with no `expires`, and only a condition with `expires` gets `ms` (node/logic/encouragement.js:270-277). Many conditions have more fields, for example `f` (the character that caused it). The fields of each condition are in `G.conditions` and in the `skill` entry.",
+      "fields": [
+        {"name": "ms", "type": "Milliseconds", "optional": true, "description": "The time left. Absent on `encouragement_lonewolf` (node/logic/encouragement.js:270-277)."}
+      ],
+      "open": true,
+      "example": {"ms": 3600000}
+    },
+    "LocalizedText": {
+      "confirm": {"code": ["languages/index.js:256-258"], "note": "`message(id, parameters, fields)` returns `Object.assign({}, fields, {message, phrase, phrase_args: parameters || {}})`: the three keys always exist, and `fields` cannot override them."},
+      "summary": "A text message in a form that the client can translate.",
+      "fields": [
+        {"name": "message", "type": "string", "optional": false, "description": "The English text."},
+        {"name": "phrase", "type": "string", "optional": false, "description": "The key of the phrase in the language files."},
+        {"name": "phrase_args", "type": "object", "optional": false, "description": "The values for the phrase; `{}` when there are none. `localization.message` always sets it (`parameters || {}`, languages/index.js:256-258), and so does the cavalry reply (node/logic/cavalry.js:237-239)."}
+      ],
+      "open": true,
+      "example": {"message": "Not enough gold", "phrase": "server.game_log.not_enough_gold", "phrase_args": {}},
+      "source": "languages/index.js:256-258"
+    },
+    "Hitchhiker": {
+      "confirm": {"code": ["node/server.js:4578-4582", "node/server_functions.js:3349", "node/server.js:5433", "node/server.js:10670"]},
+      "type": "[string, any]",
+      "summary": "An event that rides inside a `player` event: `[event name, payload]`.",
+      "description": "The server adds these pairs to `player.hitchhikers`. The next `player` event carries them as `hitchhikers` and clears the list (node/server.js:4579-4581). The official client replays each pair as a socket event. Treat each pair as if the server sent that event.",
+      "example": ["game_response", {"response": "upgrade_success", "level": 8, "num": 3}],
+      "source": "node/server.js:4579-4581"
+    },
+    "GameResponseFailure": {
+      "confirm": {"code": ["node/server_functions.js:3393-3419"]},
+      "summary": "The `game_response` object of `fail_response`: a request failed.",
+      "description": "`place` is the event name of the request, or the skill name for skills. The extra fields of each code are in the entry of the request that sends it.",
+      "fields": [
+        {"name": "response", "type": "string", "optional": false, "description": "The code. Each code has its own entry."},
+        {"name": "place", "type": "string", "optional": false, "description": "The event that failed."},
+        {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "reason", "type": "string", "optional": true, "description": "More detail for some codes."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request, on handlers that copy it."}
+      ],
+      "open": true,
+      "example": {"response": "distance", "place": "buy", "failed": true},
+      "source": "node/server_functions.js:3393-3419"
+    },
+    "GameResponseSuccess": {
+      "confirm": {"code": ["node/server_functions.js:3421-3446"]},
+      "summary": "The `game_response` object of `success_response`: a request succeeded.",
+      "description": "The extra fields of each code are in the entry of the request that sends it.",
+      "fields": [
+        {"name": "response", "type": "string", "optional": false, "description": "The code. `\"data\"` when the handler sends only data."},
+        {"name": "place", "type": "string", "optional": false, "description": "The event of the request."},
+        {"name": "success", "type": "boolean", "optional": false, "description": "`true`, or `false` when the handler sets it (for example `in_progress` work)."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request, on handlers that copy it."}
+      ],
+      "open": true,
+      "example": {"response": "buy_success", "place": "buy", "success": true},
+      "source": "node/server_functions.js:3421-3446"
+    },
+    "Action": {
+      "confirm": {"code": ["node/server.js:3547-3612", "node/server.js:3733-3734", "node/server.js:3763-3809", "node/logic/cavalry.js:484"]},
+      "summary": "One attack, heal or skill projectile, as `commence_attack` builds it.",
+      "description": "The same object goes to clients nearby as `action`, and to the attacker as the `game_response` result (with `response` and `place` added).",
+      "fields": [
+        {"name": "attacker", "type": "EntityId", "optional": false, "description": "The id of the attacker."},
+        {"name": "target", "type": "EntityId", "optional": false, "description": "The id of the target."},
+        {"name": "type", "type": "SkillName", "optional": false, "description": "The skill, for example `\"attack\"`."},
+        {"name": "source", "type": "SkillName", "optional": false, "description": "The same as `type`."},
+        {"name": "x", "type": "number", "optional": false, "description": "The position of the target at the start."},
+        {"name": "y", "type": "number", "optional": false, "description": "The position of the target at the start."},
+        {"name": "eta", "type": "integer", "optional": false, "description": "Milliseconds until the hit: `floor(1000 * distance / G.projectiles[projectile].speed)`. Always present: the object starts with `eta: 0` (node/server.js:3546-3556), and an instant projectile keeps `0` and gets `instant: true` (node/server.js:3582-3586)."},
+        {"name": "m", "type": "integer", "optional": false, "description": "The map-change counter of the target."},
+        {"name": "pid", "type": "string", "optional": false, "description": "The projectile id, 6 random characters. The later `hit` carries it."},
+        {"name": "projectile", "type": "string", "optional": false, "description": "A key of `G.projectiles`. Always present: `commence_attack` reads `G.projectiles[def.projectile].speed` (node/server.js:3582-3583), which throws when it is `null`, so every sent `action` has one (node/server.js:3564-3565)."},
+        {"name": "instant", "type": "true", "optional": true, "description": "The projectile has no travel time."},
+        {"name": "damage", "type": "number", "optional": true, "description": "The damage before the defenses of the target. Absent for a heal and for 0 damage."},
+        {"name": "heal", "type": "number", "optional": true, "description": "The heal amount, for a heal."},
+        {"name": "positive", "type": "true", "optional": true, "description": "The action helps the target (a heal or a buff)."},
+        {"name": "conditions", "type": "string[]", "optional": true, "description": "Conditions that the hit can apply, for example `\"poisoned\"`, `\"frozen\"`."},
+        {"name": "shield", "type": "object", "optional": true, "description": "`shield_slam` only: `{name, level}` of the offhand."},
+        {"name": "origin_offset", "type": "number", "optional": true, "description": "Cavalry volleys only: the side offset of this shot in px, `-16` or `16` (`npc.volley_offset`, node/logic/cavalry.js:484; `0` is not sent, node/server.js:3562)."},
+        {"name": "response", "type": "\"data\"", "optional": true, "description": "`commence_attack` adds it after it sends `action` to clients nearby, for the `game_response` to the attacker (node/server.js:3609). The server keeps the same object, so a reflected `action` also has it."},
+        {"name": "place", "type": "SkillName", "optional": true, "description": "The same as `type`. Added with `response` (node/server.js:3610); a reflected `action` also has it."},
+        {"name": "map", "type": "MapName", "optional": true, "description": "The map of the attacker when the projectile hits. The server sets it at the hit (node/server.js:3733), so only a reflected `action` has it."},
+        {"name": "in", "type": "InstanceName", "optional": true, "description": "The instance of the attacker when the projectile hits (node/server.js:3734). Only a reflected `action` has it."},
+        {"name": "reflect", "type": "integer", "optional": true, "description": "Only on a reflected `action`: the damage of the reflection, `ceil(attack * (0.9 to 1.1))`. The target reflected a magical attack (`reflection`), so `attacker` and `target` change places, `pid` is new, `x`, `y` and `m` are of the old attacker. `eta` keeps the value of the first action: the server does not change it (node/server.js:3775-3809)."}
+      ],
+      "example": {"attacker": "Wizard", "target": "48213", "type": "attack", "source": "attack", "x": 512.4, "y": -96, "eta": 241, "m": 0, "pid": "Xk3pQa", "projectile": "magic", "damage": 182},
+      "source": "node/server.js:3547-3612"
+    },
+    "Character": {
+      "confirm": {"code": ["node/server.js:855-1001", "node/server.js:4550-4596", "node/server_functions.js:4312-4328"]},
+      "summary": "The full state of your character, as `player_to_client` builds it.",
+      "description": "`player` sends it to its owner. With `stranger` set, the server leaves out the second group of fields (stats, inventory, gold) and uses it for other characters in `entities`. A field with the value `undefined` is absent from the JSON.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The name of the character."},
+        {"name": "hp", "type": "integer", "optional": false, "description": "Hit points."},
+        {"name": "max_hp", "type": "integer", "optional": false, "description": "Maximum hit points."},
+        {"name": "mp", "type": "integer", "optional": false, "description": "Mana points."},
+        {"name": "max_mp", "type": "integer", "optional": false, "description": "Maximum mana points."},
+        {"name": "xp", "type": "number", "optional": false, "description": "Experience in this level. Can be fractional: XP gains are not rounded, for example a merchant gets `tax * 3.2` per sale (node/server_functions.js:750); seen live as `106466429.2`."},
+        {"name": "max_xp", "type": "integer", "optional": false, "description": "Experience for the next level."},
+        {"name": "level", "type": "integer", "optional": false, "description": "The level."},
+        {"name": "attack", "type": "number", "optional": false, "description": "Attack value."},
+        {"name": "heal", "type": "number", "optional": true, "description": "Heal value (priests)."},
+        {"name": "frequency", "type": "number", "optional": false, "description": "Attacks per second."},
+        {"name": "speed", "type": "number", "optional": false, "description": "Movement speed, px per second."},
+        {"name": "range", "type": "number", "optional": false, "description": "Attack range in px."},
+        {"name": "armor", "type": "number", "optional": false, "description": "Armor."},
+        {"name": "resistance", "type": "number", "optional": false, "description": "Resistance."},
+        {"name": "x", "type": "number", "optional": false, "description": "Position."},
+        {"name": "y", "type": "number", "optional": false, "description": "Position."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "The map."},
+        {"name": "in", "type": "InstanceName", "optional": false, "description": "The instance."},
+        {"name": "m", "type": "integer", "optional": false, "description": "The map-change counter. `move` must send this value."},
+        {"name": "moving", "type": "boolean", "optional": true, "description": "The character moves now."},
+        {"name": "going_x", "type": "number", "optional": true, "description": "The destination of the move."},
+        {"name": "going_y", "type": "number", "optional": true, "description": "The destination of the move."},
+        {"name": "abs", "type": "boolean", "optional": true, "description": "The position is absolute (after a teleport)."},
+        {"name": "move_num", "type": "integer", "optional": true, "description": "A counter of moves."},
+        {"name": "angle", "type": "number", "optional": true, "description": "Set by cave logic on actors. Not set for a normal character."},
+        {"name": "position_id", "type": "integer", "optional": true, "description": "Set for NPC characters. Not set for a normal character."},
+        {"name": "motion", "type": "object", "optional": true, "description": "Set for NPC characters with a scripted motion; `age` is its age in ms (node/server.js:857-858)."},
+        {"name": "s", "type": "Record<string, Condition>", "optional": false, "description": "Conditions, keyed by name."},
+        {"name": "c", "type": "Record<string, object>", "optional": false, "description": "Channeled actions (for example `town`, `fishing`), keyed by name. Each has `ms`, the time left."},
+        {"name": "q", "type": "QDataQueue", "optional": false, "description": "`player.q`: the timers of `upgrade`, `compound` and `exchange`, and the spins of the tavern `wheel` and `slots`, keyed by that name (node/server.js:6669, 7051, 7438; node/logic/tavern_wheel.js:27, node/logic/tavern_slots.js:54)."},
+        {"name": "b", "type": "any", "optional": true, "description": "Unclear from the source; no handler sets it on a character."},
+        {"name": "rip", "type": "boolean | string | null", "optional": true, "description": "The character is dead. A gravestone cosmetic replaces `true` with its name (node/server.js:915-917). `false` after a revive or a state restore (node/server.js:1122, 6292, 15108); `null` is seen live on characters whose stored record holds it."},
+        {"name": "afk", "type": "boolean | \"bot\" | \"code\"", "optional": true, "description": "`\"code\"` when the character logged in with `no_html` (a code client)."},
+        {"name": "controller", "type": "CharacterName | \"\"", "optional": true, "description": "Only when `afk` is `\"code\"`: the character whose code controls this one, or `\"\"`."},
+        {"name": "code", "type": "boolean", "optional": true, "description": "The last `code` event said that code runs."},
+        {"name": "target", "type": "EntityId | null", "optional": true, "description": "The current target."},
+        {"name": "focus", "type": "EntityId | null", "optional": true, "description": "The focus target (`target` with `xid`)."},
+        {"name": "party", "type": "CharacterName | null", "optional": true, "description": "The leader of the party. `null` after leaving a party (node/server_functions.js:3608, 3618, 3633): `player_to_client` copies any value that is not `undefined` (node/server.js:899-905)."},
+        {"name": "team", "type": "string", "optional": true, "description": "The team in a team event."},
+        {"name": "guild", "type": "string | null", "optional": true, "description": "The guild: the guild's short name when the account is in one (node/server.js:11732, 11820-11823), else the character record's value, which is `\"\"` or `null`. `player_to_client` copies it whenever it is not `undefined` (node/server.js:899-905), so `null` arrives (seen live)."},
+        {"name": "role", "type": "string", "optional": true, "description": "A special role, for example `\"gm\"`."},
+        {"name": "npc", "type": "any", "optional": true, "description": "Set for NPC characters."},
+        {"name": "allow", "type": "any", "optional": true, "description": "Unclear from the source; no handler sets it on a character."},
+        {"name": "pdps", "type": "number", "optional": false, "description": "Party damage score."},
+        {"name": "age", "type": "integer", "optional": false, "description": "The age of the character in days (node/server.js:11808)."},
+        {"name": "cid", "type": "integer", "optional": false, "description": "The change id. It goes up when the character changes."},
+        {"name": "stand", "type": "boolean | string", "optional": true, "description": "From `p.stand`: the merchant stand is open (the stand item name), or `false`."},
+        {"name": "tp", "type": "true", "optional": true, "description": "The character just appeared after a teleport."},
+        {"name": "skin", "type": "string", "optional": false, "description": "The skin (or the temporary skin)."},
+        {"name": "cx", "type": "object", "optional": false, "description": "Cosmetics, keyed by slot."},
+        {"name": "slots", "type": "Record<string, ItemInstance | TradeSlotItem | null>", "optional": false, "description": "Equipped items, keyed by slot name (see Units and conventions). A trade slot (`trade1`, `trade2`, ...) of a merchant stand holds a `TradeSlotItem`: `reslot_player` builds it with `cache_item(item, 1)`, which keeps `price`, `rid` and the other trade fields."},
+        {"name": "ctype", "type": "string", "optional": false, "description": "The class, a key of `G.classes`."},
+        {"name": "owner", "type": "string", "optional": false, "description": "The user id of the owner, or `\"\"` for a private character."},
+        {"name": "int", "type": "number", "optional": false, "description": "Intelligence."},
+        {"name": "str", "type": "number", "optional": false, "description": "Strength."},
+        {"name": "dex", "type": "number", "optional": false, "description": "Dexterity."},
+        {"name": "vit", "type": "number", "optional": false, "description": "Vitality."},
+        {"name": "for", "type": "number", "optional": false, "description": "Fortitude."},
+        {"name": "mp_cost", "type": "number", "optional": false, "description": "MP cost of one `attack`."},
+        {"name": "mp_reduction", "type": "number", "optional": true, "description": "Percent reduction of skill MP costs."},
+        {"name": "goldm", "type": "number", "optional": false, "description": "Gold multiplier."},
+        {"name": "xpm", "type": "number", "optional": false, "description": "XP multiplier."},
+        {"name": "luckm", "type": "number", "optional": false, "description": "Luck multiplier."},
+        {"name": "encouragement", "type": "object", "optional": true, "description": "The encouragement bonus state (node/logic/encouragement.js:300)."},
+        {"name": "anniversary", "type": "object", "optional": true, "description": "The anniversary event state (node/server_functions.js:2349)."},
+        {"name": "isize", "type": "integer", "optional": false, "description": "Inventory size, 42."},
+        {"name": "esize", "type": "integer", "optional": false, "description": "Empty inventory slots."},
+        {"name": "items", "type": "(ItemInstance | null)[]", "optional": false, "description": "The inventory. `null` is an empty slot. A slot in an upgrade holds a `PlaceholderItem`."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "Gold."},
+        {"name": "cash", "type": "integer", "optional": false, "description": "Shells."},
+        {"name": "targets", "type": "integer", "optional": false, "description": "How many monsters target the character."},
+        {"name": "evasion", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "miss", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "reflection", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "lifesteal", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "manasteal", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "rpiercing", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "apiercing", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "crit", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "critdamage", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "dreturn", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "xrange", "type": "number", "optional": false, "description": "Range leeway in px, up to 25. Each use of it goes down; it comes back at 5 px per second (node/server.js:16240)."},
+        {"name": "pnresistance", "type": "number", "optional": true, "description": "Resistance stat."},
+        {"name": "firesistance", "type": "number", "optional": true, "description": "Resistance stat."},
+        {"name": "fzresistance", "type": "number", "optional": true, "description": "Resistance stat."},
+        {"name": "phresistance", "type": "number", "optional": true, "description": "Resistance stat."},
+        {"name": "stresistance", "type": "number", "optional": true, "description": "Resistance stat."},
+        {"name": "incdmgamp", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "stun", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "blast", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "explosion", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "courage", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "mcourage", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "pcourage", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "fear", "type": "number", "optional": true, "description": "Combat stat."},
+        {"name": "tax", "type": "number", "optional": false, "description": "The tax rate of the merchant stand, 0.01 to 0.05 by level (node/server.js:1718)."},
+        {"name": "user", "type": "object", "optional": true, "description": "Only in the bank: the bank packs `items0` to `items47` and `gold`."},
+        {"name": "cc", "type": "number", "optional": false, "description": "The call cost of the socket now. The server disconnects above 200 in 4 s."}
+      ],
+      "example_trimmed": true,
+      "example": {"id": "Wizard", "hp": 1840, "max_hp": 2100, "mp": 1200, "max_mp": 1650, "xp": 1250000, "max_xp": 9800000, "level": 62, "map": "main", "in": "main", "x": -120.5, "y": 410, "m": 3, "s": {"mluck": {"ms": 3540000, "f": "Merchant"}}, "c": {}, "q": {}, "cid": 418, "ctype": "mage", "isize": 42, "esize": 30, "gold": 1520340, "items": [{"name": "hpot0", "q": 200}, null], "slots": {"mainhand": {"name": "wand", "level": 7}}, "cc": 3},
+      "source": "node/server.js:855-958"
+    },
+    "TradeSlotName": {
+      "confirm": {"code": ["js/old_common_functions.js:52-53", "node/server_functions.js:4282-4299", "node/server.js:8833-8835", "node/server.js:9067-9069"], "note": "Every handler that reads a slot checks it with `in_arr(data.slot, trade_slots)`."},
+      "summary": "A trade slot of a merchant stand: `\"trade1\"` to `\"trade48\"`.",
+      "description": "The list is `trade_slots` (js/old_common_functions.js:52-53). How many of them are open depends on the stand and the class: see `get_trade_slots` (node/server_functions.js:4282-4299).",
+      "type": "string",
+      "example": "trade3"
+    },
+    "TradeSlotItem": {
+      "confirm": {"code": ["node/server_functions.js:4203", "node/server_functions.js:4234-4261", "node/server_functions.js:4301-4310", "node/server.js:7680-7760", "node/server.js:8774-8776", "node/server.js:8802-8818", "node/server.js:16098-16125", "node/server.js:16215"]},
+      "summary": "An item in a trade slot of a merchant stand, or an item in a trade `ui` event. It keeps the trade fields that `ItemInstance` removes.",
+      "description": "The server builds it with `cache_item(item, true)`, which removes only `grace`, `o`, `oo` and `src` (node/server_functions.js:4203, 4234-4261). A listing has `price` (a sale or a buy order) or `want` (a trade offer).",
+      "extends": "ItemInstance",
+      "fields": [
+        {"name": "price", "type": "integer", "optional": true, "description": "The gold for one unit. On a sale or a buy order. A giveaway has `price: 1` (node/server.js:7697-7699)."},
+        {"name": "b", "type": "true", "optional": true, "description": "The listing is a buy order (`trade_wishlist`, node/server.js:8804-8809): the owner buys this item. A buy order always has `q`, also for an item that does not stack: `min(99, q)` for an upgrade or compound item, else `q` up to 9999 (node/server.js:8795, 8811-8816)."},
+        {"name": "want", "type": "TradeWant", "optional": true, "description": "The listing is a trade offer: the owner gives the item for the item in `want`."},
+        {"name": "rid", "type": "string", "optional": true, "description": "A random id: 4 characters on a listing or a buy order (node/server.js:7710, 7753, 8807). An item bought from `secondhands` or `lostandfound` keeps its 5-character `rid` (node/server_functions.js:614, 645) until it is listed again. A new listing gets a new `rid`."},
+        {"name": "giveaway", "type": "integer", "optional": true, "description": "The listing is a giveaway that lasts this many minutes."},
+        {"name": "list", "type": "CharacterName[]", "optional": true, "description": "The names that joined the giveaway. Only on a giveaway."},
+        {"name": "registry", "type": "Record<string, CharacterName>", "optional": true, "description": "Only on a giveaway that someone joined: the `auth_id` of each account that joined, mapped to the name of its character (node/server.js:8774-8776). `cache_item(item, true)` does not remove it, so the minute timer (node/server.js:16215) and `reslot_player` (node/server_functions.js:4308) send it to every client that sees the stand. A server bug: it leaks the `auth_id` of each participant."},
+        {"name": "gf", "type": "CharacterName", "optional": true, "description": "The item was won in a giveaway from this character (node/server.js:16121). `ItemInstance` removes it; the trade cache keeps it when the item is listed again."}
+      ],
+      "example": {"name": "hpot0", "q": 5, "price": 1000, "b": true, "rid": "AbCd"},
+      "source": "node/server.js:7680-7760, 8774-8776, 8802-8818"
+    },
+    "TradeWant": {
+      "confirm": {"code": ["js/old_common_functions.js:469-482", "node/server.js:7690-7694", "node/server.js:7705-7709", "node/server.js:7745-7751"]},
+      "summary": "What a swap listing asks for in return: an item, the lowest level, a title and a quantity.",
+      "description": "The server normalizes it with `trade_want_normalize`. `name` must be a key of `G.items` and not `placeholder`, else the listing fails with `trade_offer_invalid`. `level` stays only for an upgrade or compound item when `parseInt(level) > 0`, at most 12. `p` must be a key of `G.titles`; `null` or `\"\"` means any title. `q` stays only for a stackable item: `min(G.items[name].s === true ? 9999 : G.items[name].s, max(1, parseInt(q) || 1))` (js/old_common_functions.js:479). An absent `level` or `p` accepts any. A `want` sent as a plain string is read as `{name: want}` (js/old_common_functions.js:471).",
+      "fields": [
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item that the buyer must give."},
+        {"name": "level", "type": "integer", "optional": true, "description": "The lowest level that the buyer can give, 1 to 12."},
+        {"name": "p", "type": "string", "optional": true, "description": "The title that the item must have, a key of `G.titles`."},
+        {"name": "q", "type": "integer", "optional": true, "description": "The quantity of a stackable item."}
+      ],
+      "example": {"name": "wand", "level": 7},
+      "source": "js/old_common_functions.js:469-481"
+    },
+    "BankPackName": {
+      "confirm": {"code": ["js/old_common_functions.js:54-102", "node/server.js:9279-9293", "node/server.js:9373", "node/server.js:9423-9428"]},
+      "summary": "A bank pack: a key of `bank_packs`, `\"items0\"` to `\"items47\"`.",
+      "description": "`bank_packs` (js/old_common_functions.js:54-102) maps each pack to `[bank map, gold price, shell price]`. `items0`-`items7` are on `bank`, `items8`-`items23` on `bank_b`, `items24`-`items47` on `bank_u`. A pack that you unlocked is an array of up to 42 items in `player.user`.",
+      "type": "string",
+      "example": "items0",
+      "source": "js/old_common_functions.js:54-102"
+    },
+    "CaveVisitInfo": {
+      "confirm": {"code": ["node/logic/generated_maps.js:632-657", "node/logic/generated_maps.js:588-594", "node/logic/cave_of_many_dreams.js:1890"], "note": "`home` is `player.p.home || region + server_name` (e.g. `\"EUI\"`); `resume.server` is `server_id.slice(3)`"},
+      "summary": "The daily visit state of the Cave of Many Dreams for your account.",
+      "fields": [
+        {"name": "available", "type": "boolean", "optional": false, "description": "`true` when the account has not used its daily opening."},
+        {"name": "resets", "type": "number", "optional": false, "description": "When the daily opening resets: a time in ms since 1970."},
+        {"name": "home", "type": "string", "optional": false, "description": "The home server of the account (`p.home`, or this server), for example `\"EUI\"`. The daily window follows its region."},
+        {"name": "server_time", "type": "number", "optional": false, "description": "The time on the server in ms since 1970."},
+        {"name": "unlimited", "type": "true", "optional": true, "description": "A dev server: visits are not counted."},
+        {"name": "resume", "type": "object", "optional": true, "description": "A run that you can join again: `{run, server, remaining_ms}`. `server` is the server id without its `SR_` prefix (`server_id.slice(3)`, node/logic/generated_maps.js:648, 654). `remaining_ms` is there only when the run is on this server."}
+      ],
+      "example": {"available": true, "resets": 1791158400000, "home": "EUI", "server_time": 1791100000000},
+      "source": "node/logic/generated_maps.js:632-660"
+    },
+    "CaveState": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1717-1868", "node/logic/cave_of_many_dreams.js:92-109", "node/logic/generated_maps.js:473", "node/logic/generated_maps.js:538-547"]},
+      "summary": "The snapshot of a Cave of Many Dreams run for one character (`cave_snapshot`). The server also keeps it in `player.cave`.",
+      "fields": [
+        {"name": "run", "type": "string", "optional": false, "description": "The run key: 24 hex characters. The name of each floor map is `zone_<run>_<floor>`."},
+        {"name": "expires", "type": "integer", "optional": false, "description": "The end of the run, in ms since 1970. A pause moves it later."},
+        {"name": "server_time", "type": "integer", "optional": false, "description": "`Date.now()` on the server when it built the snapshot, in ms since 1970."},
+        {"name": "remaining_ms", "type": "integer", "optional": false, "description": "The time left in the run. It does not go down during a pause."},
+        {"name": "paused", "type": "boolean", "optional": false, "description": "`true` while a vote pauses the run."},
+        {"name": "paused_at", "type": "integer | null", "optional": false, "description": "The start of the pause, in ms since 1970."},
+        {"name": "rewards", "type": "CaveReceipt[]", "optional": false, "description": "The last 12 rewards of the run, oldest first."},
+        {"name": "level", "type": "integer", "optional": false, "description": "The level of the run: the highest level of the party at the start. Monsters scale with it."},
+        {"name": "floor", "type": "integer", "description": "Your floor: 0, 1 or 2. Absent when you are not on a floor of the run (`generated_entry(player)` finds none, node/logic/cave_of_many_dreams.js:1720).", "optional": true},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The shared cave gold of the party. It stays in the run."},
+        {"name": "amber", "type": "integer", "optional": false, "description": "The shared Amber of the party. Unspent Amber leaves the cave as `cave_amber` items."},
+        {"name": "limits", "type": "CaveLimits", "optional": false, "description": "The caps on cave gold and Amber, and what the run gave so far."},
+        {"name": "supplies", "type": "(\"tool\" | \"lamp\" | \"decoy\" | \"message\" | \"truce\")[]", "optional": false, "description": "The supply flags that the party has now."},
+        {"name": "roster", "type": "CaveRosterEntry[]", "optional": false, "description": "Each member who entered the run."},
+        {"name": "doors", "type": "CaveDoor[]", "optional": false, "description": "The doors of your floor."},
+        {"name": "objectives", "type": "CaveObjective[]", "optional": false, "description": "The rooms that the map shows: required rooms, farms and shops of your floor, and rooms that an encounter revealed (on any floor)."},
+        {"name": "choice", "type": "CaveChoice | null", "optional": false, "description": "The current vote. After it ends, the vote of the room that you talked to, if any. `null` when there was no vote."},
+        {"name": "hunts", "type": "CaveHunt[]", "optional": false, "description": "The open hunts."},
+        {"name": "practice", "type": "CavePractice[]", "optional": false, "description": "The open practice fights."}
+      ],
+      "example": {"run": "5f2c9a0e4b7d13a8c6e2f901", "expires": 1791160240000, "server_time": 1791159411520, "remaining_ms": 828480, "paused": false, "paused_at": null, "rewards": [{"where": "purse", "gold": 2000, "amber": 1, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "x": 704, "y": 912, "id": 7}, {"item": {"name": "scroll1", "q": 1, "p": "cavefound"}, "recipient": "Wizard", "where": "inventory", "id": 9, "slot": 12}], "level": 72, "floor": 0, "gold": 4000, "amber": 2, "limits": {"gold": 60000, "amber": 36, "gold_spawned": 6000, "amber_spawned": 3}, "supplies": ["lamp"], "roster": [{"name": "Wizard", "left": false, "disconnected": false}, {"name": "Healer", "left": false, "disconnected": true}], "doors": [{"id": 0, "x": 320, "y": 480, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "to": "main", "down": false, "locked": false}, {"id": 1, "x": 1888, "y": 1312, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "to": "zone_5f2c9a0e4b7d13a8c6e2f901_1", "down": true, "locked": true}], "objectives": [{"id": "0:0", "x": 880, "y": 736, "done": true, "floor": 0, "kind": "fight", "required": true, "name": "Guard camp", "name_message": {"phrase": "server.cave.guard_camp"}}, {"id": "0:farm:14", "x": 1240, "y": 400, "done": false, "floor": 0, "kind": "farm", "required": false, "waves": 1, "name": "Bat Roost", "name_message": {"phrase": "event.dreams.camp.0.1.name"}}], "choice": null, "hunts": [], "practice": []},
+      "source": "node/logic/cave_of_many_dreams.js:1717-1867"
+    },
+    "CaveLimits": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1734-1739"], "live_needed": "The caps come from G (`events.dreams.gold_limit` 60000, `amber_limit` 36 in G_17478)."},
+      "summary": "The caps on the shared currency of a cave run.",
+      "fields": [
+        {"name": "gold", "type": "integer", "optional": false, "description": "The most cave gold that a run can give: `G.events.dreams.gold_limit` (60,000)."},
+        {"name": "amber", "type": "integer", "optional": false, "description": "The most Amber that a run can give: `G.events.dreams.amber_limit` (36)."},
+        {"name": "gold_spawned", "type": "integer", "optional": false, "description": "The cave gold that the run put in chests so far."},
+        {"name": "amber_spawned", "type": "integer", "optional": false, "description": "The Amber that the run put in chests so far."}
+      ],
+      "example": {"gold": 60000, "amber": 36, "gold_spawned": 6000, "amber_spawned": 3},
+      "source": "node/logic/cave_of_many_dreams.js:1734-1739"
+    },
+    "CaveReceipt": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:85-91", "node/logic/cave_of_many_dreams.js:565", "node/logic/cave_of_many_dreams.js:596-625", "node/server.js:2015-2132"], "note": "`slot` is the return of `add_item` (the slot index); `where` moves from `mail_pending` to `mail` when the mail is sent"},
+      "summary": "One reward of a cave run: a chest of shared currency, or an item for one member.",
+      "fields": [
+        {"name": "id", "type": "integer", "optional": false, "description": "A serial number in the run."},
+        {"name": "where", "type": "\"purse\" | \"inventory\" | \"mail_pending\" | \"mail\"", "optional": false, "description": "`\"purse\"`: a chest of cave gold and Amber went to the shared purse. For an item: `\"inventory\"`, `\"mail_pending\"` (the mail is not sent yet) or `\"mail\"`."},
+        {"name": "gold", "type": "integer", "optional": true, "description": "Purse only: the cave gold."},
+        {"name": "amber", "type": "integer", "optional": true, "description": "Purse only: the Amber."},
+        {"name": "map", "type": "MapName", "optional": true, "description": "Purse only: the map of the chest."},
+        {"name": "x", "type": "number", "optional": true, "description": "Purse only: the position of the chest."},
+        {"name": "y", "type": "number", "optional": true, "description": "Purse only: the position of the chest."},
+        {"name": "item", "type": "ItemInstance", "optional": true, "description": "Item only: a copy of the item, with `p: \"cavefound\"`."},
+        {"name": "recipient", "type": "CharacterName", "optional": true, "description": "Item only: the member who gets it. The server picks one member of the roster at random."},
+        {"name": "slot", "type": "InventoryIndex", "optional": true, "description": "Item only, when `where` is `\"inventory\"`: the inventory slot."}
+      ],
+      "example": {"item": {"name": "scroll1", "q": 1, "p": "cavefound"}, "recipient": "Wizard", "where": "inventory", "id": 9, "slot": 12},
+      "source": "node/logic/cave_of_many_dreams.js:85-91"
+    },
+    "CaveRosterEntry": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1741", "node/logic/generated_maps.js:546", "node/logic/generated_maps.js:242-245"]},
+      "summary": "One member of a cave run.",
+      "fields": [
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "left", "type": "boolean", "optional": false, "description": "`true` after the member left the run. A member who left cannot come back."},
+        {"name": "disconnected", "type": "boolean", "optional": false, "description": "`true` while the member is offline and can still come back."}
+      ],
+      "example": {"name": "Healer", "left": false, "disconnected": true},
+      "source": "node/logic/cave_of_many_dreams.js:1741"
+    },
+    "CaveDoor": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1742-1750"]},
+      "summary": "One door on your floor of a cave run.",
+      "fields": [
+        {"name": "id", "type": "integer", "optional": false, "description": "The index of the door in the floor map."},
+        {"name": "x", "type": "number", "optional": false, "description": "The landing point of the door."},
+        {"name": "y", "type": "number", "optional": false, "description": "The landing point of the door."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "Your map now."},
+        {"name": "to", "type": "MapName", "optional": false, "description": "The map behind the door: another floor (`zone_<run>_<floor>`) or the exit map."},
+        {"name": "down", "type": "boolean", "optional": false, "description": "`true` when the door goes to a deeper floor."},
+        {"name": "locked", "type": "boolean", "optional": false, "description": "`true` when the door goes down and the required rooms of this floor are not all done."}
+      ],
+      "example": {"id": 1, "x": 1888, "y": 1312, "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0", "to": "zone_5f2c9a0e4b7d13a8c6e2f901_1", "down": true, "locked": true},
+      "source": "node/logic/cave_of_many_dreams.js:1742-1750"
+    },
+    "CaveObjective": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1751-1777", "node/logic/cave_of_many_dreams.js:126-231", "node/logic/cave_of_many_dreams.js:1145-1157"]},
+      "summary": "One room that the map of a cave run shows.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The room id, for example `\"0:2\"`, `\"0:shop\"`, `\"0:farm:14\"` or `\"0:farm:14:traveler\"` (node/logic/cave_of_many_dreams.js:206). The interactions `talk` and `buy` take it as `room`."},
+        {"name": "x", "type": "number", "optional": false, "description": "The position of the room. For a traveler (`citizen`), the position of the traveler."},
+        {"name": "y", "type": "number", "optional": false, "description": "See `x`."},
+        {"name": "done", "type": "boolean", "optional": false, "description": "The room is complete. For a shop: the party bought its item."},
+        {"name": "floor", "type": "integer", "optional": false, "description": "The floor of the room: 0, 1 or 2."},
+        {"name": "kind", "type": "string", "optional": false, "description": "The kind of room: `\"fight\"`, `\"encounter\"` (shops too), `\"boss\"`, `\"farm\"` or `\"citizen\"` (a traveler that an encounter revealed). Other room kinds never pass the filter (node/logic/cave_of_many_dreams.js:1752-1755)."},
+        {"name": "required", "type": "boolean", "optional": false, "description": "The way down opens when the party completes every required room of the floor."},
+        {"name": "waves", "type": "integer", "optional": true, "description": "Farms only: the waves cleared so far."},
+        {"name": "name", "type": "string", "optional": false, "description": "The name of the encounter, traveler or camp. A fight room without a name is `\"Guard camp\"`."},
+        {"name": "name_message", "type": "CavePhrase", "optional": true, "description": "`name` as a phrase. A fight room has `{phrase: \"server.cave.guard_camp\"}`; a farm has its camp phrase. Absent for boss and traveler rooms, and for an encounter without a phrase in the language file (node/logic/cave_of_many_dreams.js:1772-1776)."}
+      ],
+      "example": {"id": "0:farm:14", "x": 1240, "y": 400, "done": false, "floor": 0, "kind": "farm", "required": false, "waves": 1, "name": "Bat Roost", "name_message": {"phrase": "event.dreams.camp.0.1.name"}},
+      "source": "node/logic/cave_of_many_dreams.js:1751-1777"
+    },
+    "CaveChoice": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1778-1860", "node/logic/cave_of_many_dreams.js:741-773", "node/logic/cave_of_many_dreams.js:816-846", "node/logic/cave_of_many_dreams.js:54-61", "node/logic/cave_of_many_dreams.js:2071-2105"], "note": "`kind` is absent for the revival vote, whose encounter has no `kind`; `result` is the option id or `\"fallback\"`"},
+      "summary": "The vote of the party on an encounter, with the scene and the replies.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The vote id: `<run>:<serial>`. The `vote` interaction sends it as `choice`."},
+        {"name": "title", "type": "string", "optional": false, "description": "The name of the encounter."},
+        {"name": "title_message", "type": "CavePhrase", "optional": true, "description": "`title` as a phrase. Absent when the language file has no phrase for it."},
+        {"name": "kind", "type": "string", "optional": true, "description": "The kind of encounter (`G.events.dreams.encounters[].kind`), for example `\"dice\"` or `\"merchant\"`. Absent for the revival vote."},
+        {"name": "danger", "type": "boolean", "optional": false, "description": "`true` for an encounter of the group `\"bad\"`."},
+        {"name": "scene", "type": "CaveSceneActor[]", "optional": false, "description": "Up to 10 living actors of the room."},
+        {"name": "text", "type": "string", "optional": false, "description": "What the actor says, with the names filled in."},
+        {"name": "text_message", "type": "CavePhrase", "optional": true, "description": "`text` as a phrase."},
+        {"name": "deadline", "type": "integer", "optional": false, "description": "The end of the vote, in ms since 1970. A vote lasts `G.events.dreams.vote_ms` (60,000 ms)."},
+        {"name": "resolved", "type": "boolean", "optional": false, "description": "`true` after the vote ended."},
+        {"name": "result", "type": "string", "optional": true, "description": "After the vote: the id of the reply that won, or `\"fallback\"`."},
+        {"name": "result_label", "type": "string", "optional": true, "description": "After the vote: the label of the reply that won, or `\"No reply was chosen.\"` (node/logic/cave_of_many_dreams.js:832)."},
+        {"name": "result_message", "type": "CavePhrase", "optional": true, "description": "After the vote: `result_label` as a phrase."},
+        {"name": "summary", "type": "string[]", "optional": false, "description": "After the vote: the log lines of the result. Empty before."},
+        {"name": "summary_messages", "type": "(LocalizedText | null)[]", "optional": false, "description": "The lines of `summary` as phrases, or `null` for a line without a phrase."},
+        {"name": "votes", "type": "Record<string, string>", "optional": false, "description": "Character name to the id of the reply that the character chose."},
+        {"name": "options", "type": "CaveOption[]", "optional": false, "description": "The replies (usually 2)."},
+        {"name": "fallback", "type": "string", "optional": false, "description": "What happens when no reply wins, for example `\"Walk away\"` or `\"Wait and lose 45 seconds\"`."},
+        {"name": "fallback_message", "type": "CavePhrase", "optional": false, "description": "`fallback` as a phrase."},
+        {"name": "skin", "type": "string", "optional": true, "description": "The skin of the main actor, when the room has one."},
+        {"name": "cx", "type": "object", "optional": true, "description": "The cosmetics of the main actor."},
+        {"name": "people", "type": "CavePerson[]", "optional": false, "description": "The main actor and the rival of the room, when they exist."},
+        {"name": "service", "type": "\"recipes\" | null", "optional": false, "description": "`\"recipes\"` when the room offers recipes."},
+        {"name": "shop", "type": "CaveShop | null", "optional": false, "description": "The item for sale, for a shop room."}
+      ],
+      "example": {"id": "5f2c9a0e4b7d13a8c6e2f901:12", "title": "Dice in a Tin Cup", "kind": "dice", "danger": false, "scene": [{"id": "1820388", "name": "Noll", "skin": "marmor10c", "cx": {"head": "makeup117", "hair": "hairdo103", "hat": "hat103", "chin": "beard104"}, "side": "neutral", "hp": 4900, "max_hp": 4900}], "text": "Pick your bet, then roll once for the whole party.", "deadline": 1791159471520, "resolved": false, "summary": [], "summary_messages": [], "votes": {"Wizard": "small"}, "options": [{"id": "small", "label": "Bet 2,000 shared gold; roll 4–6 to get 4,000", "cost": 2000, "amber": 0, "unavailable": null}, {"id": "favor", "label": "Roll 4–6 for a helper; 1–3 brings two guards", "cost": 0, "amber": 0, "unavailable": null}], "fallback": "Walk away", "fallback_message": {"phrase": "cave.no_reply"}, "skin": "marmor10c", "cx": {"head": "makeup117", "hair": "hairdo103", "hat": "hat103", "chin": "beard104"}, "people": [{"name": "Noll", "hp": 4900, "max_hp": 4900, "attack": 520}], "service": null, "shop": null},
+      "source": "node/logic/cave_of_many_dreams.js:1778-1859"
+    },
+    "CaveSceneActor": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1785-1797", "node/logic/cave_of_many_dreams.js:233-330"]},
+      "summary": "One actor in the scene of a cave vote.",
+      "fields": [
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The monster id of the actor."},
+        {"name": "name", "type": "string", "optional": false, "description": "The name of the actor."},
+        {"name": "skin", "type": "string", "optional": false, "description": "The skin: the actor skin, else the monster skin, else the monster type."},
+        {"name": "cx", "type": "object", "optional": true, "description": "The cosmetics, for humanoid actors."},
+        {"name": "side", "type": "\"neutral\" | \"ally\" | \"victim\" | \"enemy\" | \"predator\" | \"duel_left\" | \"duel_right\"", "optional": false, "description": "The side of the actor now."},
+        {"name": "hp", "type": "number", "optional": false, "description": "The HP now."},
+        {"name": "max_hp", "type": "number", "optional": false, "description": "The maximum HP."},
+        {"name": "slots", "type": "object", "optional": true, "description": "The equipment that the client draws, for example `{mainhand: {name: \"blade\", level: 0}}`."}
+      ],
+      "example": {"id": "1820391", "name": "Corren", "skin": "marmor6e", "cx": {"head": "mmakeup01", "hair": "hairdo206", "hat": "hat106"}, "side": "duel_left", "hp": 7700, "max_hp": 7700, "slots": {"mainhand": {"name": "blade", "level": 0}}},
+      "source": "node/logic/cave_of_many_dreams.js:1785-1797"
+    },
+    "CaveOption": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1810-1823", "node/logic/cave_of_many_dreams.js:848-866"], "note": "`unavailable` is `localization.phrase` of `server.cave.need_tool`, `server.cave.purse_short` or `server.cave.helpers_limit`"},
+      "summary": "One reply in a cave vote.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The reply id. The `vote` interaction sends it as `option`."},
+        {"name": "label", "type": "string", "optional": false, "description": "The text of the reply, with the names filled in."},
+        {"name": "label_message", "type": "CavePhrase", "optional": true, "description": "`label` as a phrase."},
+        {"name": "cost", "type": "integer", "optional": false, "description": "The cave gold that the reply costs, or 0."},
+        {"name": "amber", "type": "integer", "optional": false, "description": "The Amber that the reply costs, or 0."},
+        {"name": "unavailable", "type": "string | null", "optional": false, "description": "Why the party cannot choose it now (no tool, not enough in the purse, too many helpers), as text. `null` when it is available."},
+        {"name": "unavailable_message", "type": "CavePhrase", "optional": true, "description": "`unavailable` as a phrase. Absent when the reply is available."}
+      ],
+      "example": {"id": "large", "label": "Bet 5,000 shared gold; roll 4–6 to get 10,000", "cost": 5000, "amber": 0, "unavailable": "Not enough in the shared purse.", "unavailable_message": {"phrase": "server.cave.purse_short"}},
+      "source": "node/logic/cave_of_many_dreams.js:1810-1823"
+    },
+    "CavePerson": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1844-1851", "node/logic/cave_of_many_dreams.js:441-443", "node/server.js:1786-1790"]},
+      "summary": "The main actor or the rival of a cave encounter, as the vote panel shows it.",
+      "fields": [
+        {"name": "name", "type": "string", "optional": false, "description": "The name."},
+        {"name": "hp", "type": "number", "optional": false, "description": "The HP now."},
+        {"name": "max_hp", "type": "number", "optional": false, "description": "The maximum HP."},
+        {"name": "attack", "type": "number", "optional": false, "description": "The attack."},
+        {"name": "slots", "type": "object", "optional": true, "description": "The equipment."},
+        {"name": "cargo", "type": "ItemInstance[]", "optional": true, "description": "Main actor of a rescue only: the items that the actor carries."}
+      ],
+      "example": {"name": "Corren", "hp": 7700, "max_hp": 7700, "attack": 520, "slots": {"mainhand": {"name": "blade", "level": 0}}},
+      "source": "node/logic/cave_of_many_dreams.js:1844-1851"
+    },
+    "CaveShop": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1853-1858", "node/logic/cave_of_many_dreams.js:459-460"], "live_needed": "`name` and `price` come from G `events.dreams.merchant_stock`."},
+      "summary": "The one item for sale in a cave shop room.",
+      "fields": [
+        {"name": "room", "type": "string", "optional": false, "description": "The room id. The `buy` interaction takes it as `room`."},
+        {"name": "nearby", "type": "boolean", "optional": false, "description": "`true` when you are on the map of the shop and within 160 px of the seller."},
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item, from `G.events.dreams.merchant_stock`."},
+        {"name": "price", "type": "integer", "optional": false, "description": "The price in cave gold."},
+        {"name": "sold", "type": "boolean", "optional": false, "description": "`true` after the party bought it."}
+      ],
+      "example": {"room": "0:shop", "nearby": true, "name": "cave_tunnelaxe", "price": 6000, "sold": false},
+      "source": "node/logic/cave_of_many_dreams.js:1853-1858"
+    },
+    "CaveHunt": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1861-1863", "node/logic/cave_of_many_dreams.js:1031-1041"]},
+      "summary": "One open hunt in a cave run.",
+      "fields": [
+        {"name": "room", "type": "string", "optional": false, "description": "The room id."},
+        {"name": "kills", "type": "integer", "optional": false, "description": "The kills so far."},
+        {"name": "count", "type": "integer", "optional": false, "description": "The kills needed."},
+        {"name": "deadline", "type": "integer", "optional": false, "description": "The end of the hunt, in ms since 1970."}
+      ],
+      "example": {"room": "1:4", "kills": 3, "count": 8, "deadline": 1791159501520},
+      "source": "node/logic/cave_of_many_dreams.js:1861-1863"
+    },
+    "CavePractice": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1864-1866", "node/logic/cave_of_many_dreams.js:1134-1139"]},
+      "summary": "One open practice fight in a cave run.",
+      "fields": [
+        {"name": "room", "type": "string", "optional": false, "description": "The room id."},
+        {"name": "name", "type": "string", "optional": false, "description": "The name of the opponent."},
+        {"name": "hp", "type": "number", "optional": false, "description": "The HP of the opponent now."},
+        {"name": "deadline", "type": "integer", "optional": false, "description": "The end of the practice, in ms since 1970."}
+      ],
+      "example": {"room": "2:5", "name": "Corren", "hp": 3100, "deadline": 1791159441520},
+      "source": "node/logic/cave_of_many_dreams.js:1864-1866"
+    },
+    "CaveChat": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:1925-1932", "node/logic/cave_of_many_dreams.js:200-217", "node/logic/cave_of_many_dreams.js:290-294"]},
+      "summary": "What a traveler of the Cave of Many Dreams says in a cave run.",
+      "fields": [
+        {"name": "name", "type": "string", "optional": false, "description": "The name of the traveler (`G.events.dreams.travelers`)."},
+        {"name": "skin", "type": "string", "optional": false, "description": "The skin of the traveler."},
+        {"name": "cx", "type": "object", "optional": false, "description": "The cosmetics of the traveler."},
+        {"name": "text", "type": "string", "optional": false, "description": "The line, in English."},
+        {"name": "text_message", "type": "CavePhrase", "optional": false, "description": "The line as a phrase: `event.dreams.traveler.<name>.says.<index>`."}
+      ],
+      "example": {"name": "Pip", "skin": "mbody3f", "cx": {"head": "fmakeup02", "hair": "hairdo105", "back": "backpacks201"}, "text": "Excuse me! Heavy bag.", "text_message": {"phrase": "event.dreams.traveler.Pip.says.0"}},
+      "source": "node/logic/cave_of_many_dreams.js:1926-1932"
+    },
+    "CavePhrase": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:67-84", "node/logic/cave_of_many_dreams.js:1775", "node/logic/cave_of_many_dreams.js:1821", "node/logic/cave_of_many_dreams.js:1832-1841", "node/logic/cave_of_many_dreams.js:1931", "node/logic/cave_of_many_dreams.js:848-856"]},
+      "summary": "A text of the cave as a phrase key, without the English text: `{phrase, phrase_args?}`.",
+      "fields": [
+        {"name": "phrase", "type": "string", "optional": false, "description": "The key of the phrase in the language files."},
+        {"name": "phrase_args", "type": "object", "optional": true, "description": "The values for the phrase. A value is a string, a number (for example `amber` of `server.cave.revive_here`, node/logic/cave_of_many_dreams.js:854) or another `{phrase}` object."}
+      ],
+      "example": {"phrase": "event.dreams.e01.name", "phrase_args": {"npc": {"phrase": "server.cave.traveler"}, "rival": {"phrase": "server.cave.rival"}}},
+      "source": "node/logic/cave_of_many_dreams.js:67-84"
+    },
+    "ChestOpenedResult": {
+      "confirm": {"code": ["node/server.js:11280-11301", "node/server.js:11311-11392", "node/server.js:11393-11553", "node/server_functions.js:715-728", "node/logic/encouragement.js:445-501", "node/logic/cave_of_many_dreams.js:540-567"]},
+      "summary": "The loot of an opened chest, as one receiver sees it.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The chest id, as the `open_chest` request gave it."},
+        {"name": "opener", "type": "CharacterName", "optional": false, "description": "The character that opened the chest."},
+        {"name": "goldm", "type": "number", "optional": false, "description": "The gold multiplier: `goldm` of the opener, or `1` for an encouragement chest, a `dry` or `stale` open, and a cave chest."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gold that this receiver got, after the server tax, plus its encouragement gold. `0` for a cave chest."},
+        {"name": "items", "type": "ChestOpenedItem[]", "optional": true, "description": "Each item from the chest and who got it. Absent when empty, except on the party and cave forms."},
+        {"name": "party", "type": "true", "optional": true, "description": "The party shares the loot."},
+        {"name": "dry", "type": "true", "optional": true, "description": "The opener was more than 400 from the chest, so `goldm` is `1`."},
+        {"name": "stale", "type": "true", "optional": true, "description": "The chest was older than 8 minutes (`msince(chest.date) > 8`), so `goldm` is `1`."},
+        {"name": "cave", "type": "ChestOpenedCave", "optional": true, "description": "Only for a cave chest: what went to the purse of the run."}
+      ],
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "goldm": 1.2, "opener": "Warrior", "items": [{"name": "hpbelt", "level": 0, "looter": "Warrior"}], "gold": 3184},
+      "source": "node/server.js:11280-11300"
+    },
+    "ChestOpenedItem": {
+      "confirm": {"code": ["node/server.js:11331-11366", "node/server.js:11415-11517", "node/logic/encouragement.js:477-481", "node/server_functions.js:4190-4202", "node/server_functions.js:4234-4259"], "note": "`cache_item(item)` of the item after `add_item`, plus `looter` and the flags; `item_p_ignore` strips `src`, `o`, `oo`, `b`, `rid`, `price` and the rest"},
+      "summary": "One item from an opened chest: the cached item plus who got it.",
+      "extends": "ItemInstance",
+      "fields": [
+        {"name": "looter", "type": "CharacterName | null", "optional": false, "description": "The character that got the item. `null` when nobody had space and the item went to the lost and found."},
+        {"name": "pvp_loot", "type": "true", "optional": true, "description": "The item came from a character killed in PvP."},
+        {"name": "lostandfound", "type": "true", "optional": true, "description": "Nobody had space. The item went to the lost and found (`lostandfound_logic`)."}
+      ],
+      "example": {"name": "hpbelt", "level": 0, "looter": "Warrior"},
+      "source": "node/server.js:11335-11366"
+    },
+    "ChestOpenedGone": {
+      "confirm": {"code": ["node/server.js:11555"]},
+      "summary": "The reply to `open_chest` when no chest has that id.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The chest id, as the request gave it."},
+        {"name": "gone", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "gone": true},
+      "source": "node/server.js:11555"
+    },
+    "ChestOpenedCave": {
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:559-566"]},
+      "summary": "What a cave chest put into the purse of the run.",
+      "fields": [
+        {"name": "gold", "type": "number", "optional": false, "description": "The gold that went to the purse."},
+        {"name": "amber", "type": "number", "optional": false, "description": "The amber that went to the purse."},
+        {"name": "shared", "type": "true", "optional": false, "description": "Always `true`: all members of the run share the purse."}
+      ],
+      "example": {"gold": 25000, "amber": 3, "shared": true},
+      "source": "node/logic/cave_of_many_dreams.js:566"
+    },
+    "ItemAnnouncement": {
+      "confirm": {"code": ["node/server.js:2098-2127", "node/server_functions.js:4576-4589", "languages/index.js:256-258", "node/server.js:8721-8730", "node/server.js:14841-14850", "node/server.js:14865-14873", "node/server.js:14926-14935", "node/server.js:14944-14953"], "note": "`args.phrase` is only `Fished`, `Mined` or `Glitched` (node/server.js:15036, 15073; node/server_functions.js:4121), so `item_action` is always set and every announcement is a `LocalizedText`."},
+      "summary": "The `server_message` that tells every player on the server that a character got or lost an item.",
+      "description": "`add_item` sends it for a rare item: the count of announcements of this item on the server (`a_score`, +1.05 each) is below `G.items[name].a`, or the item got `p: \"shiny\"`. An `add_item` call with `announce: false` sends none. The timer results of `upgrade` and `compound`, and the level-13 roll of `destroy`, send the same shape with their own `type`. The server sends none for a `stealth` character.",
+      "extends": "LocalizedText",
+      "fields": [
+        {"name": "color", "type": "string", "optional": false, "description": "The text color, for example `\"#85C76B\"`."},
+        {"name": "type", "type": "\"server_found\" | \"server_received\" | \"server_usuccess\" | \"server_ufail\" | \"server_csuccess\" | \"server_cfail\"", "optional": false, "description": "`\"server_found\"` or `\"server_received\"` from `add_item`; `\"server_usuccess\"`, `\"server_ufail\"`, `\"server_csuccess\"` or `\"server_cfail\"` from the upgrade and compound timers (and `\"server_usuccess\"` from `destroy`, node/server.js:8727)."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "event", "type": "boolean", "optional": true, "description": "`G.items[name].event`, when the item has one (only `add_item` sends it). Every item in G 17478 that has it has `true`; the server copies the G value."}
+      ],
+      "example": {"message": "Wizard received a Fire Blade", "phrase": "server.item.named_received.a", "phrase_args": {"player": "Wizard", "item": "Fire Blade", "quantity": 1}, "color": "#85C76B", "type": "server_received", "item": {"name": "fireblade", "level": 0}, "name": "Wizard"},
+      "source": "node/server.js:2098-2127, 8721-8730, 14841-14873, 14926-14953"
+    },
+    "EquipBatchEntry": {
+      "confirm": {"code": ["node/server.js:7575-7606", "common:js/common_functions.js:200-209"], "note": "An entry that is `null` or not an object makes `equip_def.num = ...` throw (node/server.js:7580-7581); the handler then sends nothing."},
+      "summary": "One entry of the `equip_batch` payload: an item to equip.",
+      "fields": [
+        {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "`to_number`: `round(parseInt(num))`. A negative value, a missing value or `NaN` becomes 0, so the server uses slot 0", "description": "The slot of the item."},
+        {"name": "slot", "type": "string", "optional": true, "description": "The equipment slot, for example `\"mainhand\"` or `\"ring1\"`. When absent or falsy, the server uses the type of the item. `can_equip_item` can change it, for example `weapon` to `offhand`."}
+      ],
+      "example": {"num": 3, "slot": "ring1"},
+      "source": "node/server.js:7579-7606; common:js/common_functions.js:200-209"
+    },
+    "EquipBatchResult": {
+      "confirm": {"code": ["node/server.js:7579-7631", "node/server.js:7638"]},
+      "summary": "One element of `slots` in the `equip_batch` reply: an item that the server equipped.",
+      "fields": [
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The inventory slot, after `to_number`. It now holds the item that was in the equipment slot, or `null`."},
+        {"name": "slot", "type": "string", "optional": false, "description": "The equipment slot that got the item."}
+      ],
+      "example": {"num": 3, "slot": "ring1"},
+      "source": "node/server.js:7630"
+    },
+    "ServerInfoState": {
+      "confirm": {"code": ["node/server.js:203-210", "node/server.js:365", "node/server_functions.js:3105-3136", "node/server_functions.js:2340-2343", "node/server_functions.js:2486-2533", "node/server_functions.js:2553-2560", "node/server_functions.js:2651-2711", "node/server_functions.js:2801-2805", "node/server_functions.js:2814-2855", "node/server_functions.js:2998-3010", "node/server.js:12265-12286", "node/server.js:15699-15704"], "note": "Every key that the code writes into E is a field here; no other key is set."},
+      "summary": "S, the event state of the game server (`E` on the server). Every key is optional and depends on the events that run now.",
+      "description": "Each message carries the whole object, never a diff. When a key is not in the new object, the server removed it. The full reference, with every key and when it appears, is [S](#s-what-s-is) and [Every key](#s-every-key).",
+      "fields": [
+        {"name": "schedule", "type": "ServerInfoSchedule", "optional": true, "description": "Every server except HARDCORE: there `init_server` replaces E with `{rewards, minutes}` (node/server_functions.js:3105-3136), so `schedule` is absent. See [schedule](#s-key-schedule). A server bug: on HARDCORE `event_loop` reads `E.schedule.time_offset` (node/server_functions.js:2378), throws every second and is caught (node/server_functions.js:3023-3025), so nothing after `anniversary_tick` runs there."},
+        {"name": "crabxx", "type": "ServerInfoBoss", "optional": true, "description": "The daily boss, only while it lives. See [crabxx](#s-key-crabxx)."},
+        {"name": "franky", "type": "ServerInfoBoss", "optional": true, "description": "The nightly boss, only while it lives. See [franky](#s-key-franky)."},
+        {"name": "icegolem", "type": "ServerInfoBoss", "optional": true, "description": "The nightly boss, only while it lives. See [icegolem](#s-key-icegolem)."},
+        {"name": "mrpumpkin", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`halloween`). See [mrpumpkin](#s-key-mrpumpkin)."},
+        {"name": "mrgreen", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`halloween`). See [mrgreen](#s-key-mrgreen)."},
+        {"name": "slenderman", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`halloween`). The live form has no `x`/`y`. See [slenderman](#s-key-slenderman)."},
+        {"name": "grinch", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`holidayseason`). See [grinch](#s-key-grinch)."},
+        {"name": "snowman", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`holidayseason`), and off season while one lives. See [snowman](#s-key-snowman)."},
+        {"name": "dragold", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`lunarnewyear`). See [dragold](#s-key-dragold)."},
+        {"name": "pinkgoo", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`valentines`). See [pinkgoo](#s-key-pinkgoo)."},
+        {"name": "wabbit", "type": "ServerInfoBoss", "optional": true, "description": "Seasonal boss (`egghunt`). See [wabbit](#s-key-wabbit)."},
+        {"name": "tiger", "type": "ServerInfoBoss", "optional": true, "description": "Only while a tiger lives. No live code spawns one. See [tiger](#s-key-tiger)."},
+        {"name": "goobrawl", "type": "ServerInfoGoobrawl", "optional": true, "description": "The daily arena event. See [goobrawl](#s-key-goobrawl)."},
+        {"name": "abtesting", "type": "ServerInfoAbtesting", "optional": true, "description": "The daily team battle. See [abtesting](#s-key-abtesting)."},
+        {"name": "halloween", "type": "true", "optional": true, "description": "The season is on. See [halloween](#s-key-halloween)."},
+        {"name": "holidayseason", "type": "true", "optional": true, "description": "The season is on. See [holidayseason](#s-key-holidayseason)."},
+        {"name": "lunarnewyear", "type": "true", "optional": true, "description": "The season is on. See [lunarnewyear](#s-key-lunarnewyear)."},
+        {"name": "valentines", "type": "true", "optional": true, "description": "The season is on. See [valentines](#s-key-valentines)."},
+        {"name": "egghunt", "type": "true", "optional": true, "description": "The season is on. See [egghunt](#s-key-egghunt)."},
+        {"name": "anniversary", "type": "ServerInfoAnniversary", "optional": true, "description": "The anniversary event. See [anniversary](#s-key-anniversary)."},
+        {"name": "duels", "type": "Record<string, ServerInfoDuel>", "optional": true, "description": "Instance name to duel. Created on the first duel and never deleted, so it can be `{}`. See [duels](#s-key-duels)."},
+        {"name": "blessed_minutes", "type": "integer", "optional": true, "description": "The minutes left in the server blessing. See [blessed_minutes](#s-key-blessed_minutes)."},
+        {"name": "blessed_by", "type": "CharacterName", "optional": true, "description": "The character who blessed the server. See [blessed_by](#s-key-blessed_by)."},
+        {"name": "rewards", "type": "Record<string, CharacterName | string | null>", "optional": true, "description": "HARDCORE only: reward slot to the character that won it, or `null`. The key `\"!participation\"` holds a text. See [rewards](#s-key-rewards)."},
+        {"name": "minutes", "type": "integer", "optional": true, "description": "HARDCORE only: minutes left in the round. See [minutes](#s-key-minutes)."}
+      ],
+      "open": true,
+      "source": "node/server.js:203-210"
+    },
+    "ServerInfoSchedule": {
+      "confirm": {"code": ["node/server.js:203-210", "node/server.js:339-343", "node/server.js:365", "node/server_functions.js:2378-2384"]},
+      "summary": "The `schedule` entry of S: the server clock and the hours of daily and nightly events.",
+      "fields": [
+        {"name": "time_offset", "type": "integer", "optional": false, "description": "Hours from UTC for the region: EU 1, US -5, ASIA 7 (node/server.js:339-343)."},
+        {"name": "dailies", "type": "integer[]", "optional": false, "description": "Local hours at which a daily event starts."},
+        {"name": "nightlies", "type": "integer[]", "optional": false, "description": "Local hours at which a nightly event starts."},
+        {"name": "night", "type": "boolean", "optional": false, "description": "`true` from local hour 0 to 5 (node/server_functions.js:2380-2384)."}
+      ],
+      "example": {"time_offset": 1, "dailies": [13, 20], "nightlies": [23], "night": false},
+      "source": "node/server.js:203-210"
+    },
+    "ServerInfoBoss": {
+      "confirm": {"code": ["node/server_functions.js:2522-2531", "node/server_functions.js:2658", "node/server_functions.js:2667-2671", "node/server_functions.js:2692", "node/server_functions.js:2700-2708", "node/server_functions.js:2803"], "note": "Live captures have a live `mrpumpkin` and `slenderman` without `target` (`monster.target` undefined)."},
+      "summary": "A boss entry of S: the live form (`live: true`) or the waiting form of a seasonal boss (`live: false`, `spawn`).",
+      "fields": [
+        {"name": "live", "type": "boolean", "optional": false, "description": "`true` while the boss exists."},
+        {"name": "spawn", "type": "string", "optional": true, "description": "Waiting form only: the next spawn time, as an ISO-8601 date string."},
+        {"name": "map", "type": "MapName", "optional": true, "description": "Live form only: the map of the boss."},
+        {"name": "hp", "type": "number", "optional": true, "description": "Live form only: the HP now."},
+        {"name": "max_hp", "type": "number", "optional": true, "description": "Live form only: the maximum HP."},
+        {"name": "target", "type": "CharacterName | null", "optional": true, "description": "Live form only: the target of the boss. A truthy `target` makes the server send S every second. Absent when the monster has no target (`monster.target` is then `undefined`; seen live for `mrpumpkin` and `slenderman`)."},
+        {"name": "x", "type": "number", "optional": true, "description": "Live form only: the position. Absent for `slenderman` and `tiger`."},
+        {"name": "y", "type": "number", "optional": true, "description": "Sent together with `x`."},
+        {"name": "end", "type": "string", "optional": true, "description": "`crabxx`, `franky`, `icegolem` only: the event timeout, as an ISO-8601 date string."}
+      ],
+      "example": {"live": true, "map": "winterland", "hp": 4200000, "max_hp": 5000000, "target": null, "x": 812.5, "y": 420, "end": "2026-10-04T23:30:00.000Z"},
+      "source": "node/server_functions.js:2522-2531"
+    },
+    "ServerInfoDuel": {
+      "confirm": {"code": ["node/server.js:12251-12286", "node/server_functions.js:2933-2950", "node/server_functions.js:3005", "node/server_functions.js:3009-3010"]},
+      "summary": "One duel in `duels` of S.",
+      "fields": [
+        {"name": "challenger", "type": "CharacterName", "optional": false, "description": "The character who sent the challenge."},
+        {"name": "a", "type": "CharacterName[]", "optional": false, "description": "Team A: the party of the challenger. When the countdown ends, the event loop replaces it with the members of team A still in the duel (node/server_functions.js:2933-2942)."},
+        {"name": "vs", "type": "CharacterName", "optional": false, "description": "The character who accepted."},
+        {"name": "b", "type": "CharacterName[]", "optional": false, "description": "Team B: the party of the opponent. When the countdown ends, the event loop replaces it with the members of team B still in the duel (node/server_functions.js:2943-2949)."},
+        {"name": "instance", "type": "InstanceName", "optional": false, "description": "The duel instance."},
+        {"name": "seconds", "type": "integer", "optional": true, "description": "60 (20 on a Dev server). The next pass of the duel loop removes it. The loop copies `instance.seconds`, which does not exist (node/server_functions.js:3010)."},
+        {"name": "active", "type": "false", "optional": true, "description": "`false` at the start. The duel loop copies `instance.active`, which does not exist, so the key goes away (node/server_functions.js:3009). It is never `true`."},
+        {"name": "id", "type": "string", "optional": false, "description": "The same as `instance`."}
+      ],
+      "example": {"challenger": "Wizard", "a": ["Wizard", "Healer"], "vs": "Archer", "b": ["Archer"], "instance": "Kq2x7mZ1", "seconds": 60, "active": false, "id": "Kq2x7mZ1"},
+      "source": "node/server.js:12268-12277"
+    },
+    "ServerInfoGoobrawl": {
+      "confirm": {"code": ["node/server_functions.js:2550-2560"]},
+      "summary": "The `goobrawl` entry of S.",
+      "fields": [
+        {"name": "end", "type": "string", "optional": false, "description": "The end of the event, as an ISO-8601 date string."}
+      ],
+      "example": {"end": "2026-10-04T13:09:00.000Z"},
+      "source": "node/server_functions.js:2553"
+    },
+    "ServerInfoAbtesting": {
+      "confirm": {"code": ["node/server_functions.js:2851-2855", "node/server_functions.js:2814-2822", "node/server.js:2940-2945"]},
+      "summary": "The `abtesting` entry of S: the daily team battle.",
+      "fields": [
+        {"name": "end", "type": "string", "optional": false, "description": "The end of the event, as an ISO-8601 date string."},
+        {"name": "signup_end", "type": "string", "optional": false, "description": "The start plus 60 s, as an ISO-8601 date string."},
+        {"name": "A", "type": "integer", "optional": false, "description": "The score of team A: 1 for each PvP kill."},
+        {"name": "B", "type": "integer", "optional": false, "description": "The score of team B."},
+        {"name": "id", "type": "string", "optional": false, "description": "5 random characters."}
+      ],
+      "example": {"end": "2026-10-04T20:08:00.000Z", "signup_end": "2026-10-04T20:01:00.000Z", "A": 3, "B": 5, "id": "x7Kq2"},
+      "source": "node/server_functions.js:2855"
+    },
+    "ServerInfoAnniversary": {
+      "confirm": {"code": ["node/logic/anniversary_event.js:121-185", "node/server_functions.js:2340-2343"]},
+      "summary": "The `anniversary` entry of S. The round fields are present only while a round has a target.",
+      "fields": [
+        {"name": "active", "type": "true", "optional": false, "description": "Always `true` when the key exists."},
+        {"name": "live", "type": "boolean", "optional": false, "description": "`true` while a round has a target."},
+        {"name": "next", "type": "integer", "optional": false, "description": "The start of the next 30-minute slot, in ms since 1970."},
+        {"name": "round", "type": "integer", "optional": true, "description": "The round id (the slot number)."},
+        {"name": "expires", "type": "integer", "optional": true, "description": "The end of the round window, in ms since 1970."},
+        {"name": "target", "type": "CharacterName", "optional": true, "description": "The character to visit."},
+        {"name": "id", "type": "string", "optional": true, "description": "The `id` of the target character."},
+        {"name": "available", "type": "boolean", "optional": true, "description": "`true` while visitors can still claim a reward from the target."},
+        {"name": "skin", "type": "string", "optional": true, "description": "The skin of the target."},
+        {"name": "cx", "type": "object", "optional": true, "description": "The cosmetics of the target."},
+        {"name": "map", "type": "MapName", "optional": true, "description": "The map of the target."},
+        {"name": "x", "type": "integer", "optional": true, "description": "The position of the target, rounded."},
+        {"name": "y", "type": "integer", "optional": true, "description": "The position of the target, rounded."}
+      ],
+      "example": {"active": true, "live": false, "next": 1791158400000},
+      "source": "node/logic/anniversary_event.js:166-185"
+    },
+    "QDataQueue": {
+      "confirm": {"code": ["node/server.js:6669-6678", "node/server.js:7051", "node/server.js:7255", "node/server.js:7302", "node/server.js:7438-7441", "node/server.js:7547", "node/logic/tavern_wheel.js:27-39", "node/logic/tavern_slots.js:54-65"], "note": "These are the only places that create a `q` entry."},
+      "summary": "The timers of a character (`player.q`), keyed by the action. Each key is absent when that action does not run.",
+      "fields": [
+        {"name": "upgrade", "type": "QueueEntry", "optional": true, "description": "An `upgrade` timer: `{ms, len, num}`, plus `silent: true` for a shiny attempt (node/server.js:7255, 7302, 7438, 7547)."},
+        {"name": "compound", "type": "QDataCompound", "optional": true, "description": "A `compound` timer (node/server.js:7051)."},
+        {"name": "exchange", "type": "QDataExchange", "optional": true, "description": "An `exchange` timer (node/server.js:6669-6678)."},
+        {"name": "wheel", "type": "QDataWheel", "optional": true, "description": "A spin of the tavern wheel (node/logic/tavern_wheel.js:27-39)."},
+        {"name": "slots", "type": "QDataSlots", "optional": true, "description": "A spin of the tavern slots (node/logic/tavern_slots.js:54-65)."}
+      ],
+      "example": {"upgrade": {"ms": 2914.6, "len": 7905.7, "num": 3}},
+      "source": "node/server.js:14735-14814"
+    },
+    "QDataCompound": {
+      "confirm": {"code": ["node/server.js:7037-7051"]},
+      "summary": "A `compound` timer in `q`.",
+      "extends": "QueueEntry",
+      "fields": [
+        {"name": "nums", "type": "integer[]", "optional": false, "description": "Always `[]`. The digits of the roll are in `p.nums` of the placeholder, not here."}
+      ],
+      "example": {"ms": 4120, "len": 9000, "num": 5, "nums": []},
+      "source": "node/server.js:7051"
+    },
+    "QDataExchange": {
+      "confirm": {"code": ["node/server.js:6640-6678"]},
+      "summary": "An `exchange` timer in `q` (`q.exchange` in `player`).",
+      "extends": "QueueEntry",
+      "fields": [
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item that the character exchanges."},
+        {"name": "id", "type": "string", "optional": false, "description": "The drop table of the exchange: the item name, plus the level for an item with `upgrade` or `compound` in G (node/server.js:6641-6642)."},
+        {"name": "q", "type": "integer", "optional": false, "description": "The quantity that the exchange used (`G.items[name].e`)."},
+        {"name": "s", "type": "integer", "optional": true, "description": "The level suffix of `id`. Only for an item with `upgrade` or `compound` in G, and only when the level is not 0 (level 1 or more)."},
+        {"name": "v", "type": "string", "optional": true, "description": "The `v` (PvP date) of the item, when it had one. The result items get it."},
+        {"name": "qs", "type": "string", "optional": true, "description": "The quest of the item (`G.items[name].quest`). At the end, the server sends `game_response` `<qs>_success` instead of the `upgrade` animation."}
+      ],
+      "example": {"ms": 2400, "len": 4870, "name": "armorbox", "id": "armorbox", "q": 1, "num": 12},
+      "source": "node/server.js:6669-6678"
+    },
+    "QDataWheel": {
+      "confirm": {"code": ["node/logic/tavern_wheel.js:11-39"]},
+      "summary": "A spin of the tavern wheel in `q`. It holds the result before the spin ends.",
+      "fields": [
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time left (`G.games.wheel.spin` at the start). There is no `len`."},
+        {"name": "side", "type": "string", "optional": false, "description": "The side of the bet."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The stake."},
+        {"name": "cut", "type": "integer", "optional": false, "description": "The cut of the house on a win: `ceil(gold * edge / 100)`."},
+        {"name": "net", "type": "integer", "optional": false, "description": "The profit on a win: `gold - cut`."},
+        {"name": "edge", "type": "number", "optional": false, "description": "The house edge in percent."},
+        {"name": "index", "type": "integer", "optional": false, "description": "The slice that the spin drew, an index into `G.games.wheel.slices`."},
+        {"name": "slice", "type": "string", "optional": false, "description": "The name of that slice."},
+        {"name": "result", "type": "string", "optional": false, "description": "The side of that slice."},
+        {"name": "won", "type": "boolean", "optional": false, "description": "`true` when `result` is `side`."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the `bet` request, when it had one."},
+        {"name": "stale", "type": "true", "optional": true, "description": "Set by `init_player_exit` on every timer when the character leaves the game (node/server_functions.js:4509-4513), as on `QueueEntry`. The disconnect path normally deletes these entries first."}
+      ],
+      "example": {"ms": 2380, "side": "sun", "gold": 50000, "cut": 750, "net": 49250, "edge": 1.5, "index": 2, "slice": "teal", "result": "moon", "won": false},
+      "source": "node/logic/tavern_wheel.js:27-39"
+    },
+    "QDataSlots": {
+      "confirm": {"code": ["node/logic/tavern_slots.js:32-65"]},
+      "summary": "A spin of the tavern slots in `q`. It holds the result before the spin ends.",
+      "fields": [
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time left (`G.games.slots.spin` at the start). There is no `len`."},
+        {"name": "cost", "type": "integer", "optional": false, "description": "The stake: `G.games.slots.gold`."},
+        {"name": "edge", "type": "number", "optional": false, "description": "The house edge in percent."},
+        {"name": "stops", "type": "integer[]", "optional": false, "description": "One stop per reel."},
+        {"name": "symbols", "type": "ItemName[]", "optional": false, "description": "The symbol at each stop."},
+        {"name": "prize", "type": "integer", "optional": false, "description": "The gross prize. `0` when the spin drew no prize."},
+        {"name": "cut", "type": "integer", "optional": false, "description": "The cut of the house."},
+        {"name": "payout", "type": "integer", "optional": false, "description": "`prize - cut`."},
+        {"name": "won", "type": "boolean", "optional": false, "description": "`true` when the spin drew a prize."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the `bet` request, when it had one."},
+        {"name": "stale", "type": "true", "optional": true, "description": "Set by `init_player_exit` on every timer when the character leaves the game (node/server_functions.js:4509-4513), as on `QueueEntry`. The disconnect path normally deletes these entries first."}
+      ],
+      "example": {"ms": 1200, "cost": 1000000, "edge": 2, "stops": [4, 3, 9], "symbols": ["whiskey", "whiskey", "whiskey"], "prize": 3000000, "cut": 40000, "payout": 2960000, "won": true},
+      "source": "node/logic/tavern_slots.js:54-65"
+    },
+    "MerritStatusReceipt": {
+      "confirm": {"code": ["node/logic/market_patron_runtime.js:114-117", "node/logic/market_patron_runtime.js:155-167", "node/logic/market_patron_runtime.js:181", "common:mongodb_functions.js:29-31", "node/logic/market_patron.js:48-51"]},
+      "summary": "The receipt of one gift from Merrit: a `marketparcel`, and sometimes 1 shell.",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The receipt id: 32 random characters."},
+        {"name": "at", "type": "number", "optional": false, "description": "The time of the gift, in ms since the Unix epoch."},
+        {"name": "character", "type": "string", "optional": false, "description": "The database id of the character (`get_id(player)`, its `_id`: `\"CH_\"` and digits; common:mongodb_functions.js:29-31)."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that got the gift."},
+        {"name": "item", "type": "\"marketparcel\"", "optional": false, "description": "Always `\"marketparcel\"`."},
+        {"name": "quantity", "type": "1", "optional": false, "description": "Always `1`."},
+        {"name": "shells", "type": "0 | 1", "optional": false, "description": "`1` when the gift included a shell. The chance falls as the shell balance of the account goes up to 10 (`shellChance`, node/logic/market_patron.js:48-51)."},
+        {"name": "reason", "type": "string", "optional": false, "description": "The English text of `reason_phrase`."},
+        {"name": "reason_phrase", "type": "\"server.merrit.receipt\"", "optional": false, "description": "The phrase key of `reason`."},
+        {"name": "reason_phrase_args", "type": "object", "optional": false, "description": "Always `{}`."}
+      ],
+      "example": {"id": "pQ7rT2vW9xY3zA5bC8dE1fG4hJ6kL0mN", "at": 1791101360400, "character": "CH_5818821692620800", "name": "Merchant", "item": "marketparcel", "quantity": 1, "shells": 0, "reason": "Your shop stayed stocked for two minutes and left the neighbors room.", "reason_phrase": "server.merrit.receipt", "reason_phrase_args": {}},
+      "source": "node/logic/market_patron_runtime.js:156-167"
+    },
+    "PartyUpdateMember": {
+      "confirm": {"code": ["node/server.js:1137-1213"]},
+      "summary": "One member of a party, as `party_to_client` builds it. The party bonuses are the same in each member.",
+      "fields": [
+        {"name": "skin", "type": "string", "optional": false, "description": "The skin. A temporary skin (`tskin`) replaces it."},
+        {"name": "level", "type": "integer", "optional": false, "description": "The level."},
+        {"name": "type", "type": "string", "optional": false, "description": "The class, a key of `G.classes`."},
+        {"name": "x", "type": "number", "optional": false, "description": "The x position."},
+        {"name": "y", "type": "number", "optional": false, "description": "The y position."},
+        {"name": "in", "type": "InstanceName", "optional": false, "description": "The instance."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "The map."},
+        {"name": "share", "type": "number", "optional": false, "description": "The part of the party loot for this member, 0 to 1. A merchant gets 0, except in a party of only merchants. Characters of one account get equal parts of the account total (node/server.js:1177-1184)."},
+        {"name": "pdps", "type": "number", "optional": false, "description": "The contribution score of the member: damage, healing, tanking and skills (`add_pdps`). It sets `share`."},
+        {"name": "l", "type": "integer", "optional": false, "description": "The number of members online that are not merchants. It sets the party bonuses."},
+        {"name": "xp", "type": "integer", "optional": false, "description": "The XP bonus of the party in percent. For `l` = 0 to 8: 0, 0, 10, 16, 20, 24, 25, 30, 36; 40 for 9 and more (a party has at most 10 members) (node/server.js:1188)."},
+        {"name": "luck", "type": "integer", "optional": false, "description": "The luck bonus of the party: 10 for each member below level 60 that is not a merchant."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gold bonus of the party in percent. Always 5."},
+        {"name": "rip", "type": "true | string", "optional": true, "description": "Only when the member is dead. A gravestone cosmetic replaces `true` with its name."},
+        {"name": "cx", "type": "object", "optional": true, "description": "Cosmetics, keyed by slot. Only when the member has at least one; left out when `tcx` exists but is empty, even if `cx` has keys (`Object.keys(player.tcx || player.cx)`, node/server.js:1207-1209)."}
+      ],
+      "example": {"skin": "mmage", "level": 72, "type": "mage", "x": -112.5, "y": 1503, "in": "main", "map": "main", "share": 0.3412, "pdps": 18240, "l": 3, "xp": 16, "luck": 0, "gold": 5},
+      "source": "node/server.js:1137-1213"
+    },
+    "PokerState": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:14-34", "node/logic/tavern_poker.js:309-314", "node/logic/tavern_poker.js:429-497"]},
+      "summary": "The public state of the poker table in the tavern: the `poker` event with `event: \"state\"`.",
+      "fields": [
+        {"name": "event", "type": "\"state\"", "optional": false, "description": "Always `\"state\"`."},
+        {"name": "tier", "type": "string", "optional": false, "description": "The key of the blinds in `G.games.poker.blinds`: the server name (`\"I\"`, `\"II\"`, ...) when that object has it, `\"PVP\"` on a PvP server (when the object has `PVP`), else `\"IV\"` (node/logic/tavern_poker.js:14-19). In G 17478 the keys are `\"I\"`, `\"II\"`, `\"III\"`, `\"IV\"` and `\"PVP\"`; the type is `string` because the set comes from G, not from the code."},
+        {"name": "blinds", "type": "[integer, integer]", "optional": false, "description": "The small blind and the big blind, in gold."},
+        {"name": "buyin", "type": "[integer, integer]", "optional": false, "description": "The smallest and the largest buy-in, in gold: `G.games.poker.buyin` (40 and 200) times the big blind."},
+        {"name": "stools", "type": "[number, number][]", "optional": false, "description": "The position of each seat (stool), as an offset from `x`, `y`. The index is the seat index."},
+        {"name": "reach", "type": "number", "optional": false, "description": "How near a stool (px) the character must stand to sit on it with `join`: `G.games.poker.reach`, 40 in G."},
+        {"name": "rake", "type": "number", "optional": false, "description": "The rake of the house in percent of each pot that has a winner: `G.games.poker.rake`, 2 in G."},
+        {"name": "rake_cap", "type": "integer", "optional": false, "description": "The largest rake of one pot, in gold: `G.games.poker.rake_cap` (10) times the big blind."},
+        {"name": "action_ms", "type": "Milliseconds", "optional": false, "description": "The time for one decision: `G.games.poker.action_ms`, 20,000 in G."},
+        {"name": "bank_ms", "type": "Milliseconds", "optional": false, "description": "The time bank: extra time that a seat gets once per hand, when `action_ms` ends. `G.games.poker.bank_ms`, 30,000 in G."},
+        {"name": "x", "type": "number", "optional": false, "description": "The x position of the table on the `tavern` map."},
+        {"name": "y", "type": "number", "optional": false, "description": "The y position of the table on the `tavern` map."},
+        {"name": "button", "type": "integer", "optional": false, "description": "The seat index of the dealer button. `-1` before the first hand."},
+        {"name": "hands", "type": "integer", "optional": false, "description": "The number of hands that the table dealt since the server started."},
+        {"name": "now", "type": "integer", "optional": false, "description": "The time of the server (`Date.now()`, node/logic/tavern_poker.js:10-12), in ms since the Unix epoch. Compare it with `hand.deadline`."},
+        {"name": "next", "type": "Milliseconds", "optional": false, "description": "The time until the next hand can start. `0` when it can start now."},
+        {"name": "log", "type": "PokerLogEntry[]", "optional": false, "description": "The last 6 events of the table, oldest first. The server keeps 8 (node/logic/tavern_poker.js:313)."},
+        {"name": "seats", "type": "(PokerSeat | null)[]", "optional": false, "description": "One entry per seat (5). `null` is an empty seat."},
+        {"name": "hand", "type": "PokerHand | null", "optional": false, "description": "The hand in play, or the last hand while its result shows. `null` before the first hand."}
+      ],
+      "example": {"event": "state", "tier": "II", "blinds": [1000000, 2000000], "buyin": [80000000, 400000000], "stools": [[-32, 16], [0, 16], [32, 16], [-60, -28], [60, -28]], "reach": 40, "rake": 2, "rake_cap": 20000000, "action_ms": 20000, "bank_ms": 30000, "x": -168, "y": -30, "button": -1, "hands": 0, "now": 1791105240000, "next": 0, "log": [], "seats": [null, null, null, null, null], "hand": null},
+      "source": "node/logic/tavern_poker.js:429-497"
+    },
+    "PokerSeat": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:454-474", "node/logic/tavern_poker.js:589-609", "node/logic/tavern_poker.js:709-723"]},
+      "summary": "One occupied seat of the poker table.",
+      "fields": [
+        {"name": "index", "type": "integer", "optional": false, "description": "The seat index, 0 to 4."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character in the seat."},
+        {"name": "stack", "type": "integer", "optional": false, "description": "The gold of the seat that is not in the pot (the gold in front of the seat)."},
+        {"name": "bet", "type": "integer", "optional": false, "description": "The bet of the seat on this street. Between hands it keeps its value from the last street of its last hand (only a new street or a new deal resets it, node/logic/tavern_poker.js:713, 861)."},
+        {"name": "out", "type": "boolean", "optional": false, "description": "The seat sits out: it gets no cards."},
+        {"name": "dc", "type": "boolean", "optional": false, "description": "The character left the game (disconnect). The seat waits for `grace_ms` (5 min in G)."},
+        {"name": "leaving", "type": "boolean", "optional": false, "description": "The seat leaves when the hand ends (the character walked away from the stool, or asked to leave)."},
+        {"name": "folded", "type": "boolean", "optional": false, "description": "The seat folded in the hand. A new seat starts with `true` (node/logic/tavern_poker.js:605); a seat that is not in the hand keeps the value from its last hand, so it can be `false` (only the deal resets it, node/logic/tavern_poker.js:715)."},
+        {"name": "allin", "type": "boolean", "optional": false, "description": "The seat has all its gold in the pot."},
+        {"name": "can_raise", "type": "boolean", "optional": false, "description": "The seat can raise now (a hand runs, the seat is active, and the betting is open to it)."},
+        {"name": "cards", "type": "integer", "optional": false, "description": "The number of hole cards, not the cards: `2` for a seat in the hand, else `0`. The cards come in a `cards` event."},
+        {"name": "shown", "type": "[PokerCard, PokerCard]", "optional": true, "description": "Only after a showdown: the hole cards of this seat."}
+      ],
+      "example": {"index": 2, "name": "Merchant", "stack": 98000000, "bet": 2000000, "out": false, "dc": false, "leaving": false, "folded": false, "allin": false, "can_raise": true, "cards": 2},
+      "source": "node/logic/tavern_poker.js:454-474"
+    },
+    "PokerHand": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:478-495", "node/logic/tavern_poker.js:692-713", "node/logic/tavern_poker.js:752-756", "node/logic/tavern_poker.js:1032-1037"]},
+      "summary": "The public state of one poker hand.",
+      "fields": [
+        {"name": "n", "type": "integer", "optional": false, "description": "The hand number: `hands` when it was dealt."},
+        {"name": "street", "type": "\"preflop\" | \"flop\" | \"turn\" | \"river\" | \"showdown\"", "optional": false, "description": "The betting round. `\"showdown\"` when the hand is over."},
+        {"name": "board", "type": "PokerCard[]", "optional": false, "description": "The community cards, 0 to 5."},
+        {"name": "pot", "type": "integer", "optional": false, "description": "All gold that the seats put in this hand."},
+        {"name": "bet", "type": "integer", "optional": false, "description": "The largest bet on this street."},
+        {"name": "min_raise", "type": "integer", "optional": false, "description": "The smallest raise: a bet must be at least `bet + min_raise`."},
+        {"name": "acting", "type": "integer", "optional": false, "description": "The seat index that must act. `-1` when no seat must act."},
+        {"name": "settling", "type": "boolean", "optional": false, "description": "The server calculated the result and saves it. The result shows when `over` is `true`."},
+        {"name": "deadline", "type": "integer", "optional": false, "description": "The time limit of the seat that acts, in ms since the Unix epoch: `Date.now()` plus `action_ms`, or plus `bank_ms` when the time bank starts (node/logic/tavern_poker.js:754, 897). The deal arms it at once (node/logic/tavern_poker.js:735-737, 838-844), so it is `0` only when the blinds put every seat all in; when `acting` goes to `-1` it keeps its last value."},
+        {"name": "banked", "type": "boolean", "optional": false, "description": "The seat that acts uses its time bank now."},
+        {"name": "over", "type": "boolean", "optional": false, "description": "The hand is over and `results` holds the result."},
+        {"name": "results", "type": "PokerResults | null", "optional": false, "description": "The result. `null` until `over` is `true`."},
+        {"name": "rake", "type": "integer", "optional": false, "description": "The gold that the house took from this hand. `0` until the hand is over."},
+        {"name": "commit", "type": "string", "optional": false, "description": "`HMAC-SHA256(key, order.join(\",\"))` as 64 hex characters. It fixes the deck before the deal, and it is public before the deal."},
+        {"name": "key", "type": "string", "optional": true, "description": "Only when `over` is `true`: the HMAC key, 32 hex characters."},
+        {"name": "order", "type": "PokerCard[]", "optional": true, "description": "Only when `over` is `true`: the full deck (52 cards) in the order of the shuffle. The server deals from the end (`pop`)."}
+      ],
+      "example": {"n": 12, "street": "flop", "board": ["K_clubs", "7_hearts", "2_spades"], "pot": 6000000, "bet": 0, "min_raise": 2000000, "acting": 2, "settling": false, "deadline": 1791105271000, "banked": false, "over": false, "results": null, "rake": 0, "commit": "9b0c3f5e7a1d2c4b6e8f0a1b3c5d7e9f1a2b4c6d8e0f2a3b5c7d9e1f3a4b6c8d"},
+      "source": "node/logic/tavern_poker.js:478-495"
+    },
+    "PokerResults": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:945", "node/logic/tavern_poker.js:960-1013", "node/logic/tavern_poker.js:1026-1033"]},
+      "summary": "The result of a poker hand, in `hand.results` after the hand. The keys of the objects are seat indexes, as strings.",
+      "fields": [
+        {"name": "winners", "type": "Record<string, integer>", "optional": false, "description": "The gold that each seat won from the pots, after the rake."},
+        {"name": "returned", "type": "Record<string, integer>", "optional": false, "description": "The gold that came back to a seat because no other seat matched it (an uncalled bet). No rake."},
+        {"name": "hands", "type": "Record<string, string>", "optional": false, "description": "The hand of each live seat, a value of `G.games.poker.hands` (for example `\"two_pair\"`). Always present; empty unless 2 or more seats reached the showdown (node/logic/tavern_poker.js:1003-1007)."},
+        {"name": "shown", "type": "Record<string, [PokerCard, PokerCard]>", "optional": false, "description": "The hole cards of each live seat. Always present; empty unless 2 or more seats reached the showdown (node/logic/tavern_poker.js:1003-1007)."},
+        {"name": "pots", "type": "PokerPot[]", "optional": false, "description": "Each pot, from the main pot to the side pots."},
+        {"name": "voided", "type": "true", "optional": true, "description": "The hand was voided: a seat's saved escrow no longer matched (for example the character logged in on another server), the awards did not conserve gold, or the shutdown of the server started (node/logic/tavern_poker.js:225, 231, 243-244, 278). Each seat gets back its opening stack, with no rake. The other objects are empty. A failed save does not void the hand: the next tick tries again (node/logic/tavern_poker.js:918-919, 1273)."}
+      ],
+      "example": {"winners": {"2": 5880000}, "returned": {}, "hands": {"0": "pair", "2": "two_pair"}, "shown": {"0": ["A_spades", "10_hearts"], "2": ["K_hearts", "7_clubs"]}, "pots": [{"gold": 5880000, "rake": 120000, "winners": [2]}]},
+      "source": "node/logic/tavern_poker.js:945-1013, 1026-1030"
+    },
+    "PokerPot": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:948-1001"]},
+      "summary": "One pot of a poker hand: won by one or more seats, or returned to one seat.",
+      "fields": [
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gold of the pot, after the rake."},
+        {"name": "rake", "type": "integer", "optional": true, "description": "The rake of this pot: `rake` percent (2 in G), at most `rake_cap` (10 big blinds). Absent on a returned pot."},
+        {"name": "winners", "type": "integer[]", "optional": true, "description": "The seat indexes that share the pot, in clockwise order from the first seat after the button. The gold that does not divide evenly goes 1 gold each to the first ones in this list (node/logic/tavern_poker.js:983-994). Absent on a returned pot."},
+        {"name": "returned", "type": "integer", "optional": true, "description": "Only on a returned pot (an uncalled bet): the seat index that gets it back, with no rake."}
+      ],
+      "example": {"gold": 5880000, "rake": 120000, "winners": [2]},
+      "source": "node/logic/tavern_poker.js:960-1001"
+    },
+    "PokerLogEntry": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:309-314", "node/logic/tavern_poker.js:570", "node/logic/tavern_poker.js:611", "node/logic/tavern_poker.js:641", "node/logic/tavern_poker.js:730", "node/logic/tavern_poker.js:804-811", "node/logic/tavern_poker.js:1029", "node/logic/tavern_poker.js:1066", "node/logic/tavern_poker.js:1083", "node/logic/tavern_poker.js:1135", "node/logic/tavern_poker.js:1208", "node/logic/tavern_poker.js:1224"]},
+      "summary": "One event in the log of the poker table.",
+      "fields": [
+        {"name": "t", "type": "\"join\" | \"out\" | \"in\" | \"deal\" | \"act\" | \"void\" | \"win\" | \"leave\" | \"back\" | \"dc\"", "optional": false, "description": "The kind. `join`: a buy-in or a top-up. `out`, `in`: sit out, sit in (`out` also when a seat goes broke after a hand, node/logic/tavern_poker.js:1083). `deal`: a new hand. `act`: a decision. `void`: a voided hand. `win`: a seat won gold. `leave`: a cash-out. `back`: a reconnect. `dc`: a disconnect."},
+        {"name": "at", "type": "integer", "optional": false, "description": "The time of the event, in ms since the Unix epoch (`Date.now()`, node/logic/tavern_poker.js:10-12, 311)."},
+        {"name": "name", "type": "CharacterName", "optional": true, "description": "The character. All kinds except `deal` and `void`."},
+        {"name": "g", "type": "integer", "optional": true, "description": "Gold. `join`: the buy-in or the top-up. `leave`: the cash-out (the stack). `win`: the gold won. `act`: the call, or the total street bet of a bet, raise or all-in (`0` for a check or a fold)."},
+        {"name": "n", "type": "integer", "optional": true, "description": "Only `deal`: the hand number."},
+        {"name": "a", "type": "\"fold\" | \"check\" | \"call\" | \"bet\" | \"raise\" | \"allin\"", "optional": true, "description": "Only `act`: the decision."},
+        {"name": "auto", "type": "boolean", "optional": true, "description": "Only `act`: `true` when the clock ran out and the server checked or folded (the clock made the decision)."},
+        {"name": "street", "type": "\"preflop\" | \"flop\" | \"turn\" | \"river\"", "optional": true, "description": "Only `act`: the street of the decision."},
+        {"name": "h", "type": "string | null", "optional": true, "description": "Only `win`: the hand name, or `null` when the others folded."}
+      ],
+      "example": {"t": "act", "name": "Merchant", "a": "raise", "g": 6000000, "auto": false, "street": "preflop", "at": 1791105236000},
+      "source": "node/logic/tavern_poker.js:309-314, 804-811"
+    },
+    "PokerCard": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:329-344"]},
+      "type": "string",
+      "summary": "One playing card of Tavern Hold'em: `\"<rank>_<suit>\"`, for example `\"10_hearts\"` or `\"A_spades\"`.",
+      "description": "The ranks are `G.games.poker.ranks` (`\"2\"` to `\"10\"`, `\"J\"`, `\"Q\"`, `\"K\"`, `\"A\"`). The suits are `G.games.poker.suits` (`hearts`, `diamonds`, `clubs`, `spades`).",
+      "example": "10_hearts",
+      "source": "node/logic/tavern_poker.js:327-344"
+    },
+    "PokerCards": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:507-510", "node/logic/tavern_poker.js:731-734"]},
+      "summary": "Your hole cards in a poker hand. Only the seat owner gets them.",
+      "fields": [
+        {"name": "event", "type": "\"cards\"", "optional": false, "description": "Always `\"cards\"`."},
+        {"name": "n", "type": "integer", "optional": false, "description": "The hand number."},
+        {"name": "cards", "type": "[PokerCard, PokerCard]", "optional": false, "description": "Your two hole cards."}
+      ],
+      "example": {"event": "cards", "n": 12, "cards": ["A_spades", "10_hearts"]},
+      "source": "node/logic/tavern_poker.js:733"
+    },
+    "PokerTableView": {
+      "confirm": {"code": ["node/logic/tavern_poker.js:530-537", "node/logic/tavern_poker.js:429-497"]},
+      "summary": "The poker state that `poker` `info` returns in `table`: the public state plus your seat and cards.",
+      "extends": "PokerState",
+      "fields": [
+        {"name": "me", "type": "integer", "optional": false, "description": "Your seat index, or -1."},
+        {"name": "cards", "type": "PokerCard[]", "optional": false, "description": "Your hole cards in the current hand, or `[]`."}
+      ],
+      "example_trimmed": true,
+      "example": {"event": "state", "me": 1, "cards": ["A_spades", "10_hearts"]},
+      "source": "node/logic/tavern_poker.js:532-537"
+    },
+    "PlayersEntry": {
+      "confirm": {"code": ["node/server.js:12919-12953", "node/server.js:11790", "node/server.js:3014-3016"]},
+      "summary": "One online character in the reply to `players`.",
+      "fields": [
+        {"name": "name", "type": "CharacterName | \"Hidden\"", "optional": false, "description": "The character name. `\"Hidden\"` on a PvP server."},
+        {"name": "map", "type": "MapName | \"Unknown\"", "optional": false, "description": "The map name (a key of `G.maps`). `\"Unknown\"` on a PvP server."},
+        {"name": "age", "type": "integer", "optional": false, "description": "The age of the character in days, rounded up: `ceil(hours since created / 24)` (node/server.js:12928)."},
+        {"name": "level", "type": "integer", "optional": false, "description": "The level."},
+        {"name": "type", "type": "string", "optional": false, "description": "The class, a key of `G.classes`."},
+        {"name": "afk", "type": "0 | 1", "optional": false, "description": "1 when the character has a true `afk` (`true`, `\"bot\"` or `\"code\"`): a character of a code client also has 1 (node/server.js:12937, :12948)."},
+        {"name": "party", "type": "string", "optional": false, "description": "The party name: the name of the party leader. `\"\"` when the character is not in a party. On a PvP server, `\"Hidden\"` for any party, else `\"\"` (node/server.js:12938)."},
+        {"name": "kills", "type": "integer", "optional": true, "description": "Only on a PvP server: the PvP kills of the character since its login (`kills` is 0 at login, node/server.js:11790; +1 per kill, node/server.js:3015). Kills of a character of the same owner, kills in `duelland` and team kills in `abtesting` do not count (node/server.js:2934-2947, 3014-3016)."}
+      ],
+      "example": {"name": "Wizard", "map": "main", "age": 412, "level": 72, "type": "mage", "afk": 0, "party": "Wizard"},
+      "source": "node/server.js:12919-12954",
+      "description": "On a normal server, characters in a PvP instance are not in the list (`is_in_pvp`, node/server.js:12941)."
+    },
+    "NewMapData": {
+      "confirm": {"code": ["node/server.js:4614-4638", "node/server.js:4640-4758", "node/server_functions.js:1901"], "note": "The player form also lists `eval: EV`, but `EV` is only assigned inside a dead `if (0 && ...)` block (node/server.js:4727-4737), so it is `undefined` and never sent"},
+      "summary": "The `new_map` payload: you (a character or an observer) are on another map or instance, with a full entity snapshot.",
+      "description": "`transport_player_to` sends it to a character (node/server.js:4744-4755), and `transport_observer_to` to an observer (node/server.js:4627-4637). A cave floor sends `map_chunk` events first.",
+      "fields": [
+        {"name": "name", "type": "MapName", "optional": false, "description": "The map of the destination."},
+        {"name": "in", "type": "InstanceName", "optional": false, "description": "The instance of the destination."},
+        {"name": "x", "type": "number", "optional": false, "description": "The new position. A spawn with a scatter value adds a random offset."},
+        {"name": "y", "type": "number", "optional": false, "description": "The new position."},
+        {"name": "direction", "type": "integer", "optional": true, "description": "The facing direction, 0 to 3. From a point (`point[2] || 0`, always present) or from a spawn (`spawns[s][2]`); absent only when the spawn has no direction (101 of 154 spawns in G) (node/server.js:4686-4697). Observers always get `0`."},
+        {"name": "effect", "type": "0 | 1 | \"blink\" | \"magiport\"", "optional": false, "description": "The effect to draw. `0`: none. `1`: a teleport (town, respawn, cave doors). `\"blink\"` and `\"magiport\"`: those skills (node/server.js:14698, 14717). No other caller of `transport_player_to` passes another value."},
+        {"name": "info", "type": "MapInfoDuel | NewMapTavernInfo | NewMapZoneInfo | object", "optional": false, "description": "`instance.info` of the destination, for example the state of an event map. `{}` for most instances (node/server_functions.js:1901)."},
+        {"name": "m", "type": "integer", "optional": false, "description": "The new map-change counter (`player.m`). Send it with each `move`. Observers get `0`."},
+        {"name": "entities", "type": "EntitiesFrame", "optional": false, "description": "A `type: \"all\"` frame of the entities in view at the new position."}
+      ],
+      "example": {"name": "main", "in": "main", "x": 12.4, "y": -33.1, "direction": 0, "effect": 0, "info": {}, "m": 13, "entities": {"players": [], "monsters": [], "type": "all", "in": "main", "map": "main"}},
+      "source": "node/server.js:4614-4638, 4744-4755"
+    },
+    "NewMapTavernInfo": {
+      "confirm": {"code": ["node/server_functions.js:1342-1361", "node/server_functions.js:1404-1419", "node/server_functions.js:1556-1557"]},
+      "summary": "`instance.info` of the `tavern` instance: the state of the dice game.",
+      "fields": [
+        {"name": "dice", "type": "\"bets\" | \"roll\" | \"lock\"", "optional": false, "description": "The phase of the dice game: bets are open, the dice roll, or the result is locked."},
+        {"name": "num", "type": "string", "optional": true, "description": "The result of the last roll, for example `\"42.17\"`. Absent while the dice roll (node/server_functions.js:1412); during `\"bets\"` it still holds the previous result (node/server_functions.js:1419, 1558)."},
+        {"name": "seconds", "type": "integer", "optional": false, "description": "Seconds since the bets opened. The bets close at 30."}
+      ],
+      "example": {"dice": "bets", "num": "42.17", "seconds": 12},
+      "source": "node/server_functions.js:1359-1361, 1404-1419, 1556-1557"
+    },
+    "NewMapZoneInfo": {
+      "confirm": {"code": ["node/logic/generated_maps.js:101"]},
+      "summary": "`instance.info` of a floor of the Cave of Many Dreams (a generated map).",
+      "fields": [
+        {"name": "zone", "type": "NewMapZone", "optional": false, "description": "The run and the floor."}
+      ],
+      "example": {"zone": {"run": "9f2c1a7e4b3d8c6a5e0f1b2d", "floor": 2, "expires": 1791105600000}},
+      "source": "node/logic/generated_maps.js:101"
+    },
+    "NewMapZone": {
+      "confirm": {"code": ["node/logic/generated_maps.js:101", "node/logic/generated_maps.js:473", "node/logic/generated_maps.js:545", "node/logic/dream_layout.js:1254"]},
+      "summary": "The `zone` field of `NewMapZoneInfo`: the dream cave run that owns a floor.",
+      "fields": [
+        {"name": "run", "type": "string", "optional": false, "description": "The key of the run: `crypto.randomBytes(12).toString(\"hex\")`, 24 hex characters (node/logic/generated_maps.js:473)."},
+        {"name": "floor", "type": "integer", "optional": false, "description": "The floor index, from 0 (`floor: i`, node/logic/dream_layout.js:1254)."},
+        {"name": "expires", "type": "integer", "optional": false, "description": "When the run ends: milliseconds since the Unix epoch, `Date.now()` + 24 minutes at the start of the run (node/logic/generated_maps.js:545)."}
+      ],
+      "example": {"run": "9f2c1a7e4b3d8c6a5e0f1b2d", "floor": 2, "expires": 1791105600000},
+      "source": "node/logic/generated_maps.js:101"
+    },
+    "EntitiesFrame": {
+      "confirm": {"code": ["node/server_functions.js:3675-3708", "node/server.js:13675-13753"]},
+      "summary": "The payload of `entities`: the players and monsters in view. `new_map` and `start` carry one in their `entities` field.",
+      "description": "Each entity is a complete object, not a change (node/server.js:13705). The view is the vision box of the receiver (`B.vision`, 700 x 500 px each way, node/server.js:217). The receiver itself is in `players` only in a `type: \"all\"` frame: `send_xy_updates` skips it (node/server.js:13695), `send_all_xy` does not (node/server_functions.js:3679-3685). Before an `\"all\"` frame, the server sends `disappear` `{id, outside: true}` for each entity that the receiver saw before and that is not in the frame (node/server_functions.js:3696-3700), so a client can drop the entities that it holds and that are not in it.",
+      "fields": [
+        {"name": "type", "type": "\"xy\" | \"all\"", "optional": false, "description": "`\"all\"`: a full snapshot of everything in view (`send_all_xy`); `send_updates`, `loaded`, `new_map` and `start` carry this form. `\"xy\"`: the entities that changed in this tick of the instance (`send_xy_updates`)."},
+        {"name": "in", "type": "InstanceName", "optional": false, "description": "The instance of the receiver."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "The map of the receiver."},
+        {"name": "players", "type": "EntitiesPlayer[]", "optional": false, "description": "Characters and NPCs in view, from `player_to_client(p, 1)`: the stranger form of `Character` (no inventory, gold or detailed stats). Dead and invisible characters are not in the list."},
+        {"name": "monsters", "type": "EntitiesMonster[]", "optional": false, "description": "Monsters in view, from `monster_to_client`. Dead and invisible monsters are not in the list."},
+        {"name": "xy", "type": "EntitiesXy", "optional": true, "description": "Only when `mode.xyinf` is on and the receiver moves. The default is off (node/server.js:274), so the live server does not send it (node/server.js:13750, node/server_functions.js:3705)."}
+      ],
+      "example": {"type": "all", "in": "main", "map": "main", "players": [], "monsters": [{"id": "48213", "type": "goo", "x": -60, "y": 420, "cid": 1, "s": {}}]},
+      "source": "node/server.js:13675-13754; node/server_functions.js:3675-3708"
+    },
+    "EntitiesXy": {
+      "confirm": {"code": ["node/server_functions.js:3705", "node/server.js:13750"]},
+      "summary": "The position of the receiver in an `entities` frame.",
+      "fields": [
+        {"name": "x", "type": "number", "optional": false, "description": "The position on the server."},
+        {"name": "y", "type": "number", "optional": false, "description": "The position on the server."}
+      ],
+      "example": {"x": -120.5, "y": 410},
+      "source": "node/server_functions.js:3705"
+    },
+    "EntitiesPlayer": {
+      "confirm": {"code": ["node/server.js:855-937", "node/server_functions.js:1785-1830"], "note": "The stranger form of `player_to_client`; citizen NPCs have no `cslots`, so no `slots`."},
+      "summary": "A character or an NPC as other clients see it: the stranger form of `player_to_client`.",
+      "description": "The first group of `player_to_client` fields (node/server.js:859-901), then `stand`, `controller`, `skin`, `cx`, `slots`, `tp`, `ctype` and `owner` (node/server.js:905-924). A field with the value `undefined` is absent. A stranger gets no `map`, `in`, stats, items or gold (node/server.js:938-989). NPCs (citizens, cavalry, event NPCs) are in the same list. They can lack some stat fields, and they add `name` (node/server.js:926-934).",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The name of the character. An NPC has `\"$\"` and its name, for example `\"$Venn\"` (node/server_functions.js:1808)."},
+        {"name": "hp", "type": "integer", "optional": false, "description": "Hit points."},
+        {"name": "max_hp", "type": "integer", "optional": false, "description": "Maximum hit points."},
+        {"name": "mp", "type": "integer", "optional": false, "description": "Mana points."},
+        {"name": "max_mp", "type": "integer", "optional": true, "description": "Maximum mana points. An NPC can lack it."},
+        {"name": "xp", "type": "number", "optional": false, "description": "Experience in this level. Can be fractional: XP gains are not rounded, for example a merchant gets `tax * 3.2` per sale (node/server_functions.js:750); seen live as `106466429.2`."},
+        {"name": "attack", "type": "number", "optional": false, "description": "Attack value."},
+        {"name": "heal", "type": "number", "optional": true, "description": "Heal value (priests)."},
+        {"name": "frequency", "type": "number", "optional": true, "description": "Attacks per second. An NPC can lack it."},
+        {"name": "speed", "type": "number", "optional": false, "description": "Movement speed, px per second."},
+        {"name": "range", "type": "number", "optional": false, "description": "Attack range in px."},
+        {"name": "armor", "type": "number", "optional": false, "description": "Armor."},
+        {"name": "resistance", "type": "number", "optional": true, "description": "Resistance. An NPC can lack it."},
+        {"name": "level", "type": "integer", "optional": false, "description": "The level."},
+        {"name": "party", "type": "CharacterName | null", "optional": true, "description": "The leader of the party. `null` after leaving a party (node/server_functions.js:3608, 3618, 3633): `player_to_client` copies any value that is not `undefined` (node/server.js:899-905)."},
+        {"name": "rip", "type": "boolean | string | null", "optional": true, "description": "`true` when the character is dead, `false` after a revive or a state restore (node/server.js:1122, 6292, 15108), absent if never set; `null` is seen live on other players (the stored record's value). With a gravestone cosmetic it becomes the gravestone name, but only from the next payload: the server changes `player.rip` after it copies it (node/server.js:915-917)."},
+        {"name": "npc", "type": "string", "optional": true, "description": "Only for NPCs: the id of the NPC in the map definition, for example `\"pokerdealer\"` (node/server_functions.js:1803)."},
+        {"name": "allow", "type": "any", "optional": true, "description": "Unclear from the source; no handler sets it on a character."},
+        {"name": "code", "type": "boolean", "optional": true, "description": "The last `code` event said that code runs."},
+        {"name": "afk", "type": "boolean | \"bot\" | \"code\"", "optional": true, "description": "`\"code\"` when the character logged in with `no_html` (a code client)."},
+        {"name": "target", "type": "EntityId | null", "optional": true, "description": "The current target."},
+        {"name": "focus", "type": "EntityId | null", "optional": true, "description": "The focus target (`target` with `xid`)."},
+        {"name": "role", "type": "string", "optional": true, "description": "A special role, for example `\"gm\"`."},
+        {"name": "s", "type": "Record<string, Condition>", "optional": false, "description": "Conditions, keyed by name."},
+        {"name": "c", "type": "Record<string, object>", "optional": false, "description": "Channeled actions (for example `town`, `fishing`), keyed by name. Each has `ms`, the time left."},
+        {"name": "q", "type": "QDataQueue", "optional": false, "description": "`player.q`: the timers of `upgrade`, `compound` and `exchange`, and the tavern spins, keyed by that name. `player_to_client` sends it also to strangers (node/server.js:884)."},
+        {"name": "b", "type": "any", "optional": true, "description": "Unclear from the source; no handler sets it on a character."},
+        {"name": "age", "type": "integer", "optional": true, "description": "The age of the character in days. NPCs do not have it."},
+        {"name": "pdps", "type": "number", "optional": false, "description": "Party damage score."},
+        {"name": "x", "type": "number", "optional": false, "description": "Position."},
+        {"name": "y", "type": "number", "optional": false, "description": "Position."},
+        {"name": "moving", "type": "boolean", "optional": true, "description": "The character moves now."},
+        {"name": "going_x", "type": "number", "optional": true, "description": "The destination of the move."},
+        {"name": "going_y", "type": "number", "optional": true, "description": "The destination of the move."},
+        {"name": "abs", "type": "boolean", "optional": true, "description": "The position is absolute (after a teleport)."},
+        {"name": "move_num", "type": "integer", "optional": true, "description": "A counter of moves."},
+        {"name": "position_id", "type": "integer", "optional": true, "description": "Set for NPC characters. It goes up each time the NPC jumps to a new place."},
+        {"name": "angle", "type": "number", "optional": true, "description": "Set by cave logic on actors. Not set for a normal character."},
+        {"name": "cid", "type": "integer", "optional": false, "description": "The change id. It goes up when the character changes."},
+        {"name": "guild", "type": "string | null", "optional": true, "description": "The guild: the guild's short name when the account is in one (node/server.js:11732, 11820-11823), else the character record's value, which is `\"\"` or `null`. `player_to_client` copies it whenever it is not `undefined` (node/server.js:899-905), so `null` arrives (seen live)."},
+        {"name": "team", "type": "string", "optional": true, "description": "The team in a team event or a duel (`\"A\"` or `\"B\"`)."},
+        {"name": "motion", "type": "object", "optional": true, "description": "Only for NPCs with a scripted motion: a copy of `player.motion` with `age` (ms since the start) and without `started` (node/server.js:857-858)."},
+        {"name": "stand", "type": "boolean | string", "optional": true, "description": "From `p.stand`: the merchant stand is open (the stand item name), or `false`."},
+        {"name": "controller", "type": "CharacterName | \"\"", "optional": true, "description": "Only when `afk` is `\"code\"`: the character whose code controls this one, or `\"\"`."},
+        {"name": "skin", "type": "string", "optional": false, "description": "The skin (or the temporary skin)."},
+        {"name": "cx", "type": "object", "optional": false, "description": "Cosmetics, keyed by slot (or the temporary cosmetics)."},
+        {"name": "slots", "type": "Record<string, ItemInstance | TradeSlotItem | null>", "optional": true, "description": "Equipped items, keyed by slot name: `player.cslots` (node/server.js:920). Absent when `cslots` was never built: citizen NPCs are created without it (node/server_functions.js:1785-1830; only `cache_player_items` and cavalry set it, node/server_functions.js:4320, node/logic/cavalry.js:254); seen live. Otherwise the same object as `Character.slots`. A trade slot (`trade1`, `trade2`, ...) of a merchant stand holds a `TradeSlotItem`: `reslot_player` builds it with `cache_item(item, 1)`, which keeps `price`, `rid` and the other trade fields (node/server_functions.js:4301-4310)."},
+        {"name": "tp", "type": "true", "optional": true, "description": "For 500 ms after a transport with an effect: the character just appeared. Always `true`, never the effect (node/server.js:920-922, 4706-4718)."},
+        {"name": "ctype", "type": "string", "optional": false, "description": "The class, a key of `G.classes`."},
+        {"name": "owner", "type": "string", "optional": false, "description": "The user id of the owner, or `\"\"` for a private character."},
+        {"name": "name", "type": "string", "optional": true, "description": "Only for NPCs: the display name, for example `\"Venn\"`."},
+        {"name": "direction", "type": "integer", "optional": true, "description": "Only for NPCs that face a fixed direction: 0 to 3 (node/server.js:931-934)."},
+        {"name": "str", "type": "number", "optional": true, "description": "Only for cavalry NPCs: strength (node/server.js:928)."},
+        {"name": "int", "type": "number", "optional": true, "description": "Only for cavalry NPCs: intelligence."},
+        {"name": "dex", "type": "number", "optional": true, "description": "Only for cavalry NPCs: dexterity."},
+        {"name": "vit", "type": "number", "optional": true, "description": "Only for cavalry NPCs: vitality."},
+        {"name": "for", "type": "number", "optional": true, "description": "Only for cavalry NPCs: fortitude."}
+      ],
+      "example": {"id": "$Venn", "hp": 1200, "max_hp": 1200, "mp": 2000, "xp": 0, "attack": 100, "speed": 20, "range": 40, "armor": 500, "level": 100, "npc": "pokerdealer", "s": {}, "c": {}, "q": {}, "pdps": 0, "x": 120, "y": -40, "cid": 0, "skin": "pokerdealer", "cx": {}, "slots": {}, "ctype": "merchant", "owner": "", "name": "Venn", "direction": 0},
+      "source": "node/server.js:855-937"
+    },
+    "EntitiesMonster": {
+      "confirm": {"code": ["node/server.js:1003-1073"]},
+      "summary": "A monster as `monster_to_client` builds it.",
+      "description": "Most stats are only present when they differ from `G.monsters[type]`. Take the missing values from G: a monster at full health has no `hp` (node/server.js:1006-1028).",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The monster id, a string of digits."},
+        {"name": "type", "type": "string", "optional": false, "description": "The monster type, a key of `G.monsters`."},
+        {"name": "x", "type": "number", "optional": false, "description": "Position."},
+        {"name": "y", "type": "number", "optional": false, "description": "Position."},
+        {"name": "moving", "type": "boolean", "optional": true, "description": "The monster moves now."},
+        {"name": "going_x", "type": "number", "optional": true, "description": "The destination of the move."},
+        {"name": "going_y", "type": "number", "optional": true, "description": "The destination of the move."},
+        {"name": "abs", "type": "boolean", "optional": true, "description": "The position is absolute (after a teleport)."},
+        {"name": "move_num", "type": "integer", "optional": true, "description": "A counter of moves."},
+        {"name": "angle", "type": "number", "optional": true, "description": "The facing angle in degrees. Cave actors have it."},
+        {"name": "cid", "type": "integer", "optional": false, "description": "The change id. It goes up when the monster changes."},
+        {"name": "target", "type": "CharacterName | null", "optional": true, "description": "The character that the monster attacks."},
+        {"name": "focus", "type": "EntityId | null", "optional": true, "description": "The focus of the monster."},
+        {"name": "s", "type": "Record<string, Condition>", "optional": false, "description": "Conditions, keyed by name."},
+        {"name": "level", "type": "integer", "optional": true, "description": "The level. Only when it is above 1."},
+        {"name": "speed", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "hp", "type": "number", "optional": true, "description": "Hit points. Only when they differ from `G.monsters[type].hp`."},
+        {"name": "max_hp", "type": "number", "optional": true, "description": "Only when it differs from `G.monsters[type].hp` (node/server.js:1026-1028)."},
+        {"name": "mp", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "max_mp", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "attack", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "xp", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "frequency", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "armor", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "resistance", "type": "number", "optional": true, "description": "Only when it differs from G."},
+        {"name": "1hp", "type": "boolean", "optional": true, "description": "Each hit does 1 damage. Only when it differs from G."},
+        {"name": "skin", "type": "string", "optional": true, "description": "Only when it differs from G."},
+        {"name": "cooperative", "type": "boolean", "optional": true, "description": "Only when it differs from G."},
+        {"name": "drops", "type": "any[]", "optional": true, "description": "Only when it differs from G. Unclear from the source: no code in `node/` sets `monster.drops` (the `data.drops =` lines at node/server.js:5469-5472 are another payload), so in practice it is never sent."},
+        {"name": "cx", "type": "object", "optional": true, "description": "Only for cave actors: cosmetics."},
+        {"name": "slots", "type": "object", "optional": true, "description": "Only for cave actors: equipped items."},
+        {"name": "name", "type": "string", "optional": true, "description": "Only for cave actors and pets: the display name."},
+        {"name": "cave", "type": "EntitiesMonsterCave", "optional": true, "description": "Only for actors in the Cave of Many Dreams."},
+        {"name": "pet", "type": "true", "optional": true, "description": "Only for pets."},
+        {"name": "trap", "type": "true", "optional": true, "description": "Only for traps."},
+        {"name": "owner", "type": "CharacterName", "optional": true, "description": "Only for pets and traps: the character that owns it."},
+        {"name": "events", "type": "EntitiesMonsterEvent[]", "optional": true, "description": "Only in an `\"xy\"` frame, when the monster did something in this tick. Handle each pair in order."}
+      ],
+      "example": {"id": "48213", "type": "goo", "x": -60, "y": 420, "cid": 4, "target": "Ranger", "s": {}, "hp": 64, "events": [["ui", {"type": "mheal", "id": "48213", "heal": 20}]]},
+      "source": "node/server.js:1003-1073"
+    },
+    "EntitiesMonsterCave": {
+      "confirm": {"code": ["node/server.js:1054-1058", "node/logic/cave_of_many_dreams.js:250-259", "node/logic/cave_of_many_dreams.js:1187-1189"]},
+      "summary": "The `cave` field of a monster in the Cave of Many Dreams.",
+      "fields": [
+        {"name": "room", "type": "string", "optional": false, "description": "The room id, for example `\"0:shop\"`, `\"1:patrol:3\"`, `\"2:farm:4\"`, `\"1:2\"`, `\"rescue:5\"` or `\"follower:<monster id>\"` (node/logic/cave_of_many_dreams.js:128, 147, 163, 183, 205, 2078, 2120)."},
+        {"name": "side", "type": "\"enemy\" | \"predator\" | \"neutral\" | \"ally\" | \"victim\" | \"duel_left\" | \"duel_right\"", "optional": false, "description": "The side of the actor: `\"enemy\"`, `\"predator\"` or `\"neutral\"` (node/logic/cave_of_many_dreams.js:250-270), or `\"ally\"`, `\"victim\"`, `\"duel_left\"`, `\"duel_right\"` from `cave_set_side` (node/logic/cave_of_many_dreams.js:435, 929, 946-947, 1119, 1187-1189)."},
+        {"name": "citizen", "type": "boolean", "optional": false, "description": "The actor is the NPC of a citizen room."}
+      ],
+      "example": {"room": "2:4", "side": "enemy", "citizen": false},
+      "source": "node/server.js:1057"
+    },
+    "EntitiesMonsterEvent": {
+      "confirm": {"code": ["node/server.js:14106", "node/server.js:14121", "node/server.js:4342-4347", "node/server.js:14641", "node/server.js:15182-15189"]},
+      "summary": "One thing that a monster did in a tick: an `[event, payload]` pair inside `entities`.",
+      "description": "Handle it as if the server sent that event. `[\"hit\", def]` is a monster attack, with the `hit` payload (node/server.js:4342-4346). The default `mode.instant_monster_attacks: 1` (node/server.js:292) sends `hit` directly instead, so the live server only puts `[\"ui\", ...]` pairs here (node/server.js:14106, 14121).",
+      "type": "[\"hit\", object] | [\"ui\", EntitiesMheal]",
+      "example": ["ui", {"type": "mheal", "id": "48213", "heal": 20}],
+      "source": "node/server.js:14106"
+    },
+    "EntitiesMheal": {
+      "confirm": {"code": ["node/server.js:14099-14122"]},
+      "summary": "The `ui` payload of a monster heal, inside `EntitiesMonsterEvent`.",
+      "fields": [
+        {"name": "type", "type": "\"mheal\"", "optional": false, "description": "A monster healed itself or another monster."},
+        {"name": "id", "type": "string", "optional": false, "description": "The healed monster."},
+        {"name": "heal", "type": "number", "optional": false, "description": "The hit points that it got back."}
+      ],
+      "example": {"type": "mheal", "id": "48213", "heal": 20},
+      "source": "node/server.js:14106"
+    },
+    "CallLogEntry": {
+      "confirm": {"code": ["node/server_functions.js:5336-5363", "node/server_functions.js:5365-5386", "node/server.js:4897", "node/server.js:4919-4934"], "note": "Live: ccreport and limitdcreport samples have [ISO string, name, number] entries."},
+      "type": "[string, string, number]",
+      "summary": "One entry of the call-cost log of a socket: `[time, event name, cost]`.",
+      "description": "`add_call_cost` keeps these in `socket.calls` and drops entries older than 4 s when the next cost comes. The time is a `Date` on the server, so it arrives as an ISO 8601 string. The name is the event of the handler, or a label that some costs use (`cm_data`, `bank`, `transport`). Each event starts a new entry with cost 1 (`add_call_cost(-1)`, node/server.js:4897). An extra cost with the same name as the last entry (from `CC`, or from `resend`) adds to that entry. The cost is a number and can have a fraction (`cm_data` to more than one target multiplies by 0.8, node/server.js:4930-4933). `reduce_call_cost` lowers the cost of the last entry and removes it at 0 or below. A cost of 0 or none counts as 1 (`if (!num) num = 1`, node/server_functions.js:5347-5349).",
+      "example": ["2026-10-04T12:00:01.512Z", "move", 2.5],
+      "source": "node/server_functions.js:5336-5386"
+    },
+    "TrackEntry": {
+      "confirm": {"code": ["node/server.js:10576-10605", "node/server_functions.js:469-474"]},
+      "summary": "One character that the ranger skill `track` found: no name, only a class sound, a distance and invisibility.",
+      "fields": [
+        {"name": "sound", "type": "\"wmp\" | \"rr\" | \"pm\"", "optional": false, "description": "`\"rr\"` for a rogue or a ranger, `\"pm\"` for a priest or a mage, `\"wmp\"` for every other class."},
+        {"name": "dist", "type": "number", "optional": false, "description": "The distance from you in px. It is less than `G.skills.track.range` (1,440)."},
+        {"name": "invis", "type": "true", "optional": true, "description": "The character is invisible (`invis` or `ethereal`)."}
+      ],
+      "example": {"sound": "rr", "dist": 612.4},
+      "source": "node/server.js:10576-10605"
+    },
+    "DropRow": {
+      "confirm": {"code": ["node/server.js:2199-2235", "node/server_functions.js:4029-4149", "node/server_functions.js:79-89"], "note": "Every row of design/drops.js (and the `exchange` list of citizen22 that `marketparcel` uses, design/npcs.js:756) has one of these forms."},
+      "summary": "One row of a drop table: `[chance, what, ...]`.",
+      "description": "The first element is a chance. In `maps`, `drops`, `monsters_home_server` and `global*`, the entry drops when a random number divided by the luck factors is below it (node/server.js:2288-2370). In `tables`, it is a weight: one entry wins, with the chance weight / sum of weights (`exchange`, node/server_functions.js:4029-4149). The second element tells the kind. It is an item name, `\"open\"` (roll the table that the third element names), `\"gold\"`, `\"shells\"`, `\"empty\"`, `\"cx\"` or `\"cxbundle\"` (a cosmetic), or `\"cxjar\"`. For an item, the third element is the quantity and a fifth element is a property such as `\"lucky\"` (node/server_functions.js:4117-4119). `cxjar` is `[chance, \"cxjar\", 1, cosmetic]`. The forms in `design/drops.js` are exactly these.",
+      "type": "[number, ItemName] | [number, ItemName, integer] | [number, ItemName, null, null, string] | [number, \"open\" | \"cx\" | \"cxbundle\", string] | [number, \"gold\" | \"shells\", integer] | [number, \"cxjar\", integer, string] | [number, \"empty\"]",
+      "example": [0.0005, "open", "statring"],
+      "source": "node/server.js:2199-2235, design/drops.js"
+    },
+    "TrackerMax": {
+      "confirm": {"code": ["node/server.js:11663-11677", "node/server.js:11757", "node/server_functions.js:549"]},
+      "summary": "The best values of all characters of an account, from the login (`player.max_stats`): the best character of the account for each monster type.",
+      "fields": [
+        {"name": "monsters", "type": "Record<string, [number, CharacterName]>", "optional": false, "description": "Monster type to `[best count, character]`. The count is `monsters + monsters_diff` of the best character (node/server.js:11665-11674)."},
+        {"name": "level", "type": "integer", "optional": true, "description": "The highest level of the account. Can be absent after a HARDCORE reset (node/server_functions.js:549)."}
+      ],
+      "example": {"monsters": {"goo": [9480, "Wizard"]}, "level": 72},
+      "source": "node/server.js:11663-11677"
+    },
+    "TradeHistoryEntry": {
+      "confirm": {"code": ["node/server_functions.js:342-363", "node/server.js:8892-8894", "node/server.js:8999-9007", "node/server.js:9139-9140", "node/server.js:16124", "node/server.js:16201"]},
+      "type": "[\"buy\" | \"sell\", CharacterName, TradeHistoryItem, integer] | [\"swap\", CharacterName, TradeHistoryItem, 0, TradeHistoryItem] | [\"giveaway\", CharacterName, TradeHistoryItem, null]",
+      "summary": "One line of the trade history of a character: `[event, other character, item, price]`, plus the received item for a swap.",
+      "description": "`add_to_trade_history` writes it, at most 40 lines (node/server_functions.js:342-363). `buy` and `sell`: the price is the total gold of the trade, before the tax of the seller: the unit price (an integer, node/server.js:7682, 8808) times the quantity. `swap`: `[\"swap\", partner, given, 0, received]`: index 2 is the item that the character gave, index 4 the item that it got. `giveaway`: only the giver records it, with the winner as the other character and no price (`undefined` in the array becomes `null` in JSON; node/server.js:16124, 16201). A trade can go into the last line (not for a swap). This occurs when the event, the other character, the item name and the level are the same. Then the server adds the quantity to `q` and the price to index 3.",
+      "example": ["sell", "Ranger", {"name": "hpot1", "q": 200, "price": 45}, 9000],
+      "source": "node/server_functions.js:342-363"
+    },
+    "TradeHistoryItem": {
+      "confirm": {"code": ["node/server_functions.js:4203", "node/server_functions.js:4234-4261", "node/server.js:8892-8894", "node/server.js:8999-9007", "node/server.js:9139-9140", "node/server.js:16115-16124"]},
+      "summary": "The item of a trade, in the trade view (`cache_item(item, true)`).",
+      "description": "The trade view keeps all keys of the item except `grace`, `o`, `oo` and `src` (node/server_functions.js:4203, 4234-4261). So a stand item keeps its `price`, `rid` and other trade keys (see `TradeSlotItem`). `q` is the quantity of this trade. The `sell`/`buy` lines of a buy order (`trade_sell`, node/server.js:8892-8894) copy the inventory item of the seller, so they have no `price`/`rid`.",
+      "extends": "TradeSlotItem",
+      "open": true,
+      "fields": [
+        {"name": "price", "type": "integer", "optional": true, "description": "The price of one unit on the stand, when the item was on a stand."},
+        {"name": "rid", "type": "string", "optional": true, "description": "The id of the stand listing, when it had one."},
+        {"name": "gf", "type": "CharacterName", "optional": true, "description": "Only for a giveaway: the giver."}
+      ],
+      "example": {"name": "hpot1", "q": 200, "price": 45},
+      "source": "node/server.js:8892-8894, 8999-9007, 9139-9140, 16118-16124"
+    },
+    "MapInfoDuel": {
+      "confirm": {"code": ["node/server.js:12238-12246", "node/server.js:12338-12345", "node/server_functions.js:2898-2932"]},
+      "summary": "`instance.info` of a duel instance: the countdown and the two teams.",
+      "description": "The `duel` handler builds it when a challenge is accepted (node/server.js:12238-12246). The `enter` form of `duel` adds a party member to `A` or `B` (node/server.js:12338-12345). The event loop refreshes it each second (node/server_functions.js:2899-2932). `new_map` and `start` carry the same object in `info`.",
+      "fields": [
+        {"name": "seconds", "type": "integer", "optional": false, "description": "Seconds until the fight starts: 60 at the start (20 on a Dev server), 1 less on each pass of the event loop, then 0."},
+        {"name": "active", "type": "boolean", "optional": false, "description": "`false` during the countdown. `true` when the fight started."},
+        {"name": "A", "type": "MapInfoSummary[]", "optional": false, "description": "Team A: the challenger and the challenger's party members that entered."},
+        {"name": "B", "type": "MapInfoSummary[]", "optional": false, "description": "Team B: the challenged character and that character's party members that entered."},
+        {"name": "id", "type": "InstanceName", "optional": false, "description": "The duel instance: a random 20-character name (`randomStr(20)`, node/server.js:12234)."}
+      ],
+      "example": {"seconds": 60, "active": false, "A": [], "B": [], "id": "Xk2Lm9QwPz4RtY7bNc1D"},
+      "source": "node/server.js:12238-12246"
+    },
+    "MapInfoSummary": {
+      "confirm": {"code": ["node/server.js:1075-1092", "node/server.js:12241-12246", "node/server_functions.js:2908-2931"]},
+      "summary": "One duel member: `PlayerSummary` (`player_to_summary`) plus `active`.",
+      "extends": "PlayerSummary",
+      "fields": [
+        {"name": "active", "type": "boolean", "optional": false, "description": "The character is still in the duel. `false` when it died, left the instance or disconnected. The server then stops the refresh of this summary, so the other fields keep their last values."}
+      ],
+      "example": {"skin": "mranger", "level": 70, "type": "ranger", "x": -120, "y": 10, "in": "Xk2Lm9QwPz4RtY7bNc1D", "map": "duelland", "name": "Ranger", "hp": 3400, "max_hp": 3400, "cx": {}, "active": true},
+      "source": "node/server.js:1075-1092, 12241-12246; node/server_functions.js:2909-2931"
+    },
+    "PlayerSummary": {
+      "confirm": {"code": ["node/server.js:1075-1092"]},
+      "summary": "A short form of a character, as `player_to_summary` builds it: in `observer_broadcast` and in the teams of a duel.",
+      "fields": [
+        {"name": "skin", "type": "string", "optional": false, "description": "The skin, or the temporary skin."},
+        {"name": "level", "type": "integer", "optional": false, "description": "The level."},
+        {"name": "type", "type": "string", "optional": false, "description": "The class, a key of `G.classes`."},
+        {"name": "x", "type": "number", "optional": false, "description": "The position."},
+        {"name": "y", "type": "number", "optional": false, "description": "The position."},
+        {"name": "in", "type": "InstanceName", "optional": false, "description": "The instance of the character."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "The map of the character."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "hp", "type": "integer", "optional": false, "description": "Hit points."},
+        {"name": "max_hp", "type": "integer", "optional": false, "description": "Maximum hit points."},
+        {"name": "rip", "type": "true | string", "optional": true, "description": "Only when the character is dead: the gravestone cosmetic name, or `true`."},
+        {"name": "cx", "type": "object", "optional": false, "description": "Cosmetics, keyed by slot (the temporary cosmetics when there are some). `{}` when there are none."}
+      ],
+      "example": {"skin": "marmor5a", "level": 72, "type": "ranger", "x": 1240, "y": -310, "in": "main", "map": "main", "name": "Ranger", "hp": 3200, "max_hp": 3650, "cx": {"head": "makeup117", "hair": "hairdo106"}},
+      "source": "node/server.js:1075-1092"
+    },
+    "GameLogText": {
+      "confirm": {"code": ["languages/index.js:256-258", "node/server_functions.js:4576-4600", "node/server.js:16124-16132"], "note": "Every game_log call site that builds a localized object passes only `color`, or `color` and `confetti` (the giveaway lines), as the extra `fields` of `localization.message`."},
+      "summary": "A localized `game_log` line, with optional style fields.",
+      "extends": "LocalizedText",
+      "fields": [
+        {"name": "color", "type": "string", "optional": true, "description": "A CSS color (`\"#F12F02\"`) or a color name of the client (`\"gold\"`, `\"gray\"`)."},
+        {"name": "confetti", "type": "CharacterName", "optional": true, "description": "Only on a giveaway result: the winner. The official client shows confetti on that character (node/server.js:16131, 16208)."}
+      ],
+      "example": {"color": "gold", "message": "Received 1,200 gold", "phrase": "server.game_log.received_gold", "phrase_args": {"amount": "1,200"}},
+      "source": "languages/index.js:256-258"
+    },
+    "ResaleItem": {
+      "confirm": {"code": ["node/server_functions.js:590-670", "node/server_functions.js:3187-3192", "node/server_functions.js:4203", "node/server_functions.js:4234-4261"]},
+      "summary": "An item in the list of Ponty (`secondhands`) or of Lost and Found (`lostandfound`).",
+      "description": "The server builds it with `cache_item(item, true)`: the trade view, without `grace`, `o`, `oo` and `src` (node/server_functions.js:4203, 4234-4261). A secondhands item has no `v` (node/server_functions.js:613); a lost and found item keeps it. Each list keeps at most 400 items and at most 5 for each name and level; a titled item can replace an untitled one at that cap. When a list has 400 items, a new item replaces the item at index 0. Items with `cash`, `expires` or `acl` do not go into the list of Ponty. In the list of Ponty, items that an NPC sells go in only at level 7 or more (upgrade) or 2 or more (compound).",
+      "extends": "ItemInstance",
+      "fields": [
+        {"name": "rid", "type": "string", "optional": false, "description": "The id of this entry (listing): 5 random characters (`randomStr(5)`). Send it as `rid` with `sbuy`."}
+      ],
+      "example": {"name": "ringsj", "level": 2, "rid": "Zt9Kp"},
+      "source": "node/server_functions.js:590-670"
+    },
+    "EmptyObject": {
+      "confirm": {"code": ["node/server.js:4982", "node/server_functions.js:1901"], "note": "The `info` of `welcome`: `instances[undefined]` is absent, so it is the literal `{}`."},
+      "summary": "An object with no fields: `{}`.",
+      "fields": [],
+      "example": {}
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "event": "respawn",
+  "source": "node/server.js:6271-6310",
+  "request": {
+    "fields": [
+      {"name": "safe", "type": "boolean", "optional": true, "default": false, "coerce": "`data && data.safe`: tested as true or false. A `null` payload also works", "description": "If truthy, you come back in `woffice` (spawn 0), not at the death point of your map."}
+    ],
+    "others": "ignored",
+    "example": {"safe": true}, "confirm": {"code": ["node/server.js:6297-6303"]}
+  },
+  "responses": [
+    {
+      "name": "Moved",
+      "event": "new_map",
+      "when": "All checks pass. The server removes `block`, sets HP to the maximum and MP to half, and on a `hardcore` server resets the character (`reset_player`). Then it moves you with `effect: 1`: to `woffice` with `safe`, else to `G.maps[map].on_death`, else to the `on_death` of `main` (`[\"main\", 5]`). A `player` update follows.",
+      "type": "NewMapData",
+      "example": {"name": "main", "in": "main", "x": -87, "y": 673, "effect": 1, "info": {}, "m": 19, "entities": {"players": [], "monsters": [], "type": "all", "in": "main", "map": "main"}},
+      "source": "node/server.js:6289-6303", "confirm": {"code": ["node/server.js:6289-6303", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"]}
+    },
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "After the move, the party update and a second `player` update (`u+cid`).",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"respawn\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "cevent", "type": "\"respawn\"", "optional": false, "description": "Tells the official client to fire its `respawn` code event."}
+      ],
+      "example": {"place": "respawn", "cevent": "respawn", "success": true, "response": "data"},
+      "source": "node/server.js:6309", "confirm": {"code": ["node/server.js:6309", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {
+        "when": "No character, or your character is not dead (`rip` is falsy).",
+        "code": "invalid",
+        "source": "node/server.js:6273-6275", "confirm": {"code": ["node/server.js:6272-6275", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You died in a map of the Cave of Many Dreams. The server offers a rescue in the cave (`cave_fallen`): a revival room, unless a vote runs.",
+        "code": "cave_rescuer",
+        "source": "node/server.js:6277-6280", "confirm": {"code": ["node/server.js:6277-6280", "node/logic/cave_of_many_dreams.js:2065-2069", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The respawn wait did not end: `B.rip_time` (12,000 ms) since `player.rip_time`. On the `HARDCORE` and `TEST` servers `B.rip_time` is -1, so there is no wait.",
+        "code": "cant_respawn",
+        "extra": [
+          {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time that remains: `B.rip_time - mssince(player.rip_time)`.", "example": 7421}
+        ],
+        "source": "node/server.js:6282-6287", "confirm": {"code": ["node/server.js:6282-6287", "node/server.js:224", "node/server.js:375", "node/server.js:389", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "party_update",
+      "to": "party",
+      "when": "Success, if you are in a party: each member, you too.",
+      "summary": "`{list, party}`: the names and the state of the party. See the `party_update` entry.",
+      "source": "node/server.js:6304-6306, 1215-1226", "confirm": {"code": ["node/server.js:6304-6306", "node/server.js:1215-1226"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success: one after `new_map`, and one more (`u+cid`) before the `game_response`. On a PvP map the second has `s.invincible` (at least 6,000 ms, `invincible_logic`).",
+      "summary": "Your character, alive.",
+      "source": "node/server.js:4757, 6307-6308", "confirm": {"code": ["node/server.js:4757", "node/server.js:6307-6308", "node/server_functions.js:1032-1036", "node/server.js:4550-4594"]}
+    },
+    {
+      "event": "disappear",
+      "to": "nearby",
+      "when": "Success: clients that saw you at the death point.",
+      "summary": "`{id, reason: \"transport\", to, s, effect: 1}`. See the `leave` entry for the fields.",
+      "source": "node/server.js:4652-4660", "confirm": {"code": ["node/server.js:6299", "node/server.js:6302", "node/server.js:4652-4660"]}
+    }
+  ],
+  "order": [
+    "`disappear` to clients near your body",
+    "`new_map` to you, then `player`",
+    "`party_update` to the party (if any)",
+    "`player` to you",
+    "`game_response` `data` with `cevent: \"respawn\"` to you"
+  ]
+}

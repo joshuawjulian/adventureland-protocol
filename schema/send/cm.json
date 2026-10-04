@@ -1,0 +1,64 @@
+{
+  "event": "cm",
+  "source": "node/server.js:5077-5091",
+  "request": {
+    "fields": [
+      {"name": "to", "type": "CharacterName | CharacterName[]", "optional": false, "coerce": "the socket wrapper puts a value that is not an array into an array (node/server.js:4926-4928). A missing `to` becomes `[undefined]` and reaches nobody", "description": "The characters that get the message. The server skips names that are not online on this server."},
+      {"name": "message", "type": "any", "optional": false, "coerce": "the wrapper reads `JSON.stringify(message).length` for the call cost. Receivers get `message || \"\"`, so a falsy value arrives as `\"\"`", "description": "The data to send, usually a string. The server sends it on without change. A missing `message` makes the wrapper throw (failure row 1)."}
+    ],
+    "others": "ignored",
+    "example": {"to": ["MyPriest", "MyMage"], "message": "{\"cmd\":\"follow\"}"}, "confirm": {"code": ["node/server.js:4913-4933", "node/server.js:5083-5086"]}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "Always when you have a character that is not muted, also when no receiver is online.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"cm\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "locals", "type": "CharacterName[]", "optional": false, "description": "Always empty."},
+        {"name": "receivers", "type": "CharacterName[]", "optional": false, "description": "The names from `to` that are online on this server, in the order of `to`. Each of them got the message."}
+      ],
+      "example": {"locals": [], "receivers": ["MyPriest"], "success": true, "response": "data", "place": "cm"},
+      "source": "node/server.js:5090", "confirm": {"code": ["node/server.js:5083-5090", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {
+        "when": "`message` is missing. The socket wrapper reads `JSON.stringify(undefined).length` before the handler runs, and this throws. The wrapper adds 16 call-cost.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "a bare string"}
+        ],
+        "source": "node/server.js:4913-4915, 4947-4966", "confirm": {"code": ["node/server.js:4913-4915", "node/server.js:4947-4966"], "note": "When the 16 added call-cost goes over the limit, the server sends `limitdcreport` and `disconnect_reason` and disconnects instead"}
+      },
+      {
+        "when": "No character, or your character has the `mute` condition.",
+        "code": "muted",
+        "source": "node/server.js:5080-5082", "confirm": {"code": ["node/server.js:5080-5082", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "cm",
+      "to": "each online character in `to`",
+      "when": "Success, before the `game_response`, in the order of `to`.",
+      "fields": [
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The sender."},
+        {"name": "message", "type": "any", "optional": false, "description": "The `message` of the request, or `\"\"` if it was falsy."}
+      ],
+      "example": {"name": "MyMerchant", "message": "{\"cmd\":\"follow\"}"},
+      "source": "node/server.js:5086", "confirm": {"code": ["node/server.js:5083-5088"]}
+    }
+  ],
+  "order": [
+    "`cm` `{name, message}` to each receiver",
+    "`game_response` `data` with `receivers` to you"
+  ]
+}

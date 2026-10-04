@@ -1,0 +1,221 @@
+{
+  "event": "compound",
+  "source": "node/server.js:6862-7133",
+  "request": {
+    "fields": [
+      {"name": "items", "type": "[InventoryIndex, InventoryIndex, InventoryIndex]", "optional": false, "coerce": "`Number.isInteger` on each entry, with no conversion. The string `\"3\"` fails with `no_item`", "description": "The slots of the three items: the same item name at the same level, three different slots. The result goes to the first slot."},
+      {"name": "scroll_num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"10\"` also works. Any other value reads an empty slot", "description": "The slot of a compound scroll (`cscroll0` to `cscroll3`)."},
+      {"name": "offering_num", "type": "InventoryIndex", "optional": true, "coerce": "none: used as an array key", "description": "The slot of an item of type `offering`. An empty slot counts as no offering, with no error."},
+      {"name": "clevel", "type": "integer", "optional": false, "coerce": "compared with `!=` to `items[0].level || 0`, so `\"2\"` also matches 2", "description": "The level of the items now. If it does not match, the compound fails with `no_item`. It is required also at level 0."},
+      {"name": "calculate", "type": "boolean", "optional": true, "description": "Any true value: the server only sends the chance (the variant Calculate). It consumes nothing and starts no timer. Absent or false: the compound starts (the variant Compound).", "coerce": "tested as true or false"}
+    ],
+    "others": "ignored",
+    "example": {"items": [0, 1, 2], "scroll_num": 10, "clevel": 2},
+    "confirm": {"code": ["node/server.js:6865-6874", "node/server.js:6884", "node/server.js:6917", "node/server.js:6933"], "note": "The handler reads `items`, `scroll_num`, `offering_num`, `clevel` and `calculate`"}
+  },
+  "variants": {
+    "key": "calculate",
+    "list": [
+      {
+        "other": true,
+        "name": "Compound",
+        "when": "Starts the compound: the server removes the scroll, the offering and the items, and starts a timer. The result comes when the timer ends.",
+        "request": {
+          "fields": [
+            {"name": "calculate", "type": "false", "optional": true, "description": "Absent or a false value.", "coerce": "tested as true or false"}
+          ],
+          "example": {"items": [0, 1, 2], "scroll_num": 10, "clevel": 2},
+          "confirm": {"code": ["node/server.js:6933-6935", "node/server.js:7025", "node/server.js:7036"]}
+        },
+        "responses": [
+          {
+            "name": "Started",
+            "event": "player",
+            "when": "All checks pass. There is no `game_response` now.",
+            "summary": "Your state with `reopen: true`. The server removed the scroll and the offering. `items[items[0]]` is a `PlaceholderItem`, the other two slots are `null`, and `q.compound` is `{ms, len, num, nums: []}` (a `QueueEntry` with an empty `nums`).",
+            "example_trimmed": true,
+            "example": {
+              "reopen": true,
+              "q": {
+                "compound": {"ms": 10000, "len": 10000, "num": 0, "nums": []}
+              },
+              "items": [
+                {
+                  "name": "placeholder",
+                  "p": {"chance": 0.4084, "name": "ringsj", "level": 2, "scroll": "cscroll0", "nums": []}
+                },
+                null,
+                null
+              ]
+            },
+            "source": "node/server.js:7051-7064, 7128",
+            "confirm": {"code": ["node/server.js:7051-7064", "node/server.js:7124-7128", "node/server.js:4550-4594"]}
+          },
+          {
+            "name": "Progress",
+            "event": "q_data",
+            "when": "During the timer: when the time left goes below 8,000, 6,400, 5,000 and 3,000 ms, the server shows one more digit of the roll; below 2,200 ms it sets `p.success` or `p.failure`. These limits do not scale with `len`, so a short timer (`hardcore`, `massproduction`) shows several digits in the first update.",
+            "fields": [
+              {"name": "q", "type": "Record<string, QueueEntry>", "optional": false, "description": "All your timers (`player.q`). `q.compound` also has `nums: []`."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot of the placeholder."},
+              {"name": "p", "type": "PlaceholderState", "optional": false, "description": "The placeholder state, with the digits so far."}
+            ],
+            "example": {
+              "q": {
+                "compound": {"ms": 2150, "len": 10000, "num": 0, "nums": []}
+              },
+              "num": 0,
+              "p": {"chance": 0.4084, "name": "ringsj", "level": 2, "scroll": "cscroll0", "nums": [3, 1, 7, 2], "success": true}
+            },
+            "source": "node/server.js:14776-14811",
+            "confirm": {"code": ["node/server.js:14776-14811"]}
+          },
+          {
+            "name": "Success",
+            "event": "game_response",
+            "code": "compound_success",
+            "via": "a hitchhiker in `player`",
+            "when": "The timer ends and the roll succeeds. The first slot gets the item at the new level.",
+            "fields": [
+              {"name": "response", "type": "\"compound_success\"", "optional": false, "description": "The code."},
+              {"name": "level", "type": "integer", "optional": false, "description": "The new level of the item."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot of the item: `items[0]` from the request."},
+              {"name": "up", "type": "integer", "optional": true, "description": "Only for a `booster` with an offering: the extra levels that the server added (each with a chance of 12%, then half of that, and so on)."},
+              {"name": "stale", "type": "true", "optional": true, "description": "You left the game while the timer ran (the queue survived the logout, node/server_functions.js:4512)."}
+            ],
+            "example": {"response": "compound_success", "level": 3, "num": 0},
+            "source": "node/server.js:14831-14840",
+            "confirm": {"code": ["node/server.js:7066-7114", "node/server.js:14828-14840", "node/server_functions.js:4511-4513", "node/server.js:4579-4581"]}
+          },
+          {
+            "name": "Fail",
+            "event": "game_response",
+            "code": "compound_fail",
+            "via": "a hitchhiker in `player`",
+            "when": "The timer ends and the roll fails. The three items are gone, and the first slot is `null`.",
+            "fields": [
+              {"name": "response", "type": "\"compound_fail\"", "optional": false, "description": "The code."},
+              {"name": "level", "type": "integer", "optional": false, "description": "The level of the items before the compound."},
+              {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot: `items[0]` from the request."},
+              {"name": "stale", "type": "true", "optional": true, "description": "You left the game while the timer ran (the queue survived the logout, node/server_functions.js:4512)."}
+            ],
+            "example": {"response": "compound_fail", "level": 2, "num": 0},
+            "source": "node/server.js:14861-14864",
+            "confirm": {"code": ["node/server.js:7115-7122", "node/server.js:14858-14864", "node/server_functions.js:4511-4513", "node/server.js:4579-4581"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "upgrade",
+            "to": "nearby",
+            "when": "The timer ends. Every client whose view holds the compound NPC on `main`.",
+            "fields": [
+              {"name": "type", "type": "\"compound\"", "optional": false, "description": "The kind of result."},
+              {"name": "success", "type": "0 | 1", "optional": false, "description": "1 for a success, 0 for a failure."}
+            ],
+            "example": {"type": "compound", "success": 1},
+            "source": "node/server.js:14852, 14876",
+            "confirm": {"code": ["node/server.js:14852", "node/server.js:14876", "js/old_common_functions.js:251", "node/server_functions.js:3744-3791"]}
+          },
+          {"event": "server_message", "to": "everyone", "when": "The timer ends: a success for an item worth more than 1,800,000 gold, or a failure for an item worth more than 920,000 gold. Each limit uses `calculate_item_value(item) + edge * 2,000,000`. Not when you are `stealth`.", "summary": "An `ItemAnnouncement` with `type` `\"server_csuccess\"` (phrase `server.item.named_received`) or `\"server_cfail\"` (phrase `server.item.named_lost_compound`).", "source": "node/server.js:14841-14851, 14865-14875", "confirm": {"code": ["node/server.js:14841-14851", "node/server.js:14865-14875", "node/server_functions.js:4576-4589", "languages/index.js:256-258", "node/server_functions.js:3495-3496"]}},
+          {"event": "player", "to": "you", "when": "The timer ends. It carries the result code above as `hitchhikers`, with `reopen: true`.", "summary": "Your state with the result item (or `null`) in the slot.", "source": "node/server.js:14885", "confirm": {"code": ["node/server.js:14882-14885", "node/server.js:4550-4594"]}}
+        ],
+        "order": [
+          "now: `player` (placeholder in `items[0]`, `q.compound` set) to you",
+          "during the timer: `q_data` to you, up to 5 times",
+          "at the end: `server_message` to everyone for an expensive item, then `upgrade` to clients near the NPC",
+          "then `player` to you. Its `hitchhikers` hold `compound_success` or `compound_fail`"
+        ],
+        "source": "node/server.js:7036-7128"
+      },
+      {
+        "value": true,
+        "name": "Calculate",
+        "match": "any true value",
+        "when": "Sends the chance of success only. Nothing changes.",
+        "request": {
+          "fields": [
+            {"name": "calculate", "type": "true", "optional": false, "description": "Any true value. The server only sends the chance.", "coerce": "tested as true or false"}
+          ],
+          "example": {"items": [0, 1, 2], "scroll_num": 10, "clevel": 2, "calculate": true},
+          "confirm": {"code": ["node/server.js:7025"]}
+        },
+        "responses": [
+          {
+            "name": "Chance",
+            "event": "game_response",
+            "code": "compound_chance",
+            "when": "All checks pass.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"compound_chance\"", "optional": false, "description": "The code."},
+              {"name": "place", "type": "\"compound\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "calculate", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "chance", "type": "number", "optional": false, "description": "The chance of success, 0 to 1. A `booster` gives 0.9999999999999."},
+              {"name": "item", "type": "ItemInstance", "optional": false, "description": "The first item."},
+              {"name": "scroll", "type": "ItemName", "optional": false, "description": "The scroll."},
+              {"name": "offering", "type": "ItemName", "optional": true, "description": "The offering, when the request has one."},
+              {"name": "grace", "type": "number", "optional": false, "description": "The sum of the grace of the three items."}
+            ],
+            "example": {
+              "calculate": true,
+              "chance": 0.4084,
+              "item": {"name": "ringsj", "level": 2},
+              "scroll": "cscroll0",
+              "grace": 1.2,
+              "success": true,
+              "response": "compound_chance",
+              "place": "compound"
+            },
+            "source": "node/server.js:7025-7034",
+            "confirm": {"code": ["node/server.js:7025-7034", "node/server_functions.js:3421-3446"], "note": "`offering: undefined` drops out of the JSON when there is no offering"}
+          }
+        ],
+        "order": ["`game_response` `compound_chance` to you"],
+        "source": "node/server.js:7025-7034"
+      }
+    ]
+  },
+  "failures": {
+    "event": "game_response",
+    "place": "compound",
+    "intro": "**Server bug:** some failures send a bare string, not an object. The handler runs inside `try`; an error sends `exception`.",
+    "rows": [
+      {"when": "`items` is not an array of 3 entries. A `null` payload also ends here, with `exception`.", "code": "no_item", "source": "node/server.js:6865-6867", "confirm": {"code": ["node/server.js:6865-6867", "node/server.js:7129-7132", "node/server_functions.js:3393-3419"]}},
+      {"when": "An entry of `items` is not an integer.", "code": "no_item", "source": "node/server.js:6868-6870", "confirm": {"code": ["node/server.js:6868-6870", "node/server_functions.js:3393-3419"]}},
+      {"when": "No character. The handler reads `player.items` before it checks `player`, and the error goes to the `catch`.", "code": "exception", "source": "node/server.js:6871, 7129-7132", "confirm": {"code": ["node/server.js:6864", "node/server.js:6871", "node/server.js:7129-7132"]}},
+      {"when": "The character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:6877-6879", "confirm": {"code": ["node/server.js:6877-6879", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "A compound runs already (`q.compound`).",
+        "code": "compound_in_progress",
+        "extra": [
+          {"name": "reason", "type": "\"in_progress\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:6881-6883",
+        "confirm": {"code": ["node/server.js:6881-6883", "node/server_functions.js:3393-3419"]}
+      },
+      {"when": "`offering_num` holds an item that is not of type `offering`.", "code": "compound_invalid_offering", "form": "bare", "source": "node/server.js:6884-6887", "confirm": {"code": ["node/server.js:6884-6887"]}},
+      {"when": "The slot `scroll_num` is empty. The server checks this before the three items.", "code": "compound_no_scroll", "form": "bare", "source": "node/server.js:6888-6890", "confirm": {"code": ["node/server.js:6888-6890"]}},
+      {"when": "A slot of `items` is empty (also a negative or too large index).", "code": "no_item", "source": "node/server.js:6891-6893", "confirm": {"code": ["node/server.js:6891-6893", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are more than `B.sell_dist` (400 px) from the compound NPC on `main`. A character with a `computer` passes this check.", "code": "distance", "note": "the form of a failure, sent by `socket.emit`", "source": "node/server.js:6894-6896", "confirm": {"code": ["node/server.js:6894-6896", "node/server.js:220"]}},
+      {
+        "when": "The first item is at grade 4.",
+        "code": "max_level",
+        "extra": [
+          {"name": "level", "type": "integer", "optional": false, "description": "The level of the item.", "example": 5}
+        ],
+        "note": "the form of a failure, sent by `socket.emit`",
+        "source": "node/server.js:6900-6908",
+        "confirm": {"code": ["node/server.js:6900-6908"]}
+      },
+      {"when": "The three items do not have the same name and level.", "code": "compound_mismatch", "form": "bare", "source": "node/server.js:6909-6916", "confirm": {"code": ["node/server.js:6909-6916"]}},
+      {"when": "`clevel` is not the level of the items.", "code": "no_item", "source": "node/server.js:6917-6919", "confirm": {"code": ["node/server.js:6917-6919", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item cannot be compounded (no `G.items[name].compound`).", "code": "compound_cant", "form": "bare", "source": "node/server.js:6920-6922", "confirm": {"code": ["node/server.js:6920-6922"]}},
+      {"when": "The scroll is not a `cscroll`, or its grade is below the grade of the item.", "code": "compound_incompatible_scroll", "form": "bare", "source": "node/server.js:6923-6925", "confirm": {"code": ["node/server.js:6923-6925"]}},
+      {"when": "Two entries of `items` are the same slot.", "code": "misc_fail", "note": "the form of a failure, sent by `socket.emit`", "source": "node/server.js:6926-6928", "confirm": {"code": ["node/server.js:6926-6928"]}},
+      {"when": "One of the three items has the lock `l`.", "code": "item_locked", "note": "the form of a failure, sent by `socket.emit`", "source": "node/server.js:6929-6931", "confirm": {"code": ["node/server.js:6929-6931"]}},
+      {"when": "Any other error in the handler, for example an offering whose name is not in `G.items`.", "code": "exception", "source": "node/server.js:7129-7132", "confirm": {"code": ["node/server.js:6885", "node/server.js:7129-7132"]}}
+    ]
+  }
+}

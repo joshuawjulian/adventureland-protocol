@@ -1,0 +1,51 @@
+{
+  "event": "signup",
+  "source": "node/server.js:12582-12592",
+  "request": {
+    "fields": [],
+    "note": "No payload. The handler reads no field.",
+    "confirm": {"code": ["node/server.js:12582-12592"], "note": "The handler never reads `data`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "signed_up",
+      "when": "Always when you have a character, also when you are on the list already. The object has only `response`: no `place`, no `success`.",
+      "fields": [
+        {"name": "response", "type": "\"signed_up\"", "optional": false, "description": "The code."}
+      ],
+      "example": {"response": "signed_up"},
+      "source": "node/server.js:12591",
+      "confirm": {"code": ["node/server.js:12590-12591"], "note": "A plain `socket.emit`, not `success_response`: only `response`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "signup",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12584-12586", "confirm": {"code": ["node/server.js:12583-12586"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "disappearing_text",
+      "to": "nearby",
+      "when": "Only on your first signup: `signups[name]` was not set. Every client whose view holds the `bean` NPC on `main`.",
+      "fields": [
+        {"name": "message", "type": "\"+1\"", "optional": false, "description": "The text."},
+        {"name": "x", "type": "number", "optional": false, "description": "The `x` of the NPC."},
+        {"name": "y", "type": "number", "optional": false, "description": "The `y` of the NPC minus 30."},
+        {"name": "id", "type": "\"$Bean\"", "optional": false, "description": "The id of the NPC: `\"$\"` plus its name (node/server_functions.js:1808)."},
+        {"name": "args", "type": "object", "optional": false, "description": "`{c: \"#4D9A59\"}`: the color."}
+      ],
+      "example": {"message": "+1", "x": 74, "y": -64, "id": "$Bean", "args": {"c": "#4D9A59"}},
+      "source": "node/server.js:12587-12589; node/server_functions.js:3956-3991",
+      "confirm": {"code": ["node/server.js:12587-12589", "node/server_functions.js:3956-3991", "node/server_functions.js:1942-1950", "node/server_functions.js:1808", "node/server_functions.js:3744-3779"], "note": "`x`, `y` follow the NPC, which walks inside its `boundary` (G.maps.main.npcs: position [74, -34])"}
+    }
+  ],
+  "order": [
+    "`disappearing_text` `\"+1\"` to clients near the `bean` NPC (first signup only)",
+    "`game_response` `signed_up` to you"
+  ]
+}

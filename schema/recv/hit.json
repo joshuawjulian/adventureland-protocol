@@ -1,0 +1,180 @@
+{
+  "event": "hit",
+  "to": "clients and observers near the target, and the attacker in all cases. A miss, an evade or an avoid goes to clients near the start point of the `action`. A burn tick goes only to clients near the burned entity",
+  "payload": {"type": "HitDamage | HitMiss | HitEvade | HitAvoid | HitReflect | HitBurn", "confirm": {"code": ["node/server.js:3804-3808", "node/server.js:3816-3822", "node/server.js:3828-3834", "node/server.js:3838-3853", "node/server.js:3950-3954", "node/server.js:4342-4347", "node/server.js:14059-14065", "node/server.js:14676-14682"], "note": "Every emit of `hit`; the `events.push([\"hit\", def])` path is off while `mode.instant_monster_attacks` is 1 (node/server.js:292)"}},
+  "example": {"hid": "Wizard", "source": "attack", "projectile": "magic", "damage_type": "magical", "pid": "Xk3pQa", "id": "48213", "damage": 176, "kill": true},
+  "variants": [
+    {
+      "name": "Damage or heal",
+      "type": "HitDamage",
+      "has": ["projectile"],
+      "when": "The projectile reached the target. One event for each target that it hit (splash, a stack of characters on one spot).",
+      "example": {"hid": "Wizard", "source": "attack", "projectile": "magic", "damage_type": "magical", "pid": "Xk3pQa", "id": "48213", "damage": 352, "crit": 2.5, "kill": true},
+      "source": "node/server.js:4342-4343",
+      "confirm": {"code": ["node/server.js:3229-3249", "node/server.js:3539-3540", "node/server.js:3964-4343", "node/server_functions.js:3744-3791"], "note": "One `def` per attack, changed for each target; `crit`, `aoe`, `purify`, `sneak`, `trigger`, `deepfreeze`, `lifesteal`, `manasteal`, `goldsteal`, `mobbing`, `stacked` are not reset between targets"}
+    },
+    {
+      "name": "Miss",
+      "type": "HitMiss",
+      "has": ["miss"],
+      "when": "The attack missed: the target disconnected or died, the `miss` of the attacker rolled, or the `avoidance` of the target rolled. Also a splash target whose `avoidance` rolled.",
+      "example": {"pid": "Xk3pQa", "hid": "Ranger", "id": "48213", "damage": 0, "miss": true, "source": "attack"},
+      "source": "node/server.js:3821-3832, 3948-3954",
+      "confirm": {"code": ["node/server.js:3824-3835", "node/server.js:3946-3955"]}
+    },
+    {
+      "name": "Evade",
+      "type": "HitEvade",
+      "has": ["evade"],
+      "when": "The target evaded: its `evasion` rolled. Only for physical damage (`armor` defense).",
+      "example": {"pid": "Xk3pQa", "hid": "Ranger", "id": "48213", "damage": 0, "evade": true, "source": "attack"},
+      "source": "node/server.js:3814-3820",
+      "confirm": {"code": ["node/server.js:3814-3823", "node/server.js:3736-3751"], "note": "`defense` is armor only for physical (or no) damage type"}
+    },
+    {
+      "name": "Avoid",
+      "type": "HitAvoid",
+      "has": ["avoid"],
+      "when": "The target moved more than 72 px (108 px for a heal) from the start point, or changed maps.",
+      "example": {"pid": "Xk3pQa", "hid": "Ranger", "id": "48213", "damage": 0, "avoid": true, "source": "attack", "x": 512.4, "y": -96, "map": "main", "in": "main"},
+      "source": "node/server.js:3833-3853",
+      "confirm": {"code": ["node/server.js:3733-3734", "node/server.js:3836-3854"]}
+    },
+    {
+      "name": "Reflect",
+      "type": "HitReflect",
+      "has": ["reflect"],
+      "when": "The target reflected a magical projectile. A new `action` follows at once, from the target to the attacker.",
+      "example": {"pid": "Xk3pQa", "hid": "Wizard", "id": "Priest", "damage": 0, "reflect": 190},
+      "source": "node/server.js:3803-3808",
+      "confirm": {"code": ["node/server.js:3767-3808"]}
+    },
+    {
+      "name": "Burn tick",
+      "type": "HitBurn",
+      "when": "The `burned` condition did damage. It has no `pid`, because no projectile caused it.",
+      "example": {"source": "burn", "hid": "Wizard", "id": "48213", "damage": 64, "kill": false},
+      "source": "node/server.js:14059-14065, 14676-14682",
+      "confirm": {"code": ["node/server.js:14054-14065", "node/server.js:14672-14682", "node/server.js:4072-4078", "node/server_functions.js:3299-3318"], "note": "`burned` is only added at node/server.js:4073, always with `f` and `fid`, so `hid` is always present"}
+    }
+  ],
+  "types": {
+    "HitDamage": {
+      "summary": "A `hit` from a projectile that reached its target: the damage or the heal, and the effects that happened.",
+      "description": "The server builds one `def` object for the attack (node/server.js:3229) and changes it for each target. Flags that are not in the list at node/server.js:3964-3973 can stay from an earlier target of the same attack.",
+      "fields": [
+        {"name": "hid", "type": "EntityId", "optional": false, "description": "The id of the attacker."},
+        {"name": "source", "type": "SkillName", "optional": false, "description": "The skill, for example `\"attack\"`, `\"heal\"`, `\"supershot\"`."},
+        {"name": "projectile", "type": "string", "optional": false, "description": "A key of `G.projectiles`. The server starts it as `null` (node/server.js:3229-3249), but `commence_attack` then reads `G.projectiles[def.projectile].speed` (node/server.js:3582-3583), which throws for `null`, so every `hit` that is sent has a string."},
+        {"name": "damage_type", "type": "string", "optional": true, "description": "The damage type at the start of the attack: `\"physical\"`, `\"magical\"` or `\"pure\"` (node/server.js:3539). Absent when the attacker has none."},
+        {"name": "pid", "type": "string", "optional": false, "description": "The projectile id of the first `action`. A reflected projectile keeps this id; see Notes."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the target of this event."},
+        {"name": "damage", "type": "integer", "optional": true, "description": "The HP that the target lost, after shields. Absent for a heal."},
+        {"name": "heal", "type": "integer", "optional": true, "description": "Only for a heal: the HP that the target got (node/server.js:3999)."},
+        {"name": "kill", "type": "true", "optional": true, "description": "The HP of the target is 0 or less."},
+        {"name": "crit", "type": "number", "optional": true, "description": "A critical hit: the damage multiplier, `2 + critdamage / 100` (node/server.js:4016-4017)."},
+        {"name": "lifesteal", "type": "integer", "optional": true, "description": "The HP that the attacker got back (node/server.js:4183)."},
+        {"name": "manasteal", "type": "integer", "optional": true, "description": "The MP that the attacker took from the target (node/server.js:4199)."},
+        {"name": "goldsteal", "type": "integer", "optional": true, "description": "A monster with `goldsteal` took this gold, 1 to 12 (node/server.js:4204-4207). The heal path sets `-88`; no monster in G heals with `goldsteal`."},
+        {"name": "mp_damage", "type": "number", "optional": true, "description": "`mshield`: the MP that the shield used instead of HP (node/server.js:4227-4231)."},
+        {"name": "shield_reaction", "type": "\"mshield\" | \"aether_shield\"", "optional": true, "description": "The shield condition of the target that reacted (node/server.js:4236, 4282)."},
+        {"name": "mp_restored", "type": "integer", "optional": true, "description": "`aether_shield`: the MP that the paladin target got back from magical damage. Can be `0` (node/server.js:4281)."},
+        {"name": "redirected", "type": "integer", "optional": true, "description": "`guardians_oath`: the damage that went to the guardian instead (node/server.js:4246)."},
+        {"name": "guardian", "type": "CharacterName", "optional": true, "description": "`guardians_oath`: the paladin that took `redirected` (node/server.js:4247)."},
+        {"name": "guardian_mp", "type": "integer", "optional": true, "description": "`guardians_oath`: the MP that the guardian got back. Can be `0` (node/server.js:4248)."},
+        {"name": "dreturn", "type": "integer", "optional": true, "description": "Damage return: the HP that a melee attacker lost, from the `dreturn` of the target (node/server.js:4302)."},
+        {"name": "mobbing", "type": "integer", "optional": true, "description": "More than 3 monsters target the target: its combo counter (`target.combo`, node/server.js:3866)."},
+        {"name": "stacked", "type": "EntityId[]", "optional": true, "description": "The ids of the characters on the spot of the target. Each takes a part of the hit (node/server.js:3907-3910)."},
+        {"name": "unintentional", "type": "true", "optional": true, "description": "This target is a splash or stack target (node/server.js:3977)."},
+        {"name": "splash", "type": "true", "optional": true, "description": "This target took splash damage from `explosion` or `blast` (node/server.js:3980)."},
+        {"name": "aoe", "type": "true", "optional": true, "description": "`cleave` or `shadowstrike` (node/server.js:3328, 3335)."},
+        {"name": "purify", "type": "true", "optional": true, "description": "The `purify` skill (node/server.js:3401)."},
+        {"name": "sneak", "type": "true", "optional": true, "description": "The attacker was invisible (node/server.js:4143)."},
+        {"name": "deepfreeze", "type": "true", "optional": true, "description": "The `deepfreeze` skill froze the target (node/server.js:4174)."},
+        {"name": "trigger", "type": "\"sugarrush\"", "optional": true, "description": "The `sugarrush` attribute of the attacker triggered (node/server.js:4122)."}
+      ],
+      "example": {"hid": "Wizard", "source": "attack", "projectile": "magic", "damage_type": "magical", "pid": "Xk3pQa", "id": "48213", "damage": 352, "crit": 2.5, "kill": true},
+      "source": "node/server.js:3229-4343",
+      "confirm": {"code": ["node/server.js:3229-3249", "node/server.js:3539-3540", "node/server.js:3964-4343", "node/server_functions.js:3744-3791"]}
+    },
+    "HitMiss": {
+      "summary": "A `hit` that did no damage: the attack missed.",
+      "fields": [
+        {"name": "pid", "type": "string", "optional": false, "description": "The projectile id."},
+        {"name": "hid", "type": "EntityId", "optional": false, "description": "The id of the attacker."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the target."},
+        {"name": "damage", "type": "0", "optional": false, "description": "Always `0`."},
+        {"name": "miss", "type": "true", "optional": false, "description": "The attack missed. Also when the target disconnected or died."},
+        {"name": "source", "type": "SkillName", "optional": false, "description": "The skill."}
+      ],
+      "example": {"pid": "Xk3pQa", "hid": "Ranger", "id": "48213", "damage": 0, "miss": true, "source": "attack"},
+      "source": "node/server.js:3821-3832",
+      "confirm": {"code": ["node/server.js:3824-3835", "node/server.js:3946-3955"]}
+    },
+    "HitEvade": {
+      "summary": "A `hit` that did no damage: the target evaded.",
+      "fields": [
+        {"name": "pid", "type": "string", "optional": false, "description": "The projectile id."},
+        {"name": "hid", "type": "EntityId", "optional": false, "description": "The id of the attacker."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the target."},
+        {"name": "damage", "type": "0", "optional": false, "description": "Always `0`."},
+        {"name": "evade", "type": "true", "optional": false, "description": "The target evaded. Only for physical damage."},
+        {"name": "source", "type": "SkillName", "optional": false, "description": "The skill."}
+      ],
+      "example": {"pid": "Xk3pQa", "hid": "Ranger", "id": "48213", "damage": 0, "evade": true, "source": "attack"},
+      "source": "node/server.js:3814-3820",
+      "confirm": {"code": ["node/server.js:3814-3823"]}
+    },
+    "HitAvoid": {
+      "summary": "A `hit` that did no damage because the target moved away from the start point of the projectile.",
+      "fields": [
+        {"name": "pid", "type": "string", "optional": false, "description": "The projectile id."},
+        {"name": "hid", "type": "EntityId", "optional": false, "description": "The id of the attacker."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the target."},
+        {"name": "damage", "type": "0", "optional": false, "description": "Always `0`."},
+        {"name": "avoid", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "source", "type": "SkillName", "optional": false, "description": "The skill."},
+        {"name": "x", "type": "number", "optional": false, "description": "The start point: the position of the target when the `action` started."},
+        {"name": "y", "type": "number", "optional": false, "description": "The start point."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "The map of the attacker."},
+        {"name": "in", "type": "InstanceName", "optional": false, "description": "The instance of the attacker."}
+      ],
+      "example": {"pid": "Xk3pQa", "hid": "Ranger", "id": "48213", "damage": 0, "avoid": true, "source": "attack", "x": 512.4, "y": -96, "map": "main", "in": "main"},
+      "source": "node/server.js:3833-3853",
+      "confirm": {"code": ["node/server.js:3836-3854"]}
+    },
+    "HitReflect": {
+      "summary": "A `hit` that tells that the target reflected the projectile. It has no `source`.",
+      "fields": [
+        {"name": "pid", "type": "string", "optional": false, "description": "The projectile id of the first `action`."},
+        {"name": "hid", "type": "EntityId", "optional": false, "description": "The id of the attacker."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the target that reflected it."},
+        {"name": "damage", "type": "0", "optional": false, "description": "Always `0`."},
+        {"name": "reflect", "type": "integer", "optional": false, "description": "The damage that goes back to the attacker. The same value is `reflect` in the new `action`."}
+      ],
+      "example": {"pid": "Xk3pQa", "hid": "Wizard", "id": "Priest", "damage": 0, "reflect": 190},
+      "source": "node/server.js:3803-3808",
+      "confirm": {"code": ["node/server.js:3767-3808"]}
+    },
+    "HitBurn": {
+      "summary": "A `hit` from one tick of the `burned` condition. It has no `pid` and no `projectile`.",
+      "fields": [
+        {"name": "source", "type": "\"burn\"", "optional": false, "description": "Always `\"burn\"`."},
+        {"name": "hid", "type": "string", "optional": false, "description": "On a monster: `f` of the condition, the name of the burner (a character name, or the `G.monsters` name of a monster, for example `\"Goo\"`). On a character: `fid` of the condition, the id of the burner."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the burned entity."},
+        {"name": "damage", "type": "integer", "optional": false, "description": "`ceil(intensity / 5)`."},
+        {"name": "kill", "type": "boolean", "optional": false, "description": "`true` when the HP is 0 or less after the tick, else `false`."}
+      ],
+      "example": {"source": "burn", "hid": "Wizard", "id": "48213", "damage": 64, "kill": false},
+      "source": "node/server.js:14054-14065",
+      "confirm": {"code": ["node/server.js:14054-14065", "node/server.js:14672-14682"]}
+    }
+  },
+  "senders": [
+    {"what": "`complete_attack`, when a projectile from an `action` arrives (`projectiles_loop`). Monster hits too: `mode.instant_monster_attacks` is 1 (node/server.js:292).", "source": "node/server.js:4342-4343"},
+    {"what": "`complete_attack`: a miss, an evade or an avoid, before any damage.", "source": "node/server.js:3814-3852"},
+    {"what": "`complete_attack`: a splash target with `avoidance` avoided the splash.", "source": "node/server.js:3949-3955"},
+    {"what": "`complete_attack`: the target reflected the projectile.", "source": "node/server.js:3803-3808"},
+    {"what": "Burn ticks on monsters and on characters, in `update_instance`.", "source": "node/server.js:14059-14065, 14676-14682"}
+  ]
+}

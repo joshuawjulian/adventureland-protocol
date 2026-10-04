@@ -1,0 +1,56 @@
+{
+  "event": "trade",
+  "source": "node/server.js:12567-12581",
+  "request": {
+    "fields": [
+      {"name": "event", "type": "\"show\" | \"hide\"", "optional": false, "coerce": "compared with `==` to the two strings", "description": "`\"show\"` sets `player.p.trades = 1`. `\"hide\"` sets it to `null`. Any other value does nothing and sends nothing (node/server.js:12576-12580)."}
+    ],
+    "others": "ignored",
+    "example": {"event": "show"},
+    "confirm": {"code": ["node/server.js:12572", "node/server.js:12576"], "note": "The handler reads only `data.event`. A `null` payload throws at `data.event` (`game_error` `\"ERROR!\"`, node/server.js:4947-4966)"}
+  },
+  "responses": [],
+  "failures": {
+    "event": "game_response",
+    "place": "trade",
+    "intro": "No check sends a reply.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12569-12571", "confirm": {"code": ["node/server.js:12568-12571"]}}
+    ]
+  },
+  "variants": {
+    "key": "event",
+    "list": [
+      {
+        "value": "show",
+        "name": "Show",
+        "when": "Shows the trade slots: sets `player.p.trades = 1`.",
+        "request": {"confirm": {"code": ["node/server.js:12572"]}},
+        "responses": [
+          {"name": "Shown", "event": "player", "when": "`p.trades` changed. There is no `game_response`.", "summary": "Your state (`resend \"nc+u+cid\"`, no `reopen`). `reslot_player` rebuilt the trade entries of `slots`: `trade1` to `trade4`, each a `TradeSlotItem` (`cache_item(item, 1)` keeps `price` and `rid`) or `null`. With a merchant stand open, `slots` holds the 16, 24 or 30 slots of the stand instead, and `p.trades` has no effect.", "example": {"id": "Merlin", "slots": {"mainhand": {"name": "wand", "level": 7}, "trade1": null, "trade2": null, "trade3": null, "trade4": null}, "cid": 419}, "example_trimmed": true, "source": "node/server.js:12572-12575; node/server_functions.js:4282-4310", "confirm": {"code": ["node/server.js:12572-12575", "node/server_functions.js:4282-4310", "node/server_functions.js:4234-4261", "node/server.js:4550-4594"], "note": "`resend` with `nc+u+cid`: no `reopen`. The fields of the state are in the receive entry `player`"}}
+        ],
+        "failures": {
+          "rows": [
+            {"when": "`p.trades` is 1 already.", "replies": [], "source": "node/server.js:12572", "confirm": {"code": ["node/server.js:12572-12581"]}}
+          ]
+        },
+        "order": ["`player` to you (no `game_response`)"]
+      },
+      {
+        "value": "hide",
+        "name": "Hide",
+        "when": "Hides the trade slots: sets `player.p.trades = null`.",
+        "request": {"confirm": {"code": ["node/server.js:12576"]}},
+        "responses": [
+          {"name": "Hidden", "event": "player", "when": "`p.trades` changed. There is no `game_response`.", "summary": "Your state (`resend \"nc+u+cid\"`, no `reopen`). `reslot_player` rebuilt `slots` with no trade entries. With a merchant stand open, `slots` holds the 16, 24 or 30 slots of the stand instead, and `p.trades` has no effect.", "example": {"id": "Merlin", "slots": {"mainhand": {"name": "wand", "level": 7}}, "cid": 419}, "example_trimmed": true, "source": "node/server.js:12576-12579; node/server_functions.js:4282-4310", "confirm": {"code": ["node/server.js:12576-12579", "node/server_functions.js:4282-4310", "node/server.js:4550-4594"], "note": "`resend` with `nc+u+cid`: no `reopen`. The fields of the state are in the receive entry `player`"}}
+        ],
+        "failures": {
+          "rows": [
+            {"when": "`p.trades` is `null` or absent (`!= null` is false for both).", "replies": [], "source": "node/server.js:12576", "confirm": {"code": ["node/server.js:12576-12581"]}}
+          ]
+        },
+        "order": ["`player` to you (no `game_response`)"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "event": "tracker",
+  "source": "node/server.js:5440-5522",
+  "request": {"fields": [], "note": "No payload. The handler does not read `data`.", "confirm": {"code": ["node/server.js:5440-5448"], "note": "The handler declares a new `data` at once (node/server.js:5448)"}},
+  "responses": [
+    {
+      "name": "Data",
+      "event": "tracker",
+      "when": "You have a character with `player.tracker` set: your inventory holds a `tracker` or a `supercomputer`.",
+      "fields": [
+        {"name": "monsters", "type": "Record<string, integer>", "optional": false, "description": "Your kills per monster type (`player.p.stats.monsters`)."},
+        {"name": "monsters_diff", "type": "Record<string, number>", "optional": false, "description": "Extra score per monster type: a kill of a monster worth more than 1 adds `score - 1` (node/server.js:2760, 2807). The tracker adds it to `monsters`."},
+        {"name": "exchanges", "type": "Record<string, integer>", "optional": false, "description": "Your exchanges per item (`player.p.stats.exchanges`)."},
+        {"name": "maps", "type": "Record<string, DropRow[]>", "optional": false, "description": "The drop table of each map (`D.drops.maps`), with `global` and `global_static`."},
+        {"name": "tables", "type": "Record<string, DropRow[]>", "optional": false, "description": "Each table that a `[chance, \"open\", table]` row names, from every table in this payload. Also the exchange table of each exchangeable item: key `<item>`, or `<item><level>` for an item that you upgrade or compound."},
+        {"name": "max", "type": "TrackerMax", "optional": false, "description": "`player.max_stats` of your account: `{monsters: {<type>: [kills, character name]}, level}`, the best character of the account for each monster type (node/server.js:11663-11675)."},
+        {"name": "monsters_home_server", "type": "Record<string, DropRow[]>", "optional": false, "description": "The drop tables of monsters on their home server (`D.drops.monsters_home_server`), or `{}`. These are drop tables, not kill counts."},
+        {"name": "drops", "type": "Record<string, DropRow[]>", "optional": false, "description": "The drop table of each monster type (`D.drops.monsters`). The code for a filtered list (only types with 100 kills) does not run: its condition is `player.computer || 1`."},
+        {"name": "drops_home", "type": "Record<string, DropRow[]>", "optional": false, "description": "The same object as `monsters_home_server`."},
+        {"name": "global", "type": "DropRow[]", "optional": true, "description": "`D.drops.maps.global`: the table that every kill rolls. Present when the table exists (an empty array also counts)."},
+        {"name": "global_static", "type": "DropRow[]", "optional": true, "description": "`D.drops.maps.global_static`, by the same rule."}
+      ],
+      "example": {"monsters": {"goo": 1520, "bee": 830}, "monsters_diff": {}, "exchanges": {"gem0": 12}, "maps": {"main": [[0.0007, "ringsj"]], "global": [[0.000667, "anniversarygift"]], "global_static": []}, "tables": {"statring": [[1, "intring"], [1, "vitring"], [1, "dexring"], [1, "strring"]], "gem0": [[0.5, "weaponbox"], [1.5, "armorbox"], [0.5, "gold", 100000]]}, "max": {"monsters": {"goo": [1520, "MyMage"]}, "level": 62}, "monsters_home_server": {}, "drops": {"goo": [[1.25e-07, "shells", 50], [0.0002, "slimestaff"], [0.001, "gslime"]]}, "drops_home": {}, "global": [[0.000667, "anniversarygift"]], "global_static": []},
+      "source": "node/server.js:5448-5521", "confirm": {"code": ["node/server.js:5448-5521", "node/server.js:1464-1469", "node/server_functions.js:4481-4489", "node/server.js:11663-11675", "node/server.js:11757"], "note": "The drop tables are `D.drops`, the live copy of `G.drops`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5442-5444", "confirm": {"code": ["node/server.js:5441-5444"]}},
+      {
+        "when": "`player.tracker` is not set: no `tracker` and no `supercomputer` in your inventory.",
+        "replies": [],
+        "source": "node/server.js:5445-5447", "confirm": {"code": ["node/server.js:5445-5447", "node/server.js:1464-1469"]}
+      }
+    ]
+  },
+  "order": [
+    "`tracker` to you"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "event": "o:home",
+  "source": "node/server.js:5055-5065",
+  "request": {
+    "fields": [],
+    "note": "No payload. The handler reads no field. Observer sockets only.",
+    "confirm": {"code": ["node/server.js:5055-5065"], "note": "The handler never reads `data`"}
+  },
+  "responses": [
+    {
+      "name": "Generated map",
+      "event": "map_chunk",
+      "when": "The character is on a generated map (a dream cave floor), and this socket has not received that floor yet. One event per 12,000 characters of the floor JSON, before `new_map`.",
+      "fields": [
+        {"name": "run", "type": "string", "optional": false, "description": "The key of the cave run."},
+        {"name": "index", "type": "integer", "optional": false, "description": "The number of this chunk, from 0."},
+        {"name": "count", "type": "integer", "optional": false, "description": "How many chunks there are."},
+        {"name": "text", "type": "string", "optional": false, "description": "Part of the JSON text `{run, floors, manifest}`. Join the `text` of all chunks in order, then parse it."}
+      ],
+      "example": {"run": "3f9a0c1d2e4b5a6978c0d1e2", "index": 0, "count": 2, "text": "{\"run\":\"3f9a0c1d2e4b5a6978c0d1e2\",\"floors\":[{\"key\":"},
+      "source": "node/server.js:4618; node/logic/generated_maps.js:178-221",
+      "confirm": {"code": ["node/server.js:4617-4618", "node/logic/generated_maps.js:178-218"], "note": "A headless socket gets geometry with empty tile lists and `navigation` (node/logic/generated_maps.js:191-204)"}
+    },
+    {
+      "name": "Success",
+      "event": "new_map",
+      "when": "The observer moved to the character. `y` is 120 px below the character for a desktop socket.",
+      "fields": [
+        {"name": "name", "type": "MapName", "optional": false, "description": "The map of the instance."},
+        {"name": "in", "type": "InstanceName", "optional": false, "description": "The instance of the character."},
+        {"name": "x", "type": "number", "optional": false, "description": "The `x` of the character."},
+        {"name": "y", "type": "number", "optional": false, "description": "The `y` of the character, plus 120 for a desktop socket."},
+        {"name": "direction", "type": "0", "optional": false, "description": "Always 0."},
+        {"name": "effect", "type": "0", "optional": false, "description": "Always 0."},
+        {"name": "info", "type": "object", "optional": false, "description": "`instance.info`: extra state of the instance (for example a duel or the tavern)."},
+        {"name": "m", "type": "0", "optional": false, "description": "Always 0: an observer has no map-change counter."},
+        {"name": "entities", "type": "EntitiesFrame", "optional": false, "description": "Everything in view, in the format of the `entities` event (`send_all_xy` with `raw`)."}
+      ],
+      "example": {"name": "main", "in": "main", "x": -120.5, "y": 530, "direction": 0, "effect": 0, "info": {}, "m": 0, "entities": {"players": [], "monsters": [], "type": "all", "in": "main", "map": "main"}},
+      "source": "node/server.js:4614-4638",
+      "confirm": {"code": ["node/server.js:5064", "node/server.js:4614-4638", "node/server_functions.js:3675-3706", "node/server.js:4987-5003"], "note": "`socket.desktop` is `true` unless the socket connected with `secret` and without `desktop`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "o:home",
+    "intro": "No check sends a reply. The cave-pause refusal does not apply: an observer socket has no character.",
+    "rows": [
+      {"when": "The socket is not an observer (no `observers[socket.id]`). An observer exists after `loaded` on a socket without a character.", "replies": [], "source": "node/server.js:5056-5059, 5028-5040", "confirm": {"code": ["node/server.js:5056-5059", "node/server.js:5028-5040"]}},
+      {"when": "The observer follows no character, or the character disconnected (`player.dc`). An observer follows a character only when the socket connected with the `secret` handshake query of that character.", "replies": [], "source": "node/server.js:5060-5063, 4989-4996, 5041-5043", "confirm": {"code": ["node/server.js:5060-5063", "node/server.js:4989-4996", "node/server.js:5041-5043"]}},
+      {"when": "The instance of the character does not exist.", "replies": [], "source": "node/server.js:4615-4616", "confirm": {"code": ["node/server.js:4615-4616"]}},
+      {"when": "The character is on a generated map, and the socket did not connect with `map_protocol=1` (`generated_protocol`).", "replies": [], "source": "node/server.js:4617", "confirm": {"code": ["node/server.js:4617"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "drop",
+      "to": "you",
+      "when": "Generated map only, with the `map_chunk` events: after the chunks, one for each chest of the cave run on that floor (`cave_send_chests`).",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The chest id."},
+        {"name": "x", "type": "number", "optional": false, "description": "The x position of the chest."},
+        {"name": "y", "type": "number", "optional": false, "description": "The y position of the chest."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "The floor: `zone_<run>_<n>` (node/logic/dream_layout.js:1229)."},
+        {"name": "chest", "type": "string", "optional": false, "description": "The sprite: `\"cavechest\"` for a cave chest."},
+        {"name": "items", "type": "integer", "optional": false, "description": "The number of item stacks in the chest."}
+      ],
+      "example": {"id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "x": 312, "y": -96, "map": "zone_3f9a0c1d2e4b5a6978c0d1e2_1", "chest": "cavechest", "items": 1},
+      "source": "node/logic/generated_maps.js:220; node/logic/cave_of_many_dreams.js:527-541",
+      "confirm": {"code": ["node/logic/generated_maps.js:220", "node/logic/cave_of_many_dreams.js:527-541", "node/logic/cave_of_many_dreams.js:508"], "live_needed": "Which chests a run has, and where, is live state."}
+    },
+    {
+      "event": "disappear",
+      "to": "you",
+      "when": "Before `new_map`: one for each entity that the observer saw before and does not see at the new place (`send_all_xy` re-baselines the view).",
+      "fields": [
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The entity that left the view."},
+        {"name": "outside", "type": "true", "optional": false, "description": "Always `true`: the entity is out of view, it did not die."}
+      ],
+      "example": {"id": "48213", "outside": true},
+      "source": "node/server_functions.js:3697-3700",
+      "confirm": {"code": ["node/server.js:4636", "node/server_functions.js:3678-3679", "node/server_functions.js:3697-3700"]}
+    }
+  ],
+  "order": [
+    "generated map only: `map_chunk` events to you, then a `drop` for each chest of the floor",
+    "`disappear` `{id, outside: true}` for each entity no longer in view",
+    "`new_map` to you"
+  ]
+}

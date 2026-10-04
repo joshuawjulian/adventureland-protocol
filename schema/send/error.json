@@ -1,0 +1,8 @@
+{
+  "event": "error",
+  "source": "node/server.js:13198-13200",
+  "request": {"type": "any", "note": "Any payload. The handler body is empty. A comment says that a client `error` event brought the server down before. The official client never sends `error`: the only `emit(\"error\", ...)` in its code is inside the socket.io library, on its own connection object, and it does not go to the server (js/socket.io/4.2.0/socket.io.js:453).", "confirm": {"code": ["node/server.js:13198-13200"], "note": "The handler body is a comment"}},
+  "responses": [
+    {"name": "Nothing", "kind": "none", "when": "Every call. The handler is empty.", "source": "node/server.js:13198-13200", "confirm": {"code": ["node/server.js:13198-13200"]}}
+  ]
+}

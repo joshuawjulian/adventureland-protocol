@@ -1,0 +1,6 @@
+{
+  "name": "alapi-capture",
+  "private": true,
+  "type": "module",
+  "description": "The live-capture tool (see PROBES.md). Node.js 22.18+ runs the .ts files; tsc only checks the types."
+}

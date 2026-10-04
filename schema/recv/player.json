@@ -1,0 +1,21 @@
+{
+  "event": "player",
+  "to": "you: only the socket of the character",
+  "payload": {
+    "extends": "Character",
+    "fields": [
+      {"name": "reopen", "type": "true", "optional": true, "description": "Only from `resend` with `reopen`: items, gold or slots changed, so open windows must refresh."},
+      {"name": "hitchhikers", "type": "Hitchhiker[]", "optional": true, "description": "Only from `resend`: events that waited for this update, in order. Handle each `[event, payload]` as if the server sent it now. The list is not sent again. Not all of them answer a request: a `game_response` `condition` from `add_condition` can come at any time (a skill of another character, a monster, the anniversary event)."}
+    ],
+    "confirm": {"code": ["node/server.js:855-1001", "node/server.js:4578-4592", "node/server.js:2856", "node/server.js:12022", "node/logic/instance_pause.js:26", "node/logic/cave_of_many_dreams.js:13"], "note": "Every sender uses `player_to_client`; its keys are the fields of `Character` (`name` and `direction` are for NPCs only)"}
+  },
+  "example_trimmed": true,
+  "example": {"id": "Wizard", "hp": 1840, "max_hp": 2100, "mp": 1200, "max_mp": 1650, "level": 62, "map": "main", "in": "main", "x": -120.5, "y": 410, "m": 3, "s": {}, "c": {}, "q": {}, "cid": 419, "ctype": "mage", "isize": 42, "esize": 29, "gold": 1520340, "items": [{"name": "hpot0", "q": 200}, null, null, {"name": "blade", "level": 8}], "slots": {"mainhand": {"name": "wand", "level": 7}}, "cc": 4, "reopen": true, "hitchhikers": [["game_response", {"response": "upgrade_success", "level": 8, "num": 3}]]},
+  "senders": [
+    {"what": "`resend(player, events)`: the usual path. `events` is a `+` list: `reopen` adds `reopen: true`; `u` and `cid` mark the change; `nc` skips the stat calculation.", "source": "node/server.js:4550-4596"},
+    {"what": "Kill rewards: each party member that gets XP (not the killer).", "source": "node/server.js:2856"},
+    {"what": "`use` of `hp` or `mp` regeneration.", "source": "node/server.js:12022"},
+    {"what": "A cave pause stops the instance.", "source": "node/logic/instance_pause.js:26"},
+    {"what": "Entry into the Cave of Many Dreams.", "source": "node/logic/cave_of_many_dreams.js:13"}
+  ]
+}

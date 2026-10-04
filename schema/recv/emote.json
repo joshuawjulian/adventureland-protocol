@@ -1,0 +1,17 @@
+{
+  "event": "emote",
+  "to": "everyone near the character (`xy_emit`): players and observers",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "string", "optional": false, "description": "The emote: `G.skills[skill].emote`. In G it is the same as the skill name, for example `\"wiggle\"`."},
+      {"name": "player", "type": "CharacterName", "optional": false, "description": "The character that used the emote."},
+      {"name": "target", "type": "CharacterName", "optional": true, "description": "The target character. Absent when the emote has no target (node/server.js:10079)."},
+      {"name": "variation", "type": "0 | 1 | 2", "optional": false, "description": "A random variation of the animation."}
+    ],
+    "confirm": {"code": ["node/server.js:10076-10081", "node/server_functions.js:3744-3791"], "note": "`target` is `target && target.name`; `target` is a player or undefined (node/server.js:9898-9922; the emote skills in G target `player`), so the key is absent, never null"}
+  },
+  "example": {"name": "highfive", "player": "Wizard", "target": "Ranger", "variation": 2},
+  "senders": [
+    {"what": "The `skill` handler: a skill with `emote` in `G.skills`", "source": "node/server.js:10076-10081"}
+  ]
+}

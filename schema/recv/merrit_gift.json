@@ -1,0 +1,15 @@
+{
+  "event": "merrit_gift",
+  "to": "you: only the socket of the character. A `merrit_status` follows",
+  "payload": {
+    "fields": [
+      {"name": "id", "type": "string", "optional": false, "description": "The receipt id. The same as `receipt.id`."},
+      {"name": "receipt", "type": "MerritStatusReceipt", "optional": false, "description": "The receipt of the gift. The character also gets it as `last` in the next `merrit_status`."}
+    ],
+    "confirm": {"code": ["node/logic/market_patron_runtime.js:228-231", "node/logic/market_patron_runtime.js:156-167", "node/logic/market_patron_runtime.js:197-200", "node/logic/market_patron_runtime.js:249-252"]}
+  },
+  "example": {"id": "pQ7rT2vW9xY3zA5bC8dE1fG4hJ6kL0mN", "receipt": {"id": "pQ7rT2vW9xY3zA5bC8dE1fG4hJ6kL0mN", "at": 1791101360400, "character": "CH_5818821692620800", "name": "Merchant", "item": "marketparcel", "quantity": 1, "shells": 1, "reason": "Your shop stayed stocked for two minutes and left the neighbors room.", "reason_phrase": "server.merrit.receipt", "reason_phrase_args": {}}},
+  "senders": [
+    {"what": "`market_patron_finish`: the Merrit loop gave a parcel to the stand of the character, after the database commit. The server also sends `player` (`reopen`) before it, then `merrit_status`.", "source": "node/logic/market_patron_runtime.js:228-231"}
+  ]
+}

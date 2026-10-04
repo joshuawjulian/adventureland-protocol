@@ -1,0 +1,26 @@
+{
+  "event": "test",
+  "source": "node/server.js:5584-5589",
+  "request": {
+    "fields": [
+      {"name": "test", "type": "any", "optional": true, "description": "Only on a development server (`Dev`): the server writes it to its console. Other servers do not read it."}
+    ],
+    "others": "ignored",
+    "example": {"test": "hello"}, "confirm": {"code": ["node/server.js:5585-5587"]}
+  },
+  "responses": [
+    {
+      "name": "Time",
+      "event": "test",
+      "when": "Always, also without a character.",
+      "fields": [
+        {"name": "date", "type": "string", "optional": false, "description": "The time of the server: a `Date`, which arrives as an ISO 8601 string in UTC."}
+      ],
+      "example": {"date": "2026-10-04T12:00:00.000Z"},
+      "source": "node/server.js:5588", "confirm": {"code": ["node/server.js:5588", "node/msgpack_parser.js:40-42"]}
+    }
+  ],
+  "order": [
+    "`test` `{date}` to you"
+  ]
+}

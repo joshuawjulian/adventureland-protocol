@@ -1,0 +1,90 @@
+{
+  "event": "dismantle",
+  "source": "node/server.js:6441-6513",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"5\"` also works. Any other value reads an empty slot", "description": "The slot of the item."}
+    ],
+    "others": "ignored",
+    "example": {"num": 5},
+    "confirm": {"code": ["node/server.js:6452", "node/server.js:6465", "node/server.js:6504"], "note": "The handler reads only `num`"}
+  },
+  "responses": [
+    {
+      "name": "Success, compound item",
+      "event": "game_response",
+      "code": "dismantle",
+      "when": "The item is a compound item at level 1 or more, and all checks pass. The server takes the gold, removes the item and adds three copies at `level - 1`. Each copy gets `parseInt(grace / 3)` grace.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"dismantle\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"dismantle\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item."},
+        {"name": "level", "type": "integer", "optional": false, "description": "The level of the item before the dismantle. The copies have `level - 1`."},
+        {"name": "cost", "type": "integer", "optional": false, "description": "The gold paid: `min(50000000, calculate_item_value(item) * 10)`. `calculate_item_value` rounds, so it is an integer."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its `dismantle` code event."}
+      ],
+      "example": {"name": "ringsj", "level": 2, "cost": 1586560, "cevent": true, "success": true, "response": "dismantle", "place": "dismantle"},
+      "source": "node/server.js:6482",
+      "confirm": {"code": ["node/server.js:6453-6454", "node/server.js:6482", "node/server_functions.js:3421-3446"], "note": "This branch does not check the lock `l` or the flag `b`"}
+    },
+    {
+      "name": "Success, recipe",
+      "event": "game_response",
+      "code": "dismantle",
+      "when": "Any other item with a `G.dismantle` recipe, and all checks pass. The server takes `G.dismantle[name].cost` gold, removes one item and adds the outputs. An output `[c, name]` with `c` below 1 is a chance; else `c` is the quantity. A title `p` of the item that is not a `misc` title goes to each output.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"dismantle\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"dismantle\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The item."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its `dismantle` code event."}
+      ],
+      "example": {"name": "fireblade", "cevent": true, "success": true, "response": "dismantle", "place": "dismantle"},
+      "source": "node/server.js:6512",
+      "confirm": {"code": ["node/server.js:6512", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "dismantle",
+    "rows": [
+      {"when": "No character, or the character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:6445-6447", "confirm": {"code": ["node/server.js:6445-6447", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are more than `B.sell_dist` (400 px) from the `craftsman` NPC on `main`. A character with a `computer` passes this check.", "code": "distance", "source": "node/server.js:6448-6450", "confirm": {"code": ["node/server.js:6448-6450", "node/server.js:220", "node/server_functions.js:3393-3419"]}},
+      {"when": "Compound item (level 1 or more, `G.items[name].compound`): your gold is less than the cost.", "code": "gold_not_enough", "source": "node/server.js:6453-6457", "confirm": {"code": ["node/server.js:6453-6457", "node/server_functions.js:3393-3419"]}},
+      {"when": "Compound item: fewer than 2 empty inventory slots (`esize < 2`).", "code": "inv_size", "source": "node/server.js:6458-6459", "confirm": {"code": ["node/server.js:6458-6460", "node/server_functions.js:3393-3419"]}},
+      {"when": "Compound item: the item is of type `booster`.", "code": "dismantle_cant", "source": "node/server.js:6461-6462", "confirm": {"code": ["node/server.js:6461-6463", "node/server_functions.js:3393-3419"]}},
+      {"when": "Other item: the slot is empty, or `G.dismantle` has no recipe for the item.", "code": "dismantle_cant", "source": "node/server.js:6484-6485", "confirm": {"code": ["node/server.js:6484-6486", "node/server_functions.js:3393-3419"]}},
+      {"when": "Other item: the item has the lock `l`.", "code": "item_locked", "source": "node/server.js:6487-6488", "confirm": {"code": ["node/server.js:6487-6489", "node/server_functions.js:3393-3419"]}},
+      {"when": "Other item: the item has the flag `b`.", "code": "item_blocked", "source": "node/server.js:6490-6491", "confirm": {"code": ["node/server.js:6490-6492", "node/server_functions.js:3393-3419"]}},
+      {"when": "Other item: your gold is less than `G.dismantle[name].cost`.", "code": "gold_not_enough", "source": "node/server.js:6493-6494", "confirm": {"code": ["node/server.js:6493-6495", "node/server_functions.js:3393-3419"]}},
+      {"when": "Other item: the outputs do not fit (`can_add_items`). A single item (`q` 1) counts its own slot as free.", "code": "inv_size", "source": "node/server.js:6496-6501", "confirm": {"code": ["node/server.js:6496-6502", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "server_message",
+      "to": "everyone",
+      "when": "Recipe success, for each rare output (see `ItemAnnouncement`). The compound path adds its copies with `announce: false` and sends none.",
+      "type": "ItemAnnouncement",
+      "example": {"message": "Wizard received an Essence of Fire", "phrase": "server.item.named_received.an", "phrase_args": {"player": "Wizard", "item": "Essence of Fire", "quantity": 1}, "color": "#85C76B", "type": "server_received", "item": {"name": "essenceoffire", "q": 1}, "name": "Wizard"},
+      "source": "node/server.js:6509, 2098-2128",
+      "confirm": {"code": ["node/server.js:6505-6510", "node/server.js:2098-2128", "node/server_functions.js:4576-4589", "node/server_functions.js:3495-3496"], "note": "`add_item` announces when the item is rare (`G.items[name].a`); the compound branch passes `announce: false` (6469)"}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true`. `items`, `esize` and `gold` show the dismantle.",
+      "source": "node/server.js:6481, 6511",
+      "confirm": {"code": ["node/server.js:6481", "node/server.js:6511", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`server_message` to everyone, only for a rare output of a recipe",
+    "`player` to you",
+    "`game_response` `dismantle` to you"
+  ]
+}

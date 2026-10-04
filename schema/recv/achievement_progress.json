@@ -1,0 +1,20 @@
+{
+  "event": "achievement_progress",
+  "to": "you: only the socket of the character",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "\"abtesting\" | \"firehazard\" | \"stomped\" | \"gooped\" | \"festive\"", "optional": false, "description": "The achievement: a key of `G.achievements` with a `count`."},
+      {"name": "count", "type": "number", "optional": false, "description": "The count now (`item.acc`). For `festive` (damage) and `gooped` (attack values) it is a sum, so it can have a fraction."},
+      {"name": "needed", "type": "integer", "optional": false, "description": "The count that completes it: `G.achievements[name].count`."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:5846-5861"], "note": "`name` and `needed`: the achievements of G with a `count` (abtesting 1000, firehazard 20000, stomped 1200, gooped 60000000 with `rr` 40000, festive 400000); `reflector` (node/server.js:3797-3800) is not in G, so it returns early."}
+  },
+  "example": {"name": "gooped", "count": 1240388, "needed": 60000000},
+  "senders": [
+    {"what": "`item_achievement_increment`: the count passes a multiple of `G.achievements[name].rr` (1 when absent) and is still below `needed`.", "source": "node/server_functions.js:5846-5861"},
+    {"what": "`abtesting` (the equipped `orb`): you kill a player of the other team in A/B Testing.", "source": "node/server.js:2940-2943"},
+    {"what": "`stomped` (the `helmet`): a hit from `stompy` when it has no target. A hit from another monster resets the count. `gooped` (the `pants`): the `attack` value of each hit from `goo` or `cgoo`.", "source": "node/server_functions.js:5991-6004"},
+    {"what": "`festive` (the `cape`): your damage to `grinch`.", "source": "node/server_functions.js:5872-5880"},
+    {"what": "`firehazard` (the `mainhand`): a burn tick kills a monster. A last hit of another kind resets the count.", "source": "node/server_functions.js:5978-6016"}
+  ]
+}

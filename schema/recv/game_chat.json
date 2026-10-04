@@ -1,0 +1,54 @@
+{
+  "event": "game_chat",
+  "to": "you (GM mute feedback), each character in a duel instance, or the duel players and the characters near them",
+  "payload": {
+    "extends": "LocalizedText",
+    "fields": [{"name": "color", "type": "string", "optional": true, "description": "Only on duel results: `\"#47C1AE\"`."}],
+    "confirm": {"code": ["node/server.js:5296-5308", "node/server.js:12349-12353", "node/server_functions.js:2955-2979", "node/server_functions.js:2998-3003", "languages/index.js:256-258"]}
+  },
+  "example": {"color": "#47C1AE", "message": "Wizard wins the duel!", "phrase": "server.duel.winner", "phrase_args": {"winner": "Wizard"}},
+  "variants": [
+    {
+      "name": "Mute feedback",
+      "type": "LocalizedText",
+      "when": "A GM sent `gm` with `action: \"mute\"`. `server.game_chat.muted` or `server.game_chat.unmuted`, with `target`.",
+      "reply_to": ["gm"],
+      "example": {"message": "Muted Arrow", "phrase": "server.game_chat.muted", "phrase_args": {"target": "Arrow"}},
+      "source": "node/server.js:5296-5308",
+      "confirm": {"code": ["node/server.js:5289-5308"]}
+    },
+    {
+      "name": "Joined the duel",
+      "type": "LocalizedText",
+      "when": "A character entered a duel (`duel` with `event: \"enter\"`). `server.game_chat.joined_the_duel`, with `player`.",
+      "reply_to": ["duel"],
+      "example": {"message": "Arrow joined the duel!", "phrase": "server.game_chat.joined_the_duel", "phrase_args": {"player": "Arrow"}},
+      "source": "node/server.js:12349-12353",
+      "confirm": {"code": ["node/server.js:12349-12353"]}
+    },
+    {
+      "name": "Duel winner",
+      "type": "LocalizedText",
+      "when": "A duel ended. `server.duel.winner`, with `winner`, and `color`.",
+      "example": {"color": "#47C1AE", "message": "Wizard wins the duel!", "phrase": "server.duel.winner", "phrase_args": {"winner": "Wizard"}},
+      "source": "node/server_functions.js:2955-2979",
+      "confirm": {"code": ["node/server_functions.js:2955-2979"]}
+    },
+    {
+      "name": "Duel defeat",
+      "type": "LocalizedText",
+      "when": "A duel ended. The characters near the winning duel player get `server.duel.defeated`, with `winner` and `loser`, and `color`.",
+      "example": {"color": "#47C1AE", "message": "Wizard defeated Arrow!", "phrase": "server.duel.defeated", "phrase_args": {"winner": "Wizard", "loser": "Arrow"}},
+      "source": "node/server_functions.js:2998-3003",
+      "confirm": {"code": ["node/server_functions.js:2956-2961", "node/server_functions.js:2998-3003"]}
+    }
+  ],
+  "senders": [
+    {"what": "The `gm` handler, `action: \"mute\"`: to the GM.", "source": "node/server.js:5289-5308"},
+    {"what": "The `duel` handler, `event: \"enter\"`: to each character in the duel instance (`instance_emit`).", "source": "node/server.js:12349-12353"},
+    {
+      "what": "The duel loop, when a team has no active members. The winner line goes to each character in the instance and to each duel player. The defeat line goes to the characters near the winning duel player (`xy_emit`).",
+      "source": "node/server_functions.js:2955-3003"
+    }
+  ]
+}

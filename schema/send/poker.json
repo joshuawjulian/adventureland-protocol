@@ -1,0 +1,400 @@
+{
+  "event": "poker",
+  "source": "node/server.js:12875-12879; node/logic/tavern_poker.js:515-655",
+  "request": {
+    "fields": [
+      {"name": "event", "type": "\"info\" | \"join\" | \"leave\" | \"act\" | \"sit_out\" | \"sit_in\"", "optional": false, "coerce": "compared with `==` to each string", "description": "The sub-action. It selects the variant. Any other value fails with `poker_invalid_action`."},
+      {"name": "request_id", "type": "any", "optional": true, "coerce": "tested for truthiness: `0`, `\"\"` and `false` count as absent", "description": "Copied into the reply (success or failure) when it is truthy."}
+    ],
+    "others": "ignored. A `null` payload gets no reply: the handler checks `!data` before anything else",
+    "example": {"event": "info", "request_id": "p0"}, "confirm": {"code": ["node/server.js:12875-12879", "node/logic/tavern_poker.js:515-516", "node/logic/tavern_poker.js:529"], "note": "The handler reads `data.event` and `data.request_id`; a variant reads more"}
+  },
+  "failures": {
+    "event": "game_response",
+    "place": "poker",
+    "intro": "Every reply is an object, never a bare string. It has `request_id` when the request has a truthy one.",
+    "rows": [
+      {"when": "No character, or a `null` payload.", "replies": [], "source": "node/server.js:12876-12877", "confirm": {"code": ["node/server.js:12876-12877"]}},
+      {"when": "No `G.games.poker`, or the server has no `tavern` instance.", "code": "poker_unavailable", "source": "node/logic/tavern_poker.js:527", "confirm": {"code": ["node/logic/tavern_poker.js:527", "node/logic/tavern_poker.js:517-521", "node/logic/tavern_poker.js:6-8"], "note": "`fail` builds `{response, place: \"poker\", failed: true}` plus `request_id` when truthy"}},
+      {"when": "You are in the bank (`player.user`).", "code": "not_in_tavern", "source": "node/logic/tavern_poker.js:528", "confirm": {"code": ["node/logic/tavern_poker.js:528", "node/logic/tavern_poker.js:517-521"]}},
+      {"branch": true, "when": "`info`: the variant runs here. The checks below do not run for it."},
+      {"when": "The table saves a checkpoint now (before a deal or after a showdown).", "code": "poker_saving", "source": "node/logic/tavern_poker.js:539", "confirm": {"code": ["node/logic/tavern_poker.js:539", "node/logic/tavern_poker.js:517-521"]}},
+      {"when": "You are not on the `tavern` map in the `tavern` instance.", "code": "not_in_tavern", "source": "node/logic/tavern_poker.js:540", "confirm": {"code": ["node/logic/tavern_poker.js:540", "node/logic/tavern_poker.js:517-521"]}},
+      {"branch": true, "when": "`join`, `leave`, `act`, `sit_out`, `sit_in`: the checks of the variant."},
+      {"when": "`event` is none of the six.", "code": "poker_invalid_action", "source": "node/logic/tavern_poker.js:545", "confirm": {"code": ["node/logic/tavern_poker.js:541-545", "node/logic/tavern_poker.js:517-521"]}}
+    ]
+  },
+  "also": [
+    {"event": "poker", "to": "everyone in the `tavern` instance, you included", "when": "Each change of the table: join, leave, sit_out, sit_in, each decision, each street, the clock, the showdown. Before the reply of the request that caused it.", "type": "PokerState", "summary": "The public state. See the receive entry.", "source": "node/logic/tavern_poker.js:499-502", "confirm": {"code": ["node/logic/tavern_poker.js:499-502", "node/logic/tavern_poker.js:429-497", "node/server_functions.js:3540-3551", "node/server_functions.js:1314"]}},
+    {
+      "event": "poker",
+      "to": "each seat in the hand",
+      "when": "The deal: your two hole cards.",
+      "fields": [
+        {"name": "event", "type": "\"cards\"", "optional": false, "description": "The kind of `poker` event."},
+        {"name": "n", "type": "integer", "optional": false, "description": "The hand number (`hands` of the table)."},
+        {"name": "cards", "type": "[PokerCard, PokerCard]", "optional": false, "description": "Your two hole cards."}
+      ],
+      "example": {"event": "cards", "n": 12, "cards": ["A_spades", "10_hearts"]},
+      "source": "node/logic/tavern_poker.js:731-734", "confirm": {"code": ["node/logic/tavern_poker.js:711-712", "node/logic/tavern_poker.js:731-734"]},
+      "name": "Hole cards"
+    },
+    {
+      "event": "game_log",
+      "to": "you",
+      "when": "Later, from the table: `server.game_log.poker_won` (you won, color `\"gold\"`), `poker_broke` (your stack is below one big blind after the hand; you sit out), `poker_auto_check` or `poker_auto_fold` (the clock ran out), `poker_leaving` (you moved more than 60 px from your stool 12 s or more after you sat down), `poker_back` (you logged in again with a seat), `poker_cash_out` (the seat left the table).",
+      "type": "LocalizedText",
+      "example": {"color": "gold", "message": "Poker: won 1,078,000 gold", "phrase": "server.game_log.poker_won", "phrase_args": {"amount": "1,078,000"}},
+      "source": "node/logic/tavern_poker.js:902-907, 1067-1072, 1084-1089, 1209, 1261", "confirm": {"code": ["node/logic/tavern_poker.js:322-325", "node/logic/tavern_poker.js:902-907", "node/logic/tavern_poker.js:1067-1072", "node/logic/tavern_poker.js:1084-1089", "node/logic/tavern_poker.js:1117-1122", "node/logic/tavern_poker.js:1209", "node/logic/tavern_poker.js:1257-1263", "languages/index.js:256-258"]},
+      "name": "Table log"
+    },
+    {"event": "citizen", "to": "nearby", "when": "The dealer NPC announces a deal, an all-in, a win or a split.", "summary": "`{type: \"dealer\", id, ...}`: a dealer animation or line.", "source": "node/logic/tavern_dealer.js:30", "confirm": {"code": ["node/logic/tavern_dealer.js:29-43", "node/logic/tavern_dealer.js:89-99", "node/logic/tavern_poker.js:736", "node/logic/tavern_poker.js:812-813", "node/logic/tavern_poker.js:1040-1045", "node/server_functions.js:3744-3779"], "note": "Announcements are `{type: \"dealer\", id, act: \"say\", line: \"<pool>.<index>\"}` (plus `name` for a win); the receive entry `citizen` has the shape"}}
+  ],
+  "variants": {
+    "key": "event",
+    "list": [
+      {
+        "value": "info",
+        "when": "Gets the table state. It needs no seat and works from any map.",
+        "request": {
+          "example": {"event": "info", "request_id": "p0"}, "confirm": {"code": ["node/logic/tavern_poker.js:530"]}
+        },
+        "responses": [
+          {
+            "name": "Info",
+            "event": "game_response",
+            "code": "data",
+            "when": "Success. Before it, you get the `poker` state event, and a `poker` `cards` event when you are in the current hand.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"poker\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "table", "type": "PokerTableView", "optional": false, "description": "The public state, plus `me` and `cards`."}
+            ],
+            "example": {
+              "response": "data",
+              "place": "poker",
+              "success": true,
+              "request_id": "p0",
+              "table": {
+                "event": "state",
+                "tier": "I",
+                "blinds": [100000, 200000],
+                "buyin": [8000000, 40000000],
+                "stools": [
+                  [-32, 16],
+                  [0, 16],
+                  [32, 16],
+                  [-60, -28],
+                  [60, -28]
+                ],
+                "reach": 40,
+                "rake": 2,
+                "rake_cap": 2000000,
+                "action_ms": 20000,
+                "bank_ms": 30000,
+                "x": -168,
+                "y": -52,
+                "button": -1,
+                "hands": 0,
+                "now": 1791100000000,
+                "next": 0,
+                "log": [],
+                "seats": [null, null, null, null, null],
+                "hand": null,
+                "me": -1,
+                "cards": []
+              }
+            },
+            "source": "node/logic/tavern_poker.js:530-538", "confirm": {"code": ["node/logic/tavern_poker.js:530-538", "node/logic/tavern_poker.js:522-526", "node/logic/tavern_poker.js:429-497"]}
+          }
+        ],
+        "also": [
+          {
+            "event": "poker",
+            "to": "you",
+            "when": "Before the reply: the state, then `{event: \"cards\", n, cards}` when you are in the current hand.",
+            "type": "PokerState",
+            "example": {
+              "event": "state",
+              "tier": "I",
+              "blinds": [100000, 200000],
+              "buyin": [8000000, 40000000],
+              "stools": [
+                [-32, 16],
+                [0, 16],
+                [32, 16],
+                [-60, -28],
+                [60, -28]
+              ],
+              "reach": 40,
+              "rake": 2,
+              "rake_cap": 2000000,
+              "action_ms": 20000,
+              "bank_ms": 30000,
+              "x": -168,
+              "y": -52,
+              "button": -1,
+              "hands": 0,
+              "now": 1791100000000,
+              "next": 0,
+              "log": [],
+              "seats": [null, null, null, null, null],
+              "hand": null
+            },
+            "source": "node/logic/tavern_poker.js:504-511", "confirm": {"code": ["node/logic/tavern_poker.js:504-511", "node/logic/tavern_poker.js:429-497"]},
+            "name": "State to you"
+          }
+        ],
+        "order": [
+          "`poker` state to you",
+          "`poker` `cards` to you (in a hand only)",
+          "`game_response` `data` to you"
+        ]
+      },
+      {
+        "value": "join",
+        "when": "Sits down, or adds gold to your stack between hands.",
+        "request": {
+          "fields": [
+            {"name": "gold", "type": "integer", "optional": true, "coerce": "`parseInt(gold || buyin) || 0`", "description": "The buy-in, or for a seated player the gold to add to the stack. Send `gold` or `buyin`: with neither, the value is 0 and the request fails with `poker_buyin`."},
+            {"name": "buyin", "type": "integer", "optional": true, "coerce": "used only when `gold` is falsy", "description": "Another name for `gold`. The server reads it only when `gold` is falsy."},
+            {"name": "seat", "type": "integer", "optional": true, "coerce": "`null` or absent: no preference; else `parseInt(seat)`. `NaN` or a negative value also means no preference", "description": "Not seated yet: the seat index (0 to 4) that you want. It must be the free stool that you stand next to."}
+          ],
+          "example": {"event": "join", "gold": 20000000, "seat": 1, "request_id": "p1"}, "confirm": {"code": ["node/logic/tavern_poker.js:541", "node/logic/tavern_poker.js:555", "node/logic/tavern_poker.js:580"]}
+        },
+        "responses": [
+          {
+            "name": "Joined",
+            "event": "game_response",
+            "code": "data",
+            "when": "You sat down, or you added gold to your stack. The gold leaves your `gold` at once.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"poker\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "seat", "type": "integer", "optional": false, "description": "Your seat index, 0 to 4."},
+              {"name": "stack", "type": "integer", "optional": false, "description": "Your stack now."},
+              {"name": "buyin", "type": "integer", "optional": false, "description": "The gold that this request moved to the table."},
+              {"name": "blinds", "type": "[integer, integer]", "optional": false, "description": "The small and the big blind of this server."}
+            ],
+            "example": {"response": "data", "place": "poker", "success": true, "request_id": "p1", "seat": 1, "stack": 20000000, "buyin": 20000000, "blinds": [100000, 200000]},
+            "source": "node/logic/tavern_poker.js:574, 616", "confirm": {"code": ["node/logic/tavern_poker.js:574", "node/logic/tavern_poker.js:616", "node/logic/tavern_poker.js:522-526", "node/logic/tavern_poker.js:21-23"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "`tavern_closing()`: a restart closed the tavern, or the server is not live.", "code": "tavern_closing", "source": "node/logic/tavern_poker.js:557", "confirm": {"code": ["node/logic/tavern_poker.js:557", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "You are more than 260 px from the table at (-168, -52).", "code": "poker_far", "source": "node/logic/tavern_poker.js:558", "confirm": {"code": ["node/logic/tavern_poker.js:558", "node/logic/tavern_poker.js:25-29", "node/logic/tavern_poker.js:107-112", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "Seated already: your seat is in the current hand.", "code": "poker_in_hand", "source": "node/logic/tavern_poker.js:561", "confirm": {"code": ["node/logic/tavern_poker.js:559-561", "node/logic/tavern_poker.js:68-71", "node/logic/tavern_poker.js:517-521"]}},
+            {
+              "when": "Seated already: `gold` is 0 or less, or your stack plus `gold` is more than the maximum buy-in (200 big blinds).",
+              "code": "poker_buyin",
+              "extra": [
+                {"name": "min", "type": "1", "optional": false, "description": "Always 1 for a seated player."},
+                {"name": "max", "type": "integer", "optional": false, "description": "The gold that you can still add: the maximum buy-in minus your stack.", "example": 18500000}
+              ],
+              "source": "node/logic/tavern_poker.js:562", "confirm": {"code": ["node/logic/tavern_poker.js:562", "node/logic/tavern_poker.js:517-521"]}
+            },
+            {"when": "Seated already: `gold` is more than your gold.", "code": "gold_not_enough", "source": "node/logic/tavern_poker.js:563", "confirm": {"code": ["node/logic/tavern_poker.js:563", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "Not seated: a character of your account (`player.owner`) has a seat.", "code": "poker_seated", "source": "node/logic/tavern_poker.js:576-577", "confirm": {"code": ["node/logic/tavern_poker.js:576-577", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "Not seated: `seat` is 0 to 4, and that seat is taken.", "code": "poker_seat_taken", "source": "node/logic/tavern_poker.js:581", "confirm": {"code": ["node/logic/tavern_poker.js:579-581", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "Not seated: the table has no free seat.", "code": "poker_full", "source": "node/logic/tavern_poker.js:582", "confirm": {"code": ["node/logic/tavern_poker.js:582", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "Not seated: no free stool is within `reach` (40 px) of you, or `seat` is not the nearest free stool.", "code": "poker_stool_far", "source": "node/logic/tavern_poker.js:583; node/logic/tavern_poker.js:90-105", "confirm": {"code": ["node/logic/tavern_poker.js:579-583", "node/logic/tavern_poker.js:90-105", "node/logic/tavern_poker.js:517-521"]}},
+            {
+              "when": "Not seated: `gold` is outside the buy-in range, 40 to 200 big blinds.",
+              "code": "poker_buyin",
+              "extra": [
+                {"name": "min", "type": "integer", "optional": false, "description": "The minimum buy-in: `G.games.poker.buyin[0]` big blinds.", "example": 8000000},
+                {"name": "max", "type": "integer", "optional": false, "description": "The maximum buy-in: `G.games.poker.buyin[1]` big blinds.", "example": 40000000}
+              ],
+              "source": "node/logic/tavern_poker.js:584", "confirm": {"code": ["node/logic/tavern_poker.js:553-554", "node/logic/tavern_poker.js:584", "node/logic/tavern_poker.js:517-521"]}
+            },
+            {"when": "Not seated: `gold` is more than your gold.", "code": "gold_not_enough", "source": "node/logic/tavern_poker.js:585", "confirm": {"code": ["node/logic/tavern_poker.js:585", "node/logic/tavern_poker.js:517-521"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "game_log",
+            "to": "you",
+            "when": "Success, before the `player` update and the reply. Phrase `server.game_log.poker_join`.",
+            "type": "LocalizedText",
+            "example": {
+              "color": "#E6B16B",
+              "message": "You sit down at the poker table with 20,000,000 gold",
+              "phrase": "server.game_log.poker_join",
+              "phrase_args": {"amount": "20,000,000"}
+            },
+            "source": "node/logic/tavern_poker.js:322-325, 571, 613", "confirm": {"code": ["node/logic/tavern_poker.js:322-325", "node/logic/tavern_poker.js:571", "node/logic/tavern_poker.js:613", "languages/index.js:256-258"]},
+            "name": "Joined"
+          },
+          {"event": "player", "to": "you", "when": "Success: `resend \"reopen+nc\"`, before the state event.", "summary": "Your state with the new `gold`.", "source": "node/logic/tavern_poker.js:572, 614", "confirm": {"code": ["node/logic/tavern_poker.js:572", "node/logic/tavern_poker.js:614", "node/server.js:4550-4594"]}}
+        ],
+        "order": [
+          "`game_log` to you",
+          "`player` to you",
+          "`poker` state to the tavern",
+          "`game_response` `data` to you"
+        ]
+      },
+      {
+        "value": "leave",
+        "when": "Leaves the table now, or after the current hand.",
+        "request": {
+          "example": {"event": "leave", "request_id": "p2"}, "confirm": {"code": ["node/logic/tavern_poker.js:542", "node/logic/tavern_poker.js:619-631"], "note": "Reads no other field"}
+        },
+        "responses": [
+          {
+            "name": "Left",
+            "event": "game_response",
+            "code": "data",
+            "when": "In a hand you leave when the hand ends: `leaving: true` and your `stack`. Else your stack goes back to your gold now: `leaving: false` and `gold`.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"poker\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "leaving", "type": "boolean", "optional": false, "description": "`true`: you leave after the hand. `false`: you left now."},
+              {"name": "stack", "type": "integer", "optional": true, "description": "`leaving: true` only: your stack now."},
+              {"name": "gold", "type": "integer", "optional": true, "description": "`leaving: false` only: the gold that went back to you."}
+            ],
+            "example": {"response": "data", "place": "poker", "success": true, "request_id": "p2", "leaving": false, "gold": 21500000},
+            "source": "node/logic/tavern_poker.js:619-631", "confirm": {"code": ["node/logic/tavern_poker.js:619-631", "node/logic/tavern_poker.js:522-526"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "You have no seat.", "code": "poker_not_seated", "source": "node/logic/tavern_poker.js:621", "confirm": {"code": ["node/logic/tavern_poker.js:621", "node/logic/tavern_poker.js:517-521"]}}
+          ]
+        },
+        "also": [
+          {
+            "name": "Leaving",
+            "event": "game_log",
+            "to": "you",
+            "when": "In a hand: phrase `server.game_log.poker_leaving`, before the state event.",
+            "type": "LocalizedText",
+            "example": {"color": "#E6B16B", "message": "You leave the poker table after this hand", "phrase": "server.game_log.poker_leaving", "phrase_args": {}},
+            "source": "node/logic/tavern_poker.js:322-325, 624", "confirm": {"code": ["node/logic/tavern_poker.js:322-325", "node/logic/tavern_poker.js:622-624", "languages/index.js:256-258"]}
+          },
+          {
+            "name": "Cashed out",
+            "event": "game_log",
+            "to": "you",
+            "when": "Not in a hand: phrase `server.game_log.poker_cash_out`, color `\"gold\"`, before the `player` update.",
+            "type": "LocalizedText",
+            "example": {
+              "color": "gold",
+              "message": "You leave the poker table with 21,500,000 gold",
+              "phrase": "server.game_log.poker_cash_out",
+              "phrase_args": {"amount": "21,500,000"}
+            },
+            "source": "node/logic/tavern_poker.js:1117-1122", "confirm": {"code": ["node/logic/tavern_poker.js:628-629", "node/logic/tavern_poker.js:1101-1122", "languages/index.js:256-258"]}
+          },
+          {"event": "player", "to": "you", "when": "Not in a hand: `resend \"reopen+nc\"`, before the state event.", "summary": "Your state with the new `gold`.", "source": "node/logic/tavern_poker.js:1123", "confirm": {"code": ["node/logic/tavern_poker.js:1114-1123", "node/server.js:4550-4594"]}}
+        ],
+        "order": {
+          "Now": [
+            "`game_log` to you",
+            "`player` to you",
+            "`poker` state to the tavern",
+            "`game_response` `data` to you"
+          ],
+          "After the hand": ["`game_log` to you", "`poker` state to the tavern", "`game_response` `data` to you"]
+        }
+      },
+      {
+        "value": "act",
+        "when": "Makes your decision when it is your turn.",
+        "request": {
+          "fields": [
+            {"name": "action", "type": "\"fold\" | \"check\" | \"call\" | \"bet\" | \"raise\" | \"allin\"", "optional": false, "coerce": "`(\"\" + (action || \"\")).toLowerCase()`: case does not matter", "description": "Your decision. `\"raise\"` is the same as `\"bet\"`. `\"call\"` with nothing to call is a check. `\"allin\"` bets your whole stack."},
+            {"name": "amount", "type": "integer", "optional": true, "coerce": "`parseInt(amount || gold) || 0`, read only for `bet`, `raise`", "description": "`bet`/`raise`: your **total** bet on this street, not the extra gold. A value at or above your stack plus your current bet is an all-in."},
+            {"name": "gold", "type": "integer", "optional": true, "coerce": "used when `amount` is falsy", "description": "The same as `amount`."}
+          ],
+          "example": {"event": "act", "action": "raise", "amount": 800000, "request_id": "p3"}, "confirm": {"code": ["node/logic/tavern_poker.js:543", "node/logic/tavern_poker.js:652", "node/logic/tavern_poker.js:775"]}
+        },
+        "responses": [
+          {
+            "name": "Acted",
+            "event": "game_response",
+            "code": "data",
+            "when": "The server applied your decision. The `poker` state event for it comes first.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"poker\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "action", "type": "\"fold\" | \"check\" | \"call\" | \"bet\" | \"raise\" | \"allin\"", "optional": false, "description": "What the server did. `\"bet\"`: the first bet of the street. `\"raise\"`: above an earlier bet. `\"allin\"`: a bet or raise with your whole stack. An all-in that does not reach the current bet is `\"call\"`."},
+              {"name": "amount", "type": "integer", "optional": false, "description": "The gold that this decision added to the pot. 0 for `fold` and `check`."},
+              {"name": "stack", "type": "integer", "optional": false, "description": "Your stack now."},
+              {"name": "pot", "type": "integer", "optional": false, "description": "The pot now."}
+            ],
+            "example": {"response": "data", "place": "poker", "success": true, "request_id": "p3", "action": "raise", "amount": 600000, "stack": 19200000, "pot": 1100000},
+            "source": "node/logic/tavern_poker.js:646-655, 760-816", "confirm": {"code": ["node/logic/tavern_poker.js:652-654", "node/logic/tavern_poker.js:522-526", "node/logic/tavern_poker.js:760-816"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "You have no seat.", "code": "poker_not_seated", "source": "node/logic/tavern_poker.js:650", "confirm": {"code": ["node/logic/tavern_poker.js:650", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "No hand runs, the hand is over, or it is not your turn.", "code": "poker_not_your_turn", "source": "node/logic/tavern_poker.js:651", "confirm": {"code": ["node/logic/tavern_poker.js:651", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "`\"check\"` while you must call.", "code": "poker_invalid_action", "source": "node/logic/tavern_poker.js:770-771", "confirm": {"code": ["node/logic/tavern_poker.js:652-653", "node/logic/tavern_poker.js:770-771", "node/logic/tavern_poker.js:517-521"]}},
+            {
+              "when": "`bet` or `raise`: the total is below the current bet plus the minimum raise, and below your all-in.",
+              "code": "poker_min_raise",
+              "extra": [
+                {"name": "min", "type": "integer", "optional": false, "description": "The smallest legal total: `min(bet + min_raise, your all-in)`.", "example": 400000},
+                {"name": "max", "type": "integer", "optional": false, "description": "Your all-in total: your current bet plus your stack.", "example": 19800000}
+              ],
+              "source": "node/logic/tavern_poker.js:775-779", "confirm": {"code": ["node/logic/tavern_poker.js:652-653", "node/logic/tavern_poker.js:775-779", "node/logic/tavern_poker.js:517-521"]}
+            },
+            {"when": "`bet`, `raise` or `allin`: the total is above the current bet, but you cannot raise. Nobody else can act, or a short all-in did not reopen the betting for you.", "code": "poker_invalid_action", "source": "node/logic/tavern_poker.js:780, 818-826", "confirm": {"code": ["node/logic/tavern_poker.js:652-653", "node/logic/tavern_poker.js:767", "node/logic/tavern_poker.js:780", "node/logic/tavern_poker.js:818-826", "node/logic/tavern_poker.js:517-521"]}},
+            {"when": "`action` is not one of the six.", "code": "poker_invalid_action", "source": "node/logic/tavern_poker.js:797", "confirm": {"code": ["node/logic/tavern_poker.js:652-653", "node/logic/tavern_poker.js:765-767", "node/logic/tavern_poker.js:797", "node/logic/tavern_poker.js:517-521"]}}
+          ]
+        },
+        "order": ["`poker` state to the tavern", "`game_response` `data` to you"]
+      },
+      {
+        "value": ["sit_out", "sit_in"],
+        "name": "Sit out or in",
+        "when": "`sit_out` stops dealing you into hands. `sit_in` deals you into hands again.",
+        "request": {
+          "example": {"event": "sit_out", "request_id": "p4"}, "confirm": {"code": ["node/logic/tavern_poker.js:544", "node/logic/tavern_poker.js:633-644"], "note": "Reads no other field"}
+        },
+        "responses": [
+          {
+            "name": "Sat out or in",
+            "event": "game_response",
+            "code": "data",
+            "when": "Success. A seat that sits out gets no cards.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"poker\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "out", "type": "boolean", "optional": false, "description": "`true` after `sit_out`, `false` after `sit_in`."}
+            ],
+            "example": {"response": "data", "place": "poker", "success": true, "out": true},
+            "source": "node/logic/tavern_poker.js:633-644", "confirm": {"code": ["node/logic/tavern_poker.js:633-644", "node/logic/tavern_poker.js:522-526"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "You have no seat.", "code": "poker_not_seated", "source": "node/logic/tavern_poker.js:636", "confirm": {"code": ["node/logic/tavern_poker.js:636", "node/logic/tavern_poker.js:517-521"]}},
+            {
+              "when": "`sit_in`: your stack is less than the big blind.",
+              "code": "poker_broke",
+              "extra": [
+                {"name": "min", "type": "integer", "optional": false, "description": "The big blind.", "example": 200000}
+              ],
+              "source": "node/logic/tavern_poker.js:637", "confirm": {"code": ["node/logic/tavern_poker.js:637", "node/logic/tavern_poker.js:517-521"]}
+            }
+          ]
+        },
+        "order": ["`poker` state to the tavern", "`game_response` `data` to you"]
+      }
+    ]
+  }
+}

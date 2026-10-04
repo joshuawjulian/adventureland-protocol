@@ -1,0 +1,12 @@
+{
+  "_comment": "What this reference is written against. The live game's open-source code is the source of truth (owner, 2026-10-04: 'driven from the open source code'). scripts/check-updates.py compares these pins with the live game; `--pin` moves them forward after an update pass. build.py (citation links) and scripts/fetch-source.sh read them. legacy_* is the old App Engine repo the first draft was written from; it is frozen and only cited as `legacy:file.js:N`.",
+  "g_version": 17478,
+  "source_repo": "https://github.com/kaansoral/adventureland_mongodb",
+  "source_commit": "987831288c40928b959bc06a626a4d67cd0c98ca",
+  "source_version": 15555,
+  "common_repo": "https://github.com/kaansoral/common_engine",
+  "common_commit": "fa74fabf5d3782503712621e037bfb934ecb8439",
+  "legacy_repo": "https://github.com/kaansoral/adventureland",
+  "legacy_commit": "f927df37da777eb7f048fd9209c039653a3406bd",
+  "pinned_on": "2026-10-04"
+}

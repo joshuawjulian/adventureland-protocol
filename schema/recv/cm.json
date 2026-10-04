@@ -1,0 +1,18 @@
+{
+  "event": "cm",
+  "to": "each character in `to` of the `cm` request that is on this server. The sender too, if `to` has its name",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "CharacterName", "optional": false, "description": "The name of the sender."},
+      {
+        "name": "message",
+        "type": "any",
+        "optional": false,
+        "description": "The `message` of the request, unchanged: any JSON value. A falsy value (absent, `null`, `0`, `false`, `\"\"`) becomes `\"\"` (node/server.js:5086)."
+      }
+    ],
+    "confirm": {"code": ["node/server.js:5077-5090"]}
+  },
+  "example": {"name": "Wizard", "message": {"cmd": "follow", "x": -112.5, "y": 1503}},
+  "senders": [{"what": "The `cm` handler: one `cm` for each name in `to` that is online on this server.", "source": "node/server.js:5077-5090"}]
+}

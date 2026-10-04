@@ -1,0 +1,17 @@
+{
+  "event": "q_data",
+  "to": "you: only the socket of the character",
+  "payload": {
+    "fields": [
+      {"name": "q", "type": "QDataQueue", "optional": false, "description": "All timers of the character (`player.q`), not only the one that changed. The loop lowers `ms` one timer at a time (node/server.js:14735-14738), so the `ms` of this timer and of the timers before it in `q` is lower by this tick, and the `ms` of the timers after it is not yet."},
+      {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot of the placeholder: `num` of the timer. It is the slot value from the `upgrade` or `compound` request with no conversion, so it can be a numeric string."},
+      {"name": "p", "type": "PlaceholderState", "optional": false, "description": "The `p` of the placeholder item in that slot (node/server.js:14741). The server changes this same object on each tick: it adds one digit to `nums`, or sets `success` or `failure`."}
+    ],
+    "confirm": {"code": ["node/server.js:14735-14738", "node/server.js:14739-14773", "node/server.js:14775-14811", "node/server.js:7051-7062", "node/server.js:7438-7452"]}
+  },
+  "example": {"q": {"upgrade": {"ms": 2914.6, "len": 7905.7, "num": 3}}, "num": 3, "p": {"chance": 0.912, "name": "blade", "level": 7, "scroll": "scroll1", "nums": [4, 1, 9]}},
+  "senders": [
+    {"what": "The timer loop of the character, `upgrade` timer: a new digit of the roll, or the result (`success` or `failure`).", "source": "node/server.js:14740-14773"},
+    {"what": "The timer loop of the character, `compound` timer: the same, at fixed times.", "source": "node/server.js:14776-14812"}
+  ]
+}

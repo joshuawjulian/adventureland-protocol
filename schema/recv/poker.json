@@ -1,0 +1,64 @@
+{
+  "event": "poker",
+  "to": "`state`: every character in the tavern instance (`instance_emit`; on a hardcore server, every character on the server), or one character (`tavern_poker_send`). `cards`: only the character in that seat",
+  "payload": {"type": "PokerState | PokerCards", "confirm": {"code": ["node/logic/tavern_poker.js:429-497", "node/logic/tavern_poker.js:499-511", "node/logic/tavern_poker.js:731-734", "node/server_functions.js:3540-3551"]}},
+  "variants": [
+    {
+      "name": "State",
+      "type": "PokerState",
+      "when": "The public state of the table, after each change: a seat, an action, a street, the time bank, the end of a hand.",
+      "reply_to": ["poker"],
+      "example": {
+        "event": "state",
+        "tier": "II",
+        "blinds": [1000000, 2000000],
+        "buyin": [80000000, 400000000],
+        "stools": [
+          [-32, 16],
+          [0, 16],
+          [32, 16],
+          [-60, -28],
+          [60, -28]
+        ],
+        "reach": 40,
+        "rake": 2,
+        "rake_cap": 20000000,
+        "action_ms": 20000,
+        "bank_ms": 30000,
+        "x": -168,
+        "y": -30,
+        "button": 0,
+        "hands": 12,
+        "now": 1791105240000,
+        "next": 0,
+        "log": [
+          {"t": "deal", "n": 12, "at": 1791105231000}
+        ],
+        "seats": [
+          {"index": 0, "name": "Warrior", "stack": 151000000, "bet": 1000000, "out": false, "dc": false, "leaving": false, "folded": false, "allin": false, "can_raise": true, "cards": 2},
+          null,
+          {"index": 2, "name": "Merchant", "stack": 98000000, "bet": 2000000, "out": false, "dc": false, "leaving": false, "folded": false, "allin": false, "can_raise": true, "cards": 2},
+          null,
+          null
+        ],
+        "hand": {"n": 12, "street": "preflop", "board": [], "pot": 3000000, "bet": 2000000, "min_raise": 2000000, "acting": 0, "settling": false, "deadline": 1791105251000, "banked": false, "over": false, "results": null, "rake": 0, "commit": "9b0c3f5e7a1d2c4b6e8f0a1b3c5d7e9f1a2b4c6d8e0f2a3b5c7d9e1f3a4b6c8d"}
+      },
+      "source": "node/logic/tavern_poker.js:429-497",
+      "confirm": {"code": ["node/logic/tavern_poker.js:429-497", "node/logic/tavern_poker.js:499-502", "node/logic/tavern_poker.js:504-506", "node/server_functions.js:3540-3551"], "note": "`tavern_poker_emit` uses `instance_emit`, which broadcasts to the whole server on a hardcore server (`poker` is not one of its exceptions)."}
+    },
+    {
+      "name": "Cards",
+      "type": "PokerCards",
+      "when": "Your two hole cards: at the deal, and again with `tavern_poker_send` while you are in a hand.",
+      "reply_to": ["poker"],
+      "example": {"event": "cards", "n": 12, "cards": ["A_spades", "10_hearts"]},
+      "source": "node/logic/tavern_poker.js:510, 733",
+      "confirm": {"code": ["node/logic/tavern_poker.js:507-510", "node/logic/tavern_poker.js:731-734"]}
+    }
+  ],
+  "senders": [
+    {"what": "`tavern_poker_emit`: each change of the table. For example a buy-in, an action, a new street, the end of a hand or a cash-out.", "source": "node/logic/tavern_poker.js:499-502"},
+    {"what": "`tavern_poker_send`: the `poker` handler with `event: \"info\"`, and the login of a character with a seat. Then `cards`, if the character is in the hand. The `info` reply also has the state as `table` in `game_response` `data`.", "source": "node/logic/tavern_poker.js:504-511"},
+    {"what": "`tavern_poker_deal`: `cards` to each seat that gets cards.", "source": "node/logic/tavern_poker.js:731-734"}
+  ]
+}

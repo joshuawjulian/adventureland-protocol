@@ -1,0 +1,29 @@
+{
+  "event": "start",
+  "to": "the socket that sent `auth` only",
+  "payload": {
+    "extends": "Character",
+    "fields": [
+      {"name": "ipass", "type": "string", "optional": false, "description": "A random string of 12 characters. The HTTP check-in of the official client sends it back."},
+      {"name": "home", "type": "string", "optional": false, "description": "The home server of the character, `player.p.home`: region plus server name, for example `\"EUI\"`."},
+      {"name": "friends", "type": "string[]", "optional": false, "description": "The friend list of the account: the user ids of the friends (node/server.js:11632)."},
+      {"name": "acx", "type": "Record<string, integer>", "optional": false, "description": "The cosmetics that the account owns: cosmetic name to count."},
+      {"name": "xcx", "type": "string[]", "optional": false, "description": "A list of cosmetic names. The server only sets it to `[]` (node/server_functions.js:4448). The official client adds the free cosmetics of the class."},
+      {"name": "info", "type": "MapInfoDuel | NewMapTavernInfo | NewMapZoneInfo | object", "optional": false, "description": "`instance.info` of the instance of the character. Usually `{}`. A duel instance has `{seconds, active, A, B, id}` (node/server.js:12238-12246). The `tavern` has `{dice, num, seconds}`. A dream cave floor has `{zone}` (see Notes)."},
+      {"name": "base_gold", "type": "Record<string, Record<string, integer>>", "optional": false, "description": "`D.base_gold`: monster type to map name to the base gold of one kill (node/server_functions.js:231-232)."},
+      {"name": "s_info", "type": "ServerInfoState", "optional": false, "description": "The server event state `E`, the same object as the `server_info` payload."},
+      {"name": "blessed_by", "type": "CharacterName", "optional": true, "description": "Only while the server has a blessing: the character that paid for it."},
+      {"name": "blessed_minutes", "type": "integer", "optional": true, "description": "Only while the server has a blessing: the minutes that remain."},
+      {"name": "code", "type": "boolean | string", "optional": true, "description": "When `auth` loaded code from a code slot: the source code text. It replaces the `code` flag of `player_to_client` (node/server.js:11937-11941). Otherwise it is that flag."},
+      {"name": "code_slot", "type": "string", "optional": true, "description": "Only with the code text: the code slot that the server found for `auth.code_slot`, as a string."},
+      {"name": "code_version", "type": "integer", "optional": true, "description": "Only with the code text: the save count of that code slot."},
+      {"name": "entities", "type": "EntitiesFrame", "optional": false, "description": "An `entities` payload with `type: \"all\"` for the start position (`send_all_xy(player, {raw: true})`)."}
+    ],
+    "confirm": {"code": ["node/server.js:11918-11944", "node/server.js:855-1001", "node/server.js:11687-11703", "node/server.js:11632", "node/server.js:11713-11719", "node/server_functions.js:4446-4449", "node/server_functions.js:231-232", "node/server_functions.js:1359-1361", "node/logic/generated_maps.js:101", "node/server.js:12238-12246"]}
+  },
+  "example_trimmed": true,
+  "example": {"id": "Wizard", "hp": 1840, "max_hp": 2100, "mp": 1200, "max_mp": 1650, "level": 62, "map": "main", "in": "main", "x": -120.5, "y": 410, "m": 0, "s": {}, "c": {}, "q": {}, "cid": 1, "ctype": "mage", "gold": 1520340, "ipass": "aK3mZp9QxL2w", "home": "EUI", "friends": ["5629499534213120"], "acx": {"hat221": 1}, "xcx": [], "info": {}, "base_gold": {"goo": {"main": 2}, "bee": {"main": 4}}, "s_info": {"schedule": {"time_offset": 0, "dailies": [13, 20], "nightlies": [23], "night": false}}, "code": "setInterval(function () { loot(); }, 250);", "code_slot": "1", "code_version": 7, "entities": {"type": "all", "map": "main", "in": "main", "players": [], "monsters": []}},
+  "senders": [
+    {"what": "The `auth` handler, after a successful login. `players[socket.id]` must still be this character and the socket must be connected.", "source": "node/server.js:11919-11944"}
+  ]
+}

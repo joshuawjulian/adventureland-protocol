@@ -1,0 +1,21 @@
+{
+  "event": "skill_timeout",
+  "to": "you: only the socket of the character",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "SkillName", "optional": false, "description": "The skill. For a skill with `share` in G, the skill that it shares the cooldown with, for example `\"quickpunch\"` for `quickstab`, or `\"use_hp\"` for `regen_hp` (node/server_functions.js:3452-3455)."},
+      {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time until the skill is ready. From `consume_skill`, it includes `penalty`. The `attack_ms` form can be 0 or less: then the skill is ready now."},
+      {"name": "penalty", "type": "Milliseconds", "optional": true, "description": "Only from `consume_skill`: the part of `ms` that comes from the `penalty_cd` condition, up to 10,000. Often `0`."},
+      {"name": "reason", "type": "\"attack_ms\"", "optional": true, "description": "Only when the attack speed changed: `ms` is `attack_ms - (time since the last attack)` (node/server.js:1630-1634)."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:3448-3470", "node/server.js:1628-1635", "node/logic/instance_pause.js:43-48"], "note": "From node/logic/instance_pause.js the cooldown of `attack` is `1000 / frequency`, so `ms` can have a fraction."}
+  },
+  "example": {"name": "supershot", "ms": 30000, "penalty": 0},
+  "senders": [
+    {"what": "`consume_skill`: the `skill` handler after a skill succeeds. The cooldown is `G.skills[name].cooldown * cooldown_multiplier`. A skill without a cooldown sends nothing.", "source": "node/server.js:10985"},
+    {"what": "`consume_skill` with `reuse` (the cooldown is `reuse_cooldown`): `step_out_of_invis` when an action ends `invis`, and the end of `pickpocket`, `fishing` and `mining`.", "source": "node/server.js:13765, 15019, 15038, 15075"},
+    {"what": "`consume_skill` from the `absorb` branch of `skill` (an absorb that fails on a target that is not friendly).", "source": "node/server.js:10644"},
+    {"what": "`calculate_player_stats`: the attack speed changed, for example after `equip`. It has `reason: \"attack_ms\"` and no `penalty`.", "source": "node/server.js:1628-1635"},
+    {"what": "The end of a cave pause, or the end of the entry to the Cave of Many Dreams. It sends each cooldown that is not over, with `name` and `ms` only.", "source": "node/logic/instance_pause.js:43-48"}
+  ]
+}

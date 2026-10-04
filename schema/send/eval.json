@@ -1,0 +1,124 @@
+{
+  "event": "eval",
+  "source": "node/server.js:13201-13286",
+  "request": {
+    "fields": [
+      {"name": "command", "type": "string", "optional": true, "coerce": "tested for truthiness, compared with `==`, then read with `.startsWith` and `.split(\" \")`. A truthy value that is not a string throws at `.startsWith` (Failure row 3)", "description": "The mainframe terminal on the `cyberland` map. The commands are in the Notes. When it is falsy, the handler skips the mainframe part."},
+      {"name": "request_id", "type": "any", "optional": true, "coerce": "tested for truthiness", "description": "Mainframe only. With it, you also get a `game_response` with the result (success or failure)."},
+      {"name": "pass", "type": "string", "optional": true, "coerce": "compared with `==` to `keys.ACCESS_MASTER`", "description": "Admin only. When it is correct, the server runs `code`."},
+      {"name": "code", "type": "string", "optional": true, "coerce": "none: passed to `eval`", "description": "Admin only: JavaScript that the server runs. The server sends nothing back."}
+    ],
+    "others": "ignored",
+    "example": {"command": "give spares", "request_id": "m1"},
+    "confirm": {"code": ["node/server.js:13202-13204", "node/server.js:13213", "node/server.js:13223-13228", "node/server.js:13281-13285"], "note": "The handler reads `command`, `request_id`, `pass` and `code`"}
+  },
+  "responses": [
+    {
+      "name": "Mainframe answer",
+      "event": "chat_log",
+      "when": "A mainframe command ran. It goes to every client whose view holds (0, -100) on `cyberland`, so you get it only when you are near that point.",
+      "fields": [
+        {"name": "owner", "type": "\"mainframe\"", "optional": false, "description": "The speaker."},
+        {"name": "message", "type": "string", "optional": false, "description": "The answer: see the commands in the Notes."},
+        {"name": "id", "type": "\"mainframe\"", "optional": false, "description": "The speaker id."}
+      ],
+      "example": {"owner": "mainframe", "message": "here you go", "id": "mainframe"},
+      "source": "node/server.js:13205-13212",
+      "confirm": {"code": ["node/server.js:13205-13212", "node/server_functions.js:3744-3779", "node/server.js:13223-13280"], "note": "Every answer is a literal in the handler"}
+    },
+    {
+      "name": "Result",
+      "event": "game_response",
+      "code": "data",
+      "when": "A mainframe command ran. Sent after `chat_log`, only when the request has `request_id`.",
+      "with_request_id": {
+        "extends": "GameResponseSuccess",
+        "fields": [
+          {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+          {"name": "place", "type": "\"mainframe\"", "optional": false, "description": "Not `\"eval\"`."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`."},
+          {"name": "command", "type": "string", "optional": false, "description": "Your `command`."},
+          {"name": "authorized", "type": "boolean", "optional": false, "description": "`false` only for an unknown command (the `UNAUTHORIZED` answers)."},
+          {"name": "reply", "type": "string", "optional": false, "description": "The answer, the same as `message` of the `chat_log`."}
+        ],
+        "example": {"request_id": "m1", "command": "give spares", "authorized": true, "reply": "here you go", "success": true, "response": "data", "place": "mainframe"}
+      },
+      "without_request_id": {"none": true},
+      "source": "node/server.js:13204, 13281",
+      "confirm": {"code": ["node/server.js:13204", "node/server.js:13206", "node/server.js:13268", "node/server.js:13281", "node/server_functions.js:3421-3446"]}
+    },
+    {"name": "Admin code", "kind": "none", "when": "`pass` equals `keys.ACCESS_MASTER`: the server runs `code` with `eval` and sends nothing back.", "source": "node/server.js:13283-13285", "confirm": {"code": ["node/server.js:13283-13285"]}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "mainframe",
+    "intro": "Rows 1 to 3 apply only when `command` is truthy. A failure ends the handler, so `code` does not run either.",
+    "rows": [
+      {
+        "when": "No character.",
+        "with_request_id": {
+          "code": "invalid",
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "m1"},
+            {"name": "command", "type": "string", "optional": false, "description": "Your `command`.", "example": "give spares"},
+            {"name": "authorized", "type": "true", "optional": false, "description": "Always `true` here."}
+          ]
+        },
+        "without_request_id": {"none": true},
+        "source": "node/server.js:13213-13215",
+        "confirm": {"code": ["node/server.js:13204", "node/server.js:13213-13216", "node/server_functions.js:3393-3419"], "note": "Without `request_id` the handler returns and sends nothing; live, a socket with no character got no reply"}
+      },
+      {
+        "when": "You are not on `cyberland`, or you are dead.",
+        "with_request_id": {
+          "code": "not_connected",
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "m1"},
+            {"name": "command", "type": "string", "optional": false, "description": "Your `command`.", "example": "give spares"},
+            {"name": "authorized", "type": "true", "optional": false, "description": "Always `true` here."}
+          ]
+        },
+        "without_request_id": {
+          "event": "game_log",
+          "example": {"message": "Not connected to the mainframe", "phrase": "server.game_log.not_connected_to_the_mainframe", "phrase_args": {}}
+        },
+        "source": "node/server.js:13217-13222",
+        "confirm": {"code": ["node/server.js:13204", "node/server.js:13217-13223", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:246"]}
+      },
+      {
+        "when": "`command` is truthy but not a string, and not loosely equal (`==`) to `\"hello\"` or `\"give\"`. `.startsWith` throws.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "the wrapper error, +16 call cost"}
+        ],
+        "source": "node/server.js:13228",
+        "confirm": {"code": ["node/server.js:13224-13228", "node/server.js:4947-4966"]}
+      },
+      {"when": "Admin part: `pass` is wrong or absent. The server does not run `code`. This is the usual end of a mainframe request.", "replies": [], "source": "node/server.js:13283-13285", "confirm": {"code": ["node/server.js:13283-13285"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "drop",
+      "to": "you",
+      "when": "`\"give spares\"` with items in `S.misc.spares`: after the `chat_log`, `drop_one_thing` makes a `chest1` with the spares at (1, -88) on `cyberland`. Then the list is empty.",
+      "fields": [
+        {"name": "x", "type": "number", "optional": false, "description": "1."},
+        {"name": "y", "type": "number", "optional": false, "description": "-88."},
+        {"name": "items", "type": "integer", "optional": false, "description": "How many item stacks the chest holds (`drop.items.length`). The spares are `electronics` and `networkcard`, which stack, so it is 1 or 2."},
+        {"name": "chest", "type": "\"chest1\"", "optional": false, "description": "The chest skin."},
+        {"name": "id", "type": "string", "optional": false, "description": "The chest id, 30 random characters. Send it with `open_chest`."},
+        {"name": "map", "type": "MapName", "optional": false, "description": "`\"cyberland\"`."},
+        {"name": "owners", "type": "string[]", "optional": false, "description": "`[your owner id]`."}
+      ],
+      "example": {"x": 1, "y": -88, "items": 2, "chest": "chest1", "id": "Qx81mZkLr0aT5vB2nC7dE9fG4hJ6kL", "map": "cyberland", "owners": ["5818821692620800"]},
+      "source": "node/server.js:13259-13263, 2238-2274",
+      "confirm": {"code": ["node/server.js:13259-13263", "node/server.js:2238-2274", "node/server.js:2199-2236", "node/server_functions.js:2889-2895"], "live_needed": "The spares list is live state (`S.misc.spares`, which the cyberland timer grows at random every 10 s or so, node/server_functions.js:2866-2895): whether it holds anything, and so whether `drop` comes, depends on the server."}
+    }
+  ],
+  "order": [
+    "`chat_log` from `\"mainframe\"` to clients near (0, -100) on `cyberland`",
+    "`\"give spares\"` with spares only: `drop` to you",
+    "with `request_id`: `game_response` `{response: \"data\", place: \"mainframe\", ...}` to you"
+  ]
+}

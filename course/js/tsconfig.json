@@ -1,0 +1,16 @@
+// tsconfig.json: TypeScript does not build anything here. It only reads the
+// JSDoc comments of the .js files and checks the types: npx tsc -p .
+{
+  "compilerOptions": {
+    "allowJs": true,      // read .js files
+    "checkJs": true,      // and report type errors in them
+    "noEmit": true,       // write no output: Node.js runs the .js files as they are
+    "target": "es2022",
+    "lib": ["es2022"],
+    "module": "nodenext", // ES modules, as in package.json "type": "module"
+    "moduleResolution": "nodenext",
+    "types": ["node"],    // fetch, WebSocket, process: from @types/node
+    "skipLibCheck": true
+  },
+  "include": ["*.js", "albot/*.js"]
+}

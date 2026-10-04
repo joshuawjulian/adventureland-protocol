@@ -1,0 +1,142 @@
+{
+  "event": "exchange",
+  "source": "node/server.js:6617-6681",
+  "request": {
+    "fields": [
+      {"name": "item_num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"4\"` also works. Any other value reads an empty slot", "description": "The slot of an item that you can exchange (`G.items[name].e`)."}
+    ],
+    "others": "ignored",
+    "example": {"item_num": 4},
+    "confirm": {"code": ["node/server.js:6629", "node/server.js:6656"], "note": "The handler reads only `item_num`"}
+  },
+  "responses": [
+    {
+      "name": "Started",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. The server removes `G.items[name].e` units of the item, puts a placeholder in the first empty slot and starts the timer.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"exchange\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the result comes when the timer ends."},
+        {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot of the placeholder `{name: \"placeholder\"}`. This placeholder has no `p`."}
+      ],
+      "example": {"success": false, "in_progress": true, "num": 6, "response": "data", "place": "exchange"},
+      "source": "node/server.js:6680",
+      "confirm": {"code": ["node/server.js:6657", "node/server.js:6669", "node/server.js:6680", "node/server_functions.js:3421-3446"]}
+    },
+    {
+      "name": "Log",
+      "event": "game_log",
+      "when": "The timer ends. One line for each result of the roll: an item (`server.item.received`, or `fished`, `mined`, `glitched`), gold (`server.game_log.received_gold`), shells (`server.shells.received`), or nothing (`server.game_log.didn_t_receive_anything`). A cosmetic sends no line.",
+      "type": "LocalizedText",
+      "example": {"color": "#85C76B", "message": "Received a Candy Cane", "phrase": "server.item.received.a", "phrase_args": {"item": "Candy Cane", "quantity": 1}},
+      "source": "node/server_functions.js:4065-4071, 4085-4086, 4133-4140, 4142-4143; node/server.js:4766-4769",
+      "confirm": {"code": ["node/server.js:14819", "node/server_functions.js:4063-4072", "node/server_functions.js:4083-4086", "node/server_functions.js:4129-4138", "node/server_functions.js:4142-4144", "node/server.js:4764-4769", "languages/index.js:256-258"]}
+    },
+    {
+      "name": "Cosmetic",
+      "event": "game_response",
+      "code": "cx_new",
+      "when": "The timer ends and the roll gives a cosmetic (`cx`) or a cosmetic bundle (`cxbundle`).",
+      "fields": [
+        {"name": "response", "type": "\"cx_new\"", "optional": false, "description": "The code."},
+        {"name": "acx", "type": "Record<string, integer>", "optional": false, "description": "All your cosmetics now: name to count (`player.p.acx`)."},
+        {"name": "name", "type": "string", "optional": false, "description": "The cosmetic or the bundle that you got."},
+        {"name": "from", "type": "string", "optional": false, "description": "The drop table, for example `\"cosmo0\"`."},
+        {"name": "bundle", "type": "boolean", "optional": false, "description": "`true` for a bundle."}
+      ],
+      "example": {"response": "cx_new", "acx": {"hat221": 1}, "name": "hat221", "from": "cosmo0", "bundle": false},
+      "source": "node/server_functions.js:4087-4095",
+      "confirm": {"code": ["node/server_functions.js:4087-4095"]}
+    },
+    {
+      "name": "Quest done",
+      "event": "game_response",
+      "code": "seashell_success",
+      "code_type": "string",
+      "when": "The timer ends, after the results, when the item has a `quest` (for example `seashell`, `leather`, `gemfragment`, `lostearring`, or `cx` for `cosmo*`).",
+      "fields": [
+        {"name": "response", "type": "string", "optional": false, "description": "`G.items[name].quest` plus `\"_success\"`, for example `\"seashell_success\"`."},
+        {"name": "suffix", "type": "integer | \"\"", "optional": false, "description": "The level of an upgrade or compound item (for example `lostearring`), else `\"\"`. A level of 0 also gives `\"\"`: the server stores the level only when it is truthy (node/server.js:6670-6672) and sends `ref.s || \"\"`."}
+      ],
+      "example": {"response": "seashell_success", "suffix": ""},
+      "source": "node/server.js:14820-14821",
+      "confirm": {"code": ["node/server.js:6676-6678", "node/server.js:6670-6672", "node/server.js:14820-14821"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "exchange",
+    "rows": [
+      {"when": "No character.", "code": "invalid", "source": "node/server.js:6619-6621", "confirm": {"code": ["node/server.js:6619-6621", "node/server_functions.js:3393-3419"]}},
+      {"when": "An exchange runs already (`q.exchange`).", "code": "exchange_existing", "source": "node/server.js:6622-6624", "confirm": {"code": ["node/server.js:6622-6624", "node/server_functions.js:3393-3419"]}},
+      {"when": "The character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:6625-6627", "confirm": {"code": ["node/server.js:6625-6627", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot `item_num` is empty.", "code": "invalid", "source": "node/server.js:6629-6632", "confirm": {"code": ["node/server.js:6629-6632", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the lock `l`.", "code": "item_locked", "source": "node/server.js:6633-6635", "confirm": {"code": ["node/server.js:6633-6635", "node/server_functions.js:3393-3419"]}},
+      {"when": "No empty inventory slot (`esize <= 0`), and the item is a stack with `q` above 1.", "code": "inventory_full", "source": "node/server.js:6636-6639", "confirm": {"code": ["node/server.js:6636-6639", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has no `e`, or there is no drop table `D.drops[id]`. `id` is the item name, plus the level for an upgrade or compound item (for example `lostearring2`).", "code": "invalid", "source": "node/server.js:6640-6645", "confirm": {"code": ["node/server.js:6640-6645", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are more than `B.sell_dist` (400 px) from the NPC: the quest NPC of the item (`G.quests[quest]`), else the exchange NPC on `main`. A character with a `computer` passes this check.", "code": "distance", "source": "node/server.js:6646-6651", "confirm": {"code": ["node/server.js:6646-6651", "js/old_common_functions.js:252-253", "node/server.js:220", "node/server_functions.js:3393-3419"]}},
+      {"when": "`e` is above 1, and the stack has fewer than `e` units.", "code": "exchange_notenough", "source": "node/server.js:6652-6654", "confirm": {"code": ["node/server.js:6652-6654", "node/server_functions.js:3393-3419"], "note": "`item.q < def.e` is false when the item has no `q`"}}
+    ]
+  },
+  "also": [
+    {"name": "Placeholder", "event": "player", "to": "you", "when": "Success, before the `game_response`.", "summary": "Your state with `reopen: true`. The slot `num` holds `{name: \"placeholder\"}`, and `q.exchange` is an `QDataExchange`.", "source": "node/server.js:6679", "confirm": {"code": ["node/server.js:6657", "node/server.js:6669-6679", "node/server.js:4550-4594"]}},
+    {
+      "name": "Gold",
+      "event": "server_message",
+      "to": "everyone",
+      "when": "The timer ends and the roll gives more than 3,000,000 gold, unless you are `stealth`.",
+      "type": "LocalizedText",
+      "example": {
+        "color": "gold",
+        "message": "Wizard received 5,000,000 gold",
+        "phrase": "server.server_message.received_gold",
+        "phrase_args": {"player": "Wizard", "amount": "5,000,000"}
+      },
+      "source": "node/server_functions.js:4072-4082",
+      "confirm": {"code": ["node/server_functions.js:4073-4082", "languages/index.js:256-258", "node/server_functions.js:3495-3496"]}
+    },
+    {
+      "name": "Item",
+      "event": "server_message",
+      "to": "everyone",
+      "when": "The timer ends and the roll gives a rare item, or the item got `p: \"shiny\"` (the exchange rolls for shiny: 1/500 for an upgrade item, 1/20,000 for a compound item).",
+      "type": "ItemAnnouncement",
+      "example": {
+        "message": "Wizard received a Shiny Candy Cane",
+        "phrase": "server.item.named_received.a",
+        "phrase_args": {"player": "Wizard", "item": "Shiny Candy Cane", "quantity": 1},
+        "color": "#85C76B",
+        "type": "server_received",
+        "item": {"name": "candycanesword", "level": 0, "p": "shiny"},
+        "name": "Wizard"
+      },
+      "source": "node/server_functions.js:4129; node/server.js:2029-2036, 2098-2128",
+      "confirm": {"code": ["node/server_functions.js:4107-4129", "node/server.js:2029-2036", "node/server.js:2098-2128", "node/server_functions.js:4576-4589", "node/server_functions.js:3495-3496"]}
+    },
+    {"event": "disappearing_text", "to": "nearby", "when": "The timer ends and the roll gives shells. Not on `hardcore` or `test` servers.", "summary": "`{message: \"+<amount>\", x, y, id, args: {c, s: \"cash\", sz: \"huge\"}}` over your character.", "source": "node/server.js:4770-4775", "confirm": {"code": ["node/server_functions.js:4083-4084", "node/server.js:4760-4775", "node/server_functions.js:3956-3996"]}},
+    {
+      "event": "upgrade",
+      "to": "nearby",
+      "when": "The timer ends, for an item without a `quest`. Every client whose view holds the exchange NPC on `main`.",
+      "fields": [
+        {"name": "type", "type": "\"exchange\"", "optional": false, "description": "The kind of result."},
+        {"name": "success", "type": "1", "optional": false, "description": "Always 1."}
+      ],
+      "example": {"type": "exchange", "success": 1},
+      "source": "node/server.js:14823",
+      "confirm": {"code": ["node/server.js:14822-14824", "js/old_common_functions.js:252", "node/server_functions.js:3744-3791"]}
+    },
+    {"name": "Done", "event": "player", "to": "you", "when": "The timer ends, last. The placeholder slot is empty again (or holds a result item), and `q.exchange` is gone.", "summary": "Your state with `reopen: true`.", "source": "node/server.js:14825", "confirm": {"code": ["node/server.js:14813-14819", "node/server.js:14825", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "now: `player` (placeholder in a slot, `q.exchange` set) to you",
+    "now: `game_response` `data` with `in_progress: true` to you",
+    "at the end, for each result of the roll: `server_message` to everyone (rare item or more than 3,000,000 gold), `game_log` to you, `cx_new` to you for a cosmetic. A drop table can roll another table (`open`), and its `_bonus` table can add more results",
+    "then `game_response` `<quest>_success` to you (quest items), or `upgrade` to clients near the exchange NPC",
+    "then `player` to you"
+  ]
+}

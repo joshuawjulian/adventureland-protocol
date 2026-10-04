@@ -1,0 +1,15 @@
+{
+  "event": "server_info",
+  "to": "everyone: every socket on the game server, on both socket endpoints (`broadcast`)",
+  "payload": {"type": "ServerInfoState", "confirm": {"code": ["node/server_functions.js:3028-3032", "node/server_functions.js:3495-3496", "node/server.js:16509-16517", "node/server_functions.js:3014-3022", "node/server_functions.js:2359-2370", "node/server_functions.js:2651-2671", "node/server_functions.js:3005-3006", "node/server.js:2940-2945", "node/server.js:12286-12287"], "note": "Every sender is `broadcast_e()`, which sends the object `E` itself. The keys are confirmed with the type `ServerInfoState`."}},
+  "example": {"schedule": {"time_offset": 1, "dailies": [13, 20], "nightlies": [23], "night": false}, "franky": {"live": true, "map": "level2w", "hp": 98000000, "max_hp": 120000000, "target": "Wizard", "x": -232.5, "y": 410, "end": "2026-10-04T23:30:00.000Z"}, "halloween": true, "mrpumpkin": {"live": false, "spawn": "2026-10-04T22:41:07.000Z"}, "duels": {}},
+  "senders": [
+    {"what": "`broadcast_e()`: `event_loop`, a timer every 24 s, seasonal boss timers, the anniversary, A/B Testing kills and duels. The full list is in [S](#s-what-s-is).", "source": "node/server_functions.js:3028-3032"},
+    {"what": "The 24 s timer while `server.live`.", "source": "node/server.js:16509-16517"},
+    {"what": "`event_loop`: at the end of a tick with a change, a truthy `target` or a duel.", "source": "node/server_functions.js:3014-3022"},
+    {"what": "`anniversary_tick` (start of `event_loop`): when the `anniversary` entry changed.", "source": "node/server_functions.js:2359-2370"},
+    {"what": "`event_loop`: a seasonal boss gets its waiting form or spawns.", "source": "node/server_functions.js:2651-2671"},
+    {"what": "An A/B Testing kill (score change).", "source": "node/server.js:2940-2945"},
+    {"what": "A duel is accepted, or a duel ends.", "source": "node/server.js:12286-12287, node/server_functions.js:3005-3006"}
+  ]
+}

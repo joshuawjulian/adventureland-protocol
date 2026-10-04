@@ -1,0 +1,8 @@
+{
+  "event": "requested_ack",
+  "source": "node/server.js:13040-13043",
+  "request": {"type": "any", "note": "Any payload. The server writes `\"requested_ack\" + JSON.stringify(data)` to its log and reads no field. The official client sends `{}`, only in reply to a `requesting_ack` event (js/game.js:1878-1880). The live server never sends `requesting_ack` (only a comment names it, node/server.js:13041), so in practice the official client never sends `requested_ack`.", "example": {}, "confirm": {"code": ["node/server.js:13040-13043"], "note": "The handler only logs `JSON.stringify(data)`"}},
+  "responses": [
+    {"name": "Nothing", "kind": "none", "when": "Every call. The server only writes the payload to its log.", "source": "node/server.js:13042", "confirm": {"code": ["node/server.js:13040-13043"]}}
+  ]
+}

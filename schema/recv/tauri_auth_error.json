@@ -1,0 +1,19 @@
+{
+  "event": "tauri_auth_error",
+  "to": "the socket that sent `auth` only",
+  "payload": {
+    "fields": [
+      {"name": "reason", "type": "\"steam_auth_failed\" | \"steam_link_failed\"", "optional": false, "description": "`\"steam_auth_failed\"`: Steam did not accept the ticket, or the check had an error. `\"steam_link_failed\"`: the server could not save the Steam id to the account and the character."},
+      {"name": "stage", "type": "\"verify_ticket\" | \"persist_saved_id\" | \"persist_verified_ticket\"", "optional": false, "description": "The step that failed. `steam_auth_failed` always has `\"verify_ticket\"`. `steam_link_failed` has `\"persist_saved_id\"` (a Steam id that the account had) or `\"persist_verified_ticket\"` (a new Steam id from the ticket)."},
+      {"name": "ticket_received", "type": "boolean", "optional": false, "description": "`true` when `auth` had a `ticket`."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:922-964", "node/server.js:11844-11855"]}
+  },
+  "example": {"reason": "steam_link_failed", "stage": "persist_verified_ticket", "ticket_received": true},
+  "senders": [
+    {"what": "`verify_tauri_steam_auth`: the save of a known Steam id fails.", "source": "node/server_functions.js:925-933"},
+    {"what": "`verify_tauri_steam_auth`: Steam does not accept the ticket.", "source": "node/server_functions.js:944-953"},
+    {"what": "`verify_tauri_steam_auth`: the save of a new Steam id fails.", "source": "node/server_functions.js:955-963"},
+    {"what": "The `auth` handler: `verify_tauri_steam_auth` throws an error.", "source": "node/server.js:11844-11855"}
+  ]
+}

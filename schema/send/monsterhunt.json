@@ -1,0 +1,73 @@
+{
+  "event": "monsterhunt",
+  "source": "node/server.js:5395-5436",
+  "request": {"fields": [], "note": "No payload. The handler does not read `data`.", "confirm": {"code": ["node/server.js:5395-5436"], "note": "The handler never reads `data`"}},
+  "responses": [
+    {
+      "name": "Token",
+      "event": "game_response",
+      "code": "add_item",
+      "when": "Turn-in: you have a `monsterhunt` condition with `c` at 0. The server removes the condition, adds the token, and sends this first.",
+      "fields": [
+        {"name": "response", "type": "\"add_item\"", "optional": false, "description": "The code. The object has no `place`."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The new item: `monstertoken`, quantity 1 (100 on a `hardcore` server)."}
+      ],
+      "example": {"response": "add_item", "item": {"name": "monstertoken", "q": 1}},
+      "source": "node/server.js:5415, 2129-2131", "confirm": {"code": ["node/server.js:5411-5415", "node/server.js:2023-2025", "node/server.js:2129-2131"]}
+    },
+    {
+      "name": "Completed",
+      "event": "game_response",
+      "code": "data",
+      "when": "Turn-in, after `add_item` and a `player` update with `reopen`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"monsterhunt\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "completed", "type": "true", "optional": false, "description": "The hunt is complete."}
+      ],
+      "example": {"completed": true, "success": true, "response": "data", "place": "monsterhunt"},
+      "source": "node/server.js:5417", "confirm": {"code": ["node/server.js:5417", "node/server_functions.js:3421-3446"]}
+    },
+    {"name": "Started notice", "event": "game_response", "code": "monsterhunt_started", "via": "a hitchhiker in `player`", "when": "Start: you have no `monsterhunt` condition. The `player` update carries it.", "type": "\"monsterhunt_started\"", "example": "monsterhunt_started", "source": "node/server.js:5433-5434", "confirm": {"code": ["node/server.js:5433-5434", "node/server.js:4579-4582"]}},
+    {
+      "name": "Started",
+      "event": "game_response",
+      "code": "data",
+      "when": "Start, after the `player` update. Your `s.monsterhunt` is now `{sn, id, c, ms, dl}`: the server (`\"<region> <name>\"`), the monster type, the kills that remain, 1,800,000 ms, and `dl: true`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"monsterhunt\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "started", "type": "true", "optional": false, "description": "A new hunt started."}
+      ],
+      "example": {"started": true, "success": true, "response": "data", "place": "monsterhunt"},
+      "source": "node/server.js:5430, 5435", "confirm": {"code": ["node/server.js:5430", "node/server.js:5435", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5397-5399", "confirm": {"code": ["node/server.js:5396-5399"]}},
+      {"when": "You are not on `main`, or you are farther than `B.sell_dist` from the Monster Hunter NPC. `B.sell_dist` is 400 px, and 10,000,999 px on the `HARDCORE` and `TEST` servers.", "code": "distance", "source": "node/server.js:5400-5402", "confirm": {"code": ["node/server.js:5400-5402", "node/server.js:220", "node/server.js:377", "node/server.js:390", "js/old_common_functions.js:1197-1202", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your `monsterhunt` condition has kills that remain (`c` is not 0).", "code": "monsterhunt_already", "source": "node/server.js:5409-5410", "confirm": {"code": ["node/server.js:5409-5410", "node/server_functions.js:3393-3419"]}},
+      {"when": "A merchant starts a hunt. A merchant can turn in a hunt: that check comes first.", "code": "monsterhunt_merchant", "form": "bare", "source": "node/server.js:5419-5421", "confirm": {"code": ["node/server.js:5419-5421"]}}
+    ]
+  },
+  "also": [
+    {"event": "player", "to": "you", "when": "Turn-in: with `reopen`, between `add_item` and `completed`. Start: with the hitchhiker `[\"game_response\", \"monsterhunt_started\"]`, before `started`.", "summary": "Your character: without the `monsterhunt` condition and with the token (turn-in), or with the new `s.monsterhunt` (start).", "source": "node/server.js:5416, 5434", "confirm": {"code": ["node/server.js:5416", "node/server.js:5434", "node/server.js:4550-4594"]}}
+  ],
+  "order": {
+    "Turn-in": [
+      "`game_response` `add_item` to you",
+      "`player` with `reopen` to you",
+      "`game_response` `data` with `completed: true` to you"
+    ],
+    "Start": [
+      "`player` with the hitchhiker `monsterhunt_started` to you",
+      "`game_response` `data` with `started: true` to you"
+    ]
+  }
+}

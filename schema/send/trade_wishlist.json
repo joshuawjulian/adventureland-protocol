@@ -1,0 +1,40 @@
+{
+  "event": "trade_wishlist",
+  "source": "node/server.js:8790-8821",
+  "request": {
+    "fields": [
+      {"name": "slot", "type": "string", "optional": false, "description": "One of your open trade slots (see `get_trade_slots`): `\"trade1\"` to `\"trade30\"`."},
+      {"name": "name", "type": "ItemName", "optional": false, "description": "The item that you want to buy. Not `\"placeholder\"`."},
+      {"name": "q", "type": "integer", "optional": true, "default": 1, "coerce": "`min(9999, max(1, parseInt(q || 1) || 1))`", "description": "The quantity, 1 to 9,999. For an upgrade or compound item, at most 99."},
+      {"name": "price", "type": "integer", "optional": true, "default": 1, "coerce": "`round(min(99999999999, max(parseInt(price) || 1, 1)))`", "description": "The gold for each unit, 1 to 99,999,999,999."},
+      {"name": "level", "type": "integer", "optional": true, "default": 0, "coerce": "`round(min(12, max(parseInt(level) || 0, 0)))`", "description": "Upgrade or compound items only: the level, 0 to 12."}
+    ],
+    "others": "ignored",
+    "example": {"slot": "trade2", "name": "wbook0", "q": 1, "price": 2000000},
+    "confirm": {"code": ["node/server.js:8795-8796", "node/server.js:8805-8816"], "note": "The handler reads `slot`, `name`, `q`, `price` and `level`"}
+  },
+  "responses": [
+    {"name": "Success", "event": "game_response", "code": "data", "when": "All checks pass. The slot gets the wishlist entry `{name, rid, price, b: true, q, level?}`. `rid` is 4 random characters. The entry replaces an older wishlist entry in the slot.", "extends": "GameResponseSuccess", "fields": [{"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."}, {"name": "place", "type": "\"trade_wishlist\"", "optional": false, "description": "The request."}, {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}], "example": {"success": true, "response": "data", "place": "trade_wishlist"}, "source": "node/server.js:8820", "confirm": {"code": ["node/server.js:8805-8817", "node/server.js:8820", "node/server_functions.js:3421-3446"]}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "trade_wishlist",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:8792-8794", "confirm": {"code": ["node/server.js:8792-8794"]}},
+      {"when": "`slot` is not one of `trade1` to `trade48`, `name` is not a key of `G.items`, or `name` is `\"placeholder\"`.", "code": "invalid", "source": "node/server.js:8796-8798", "confirm": {"code": ["node/server.js:8796-8798", "js/old_common_functions.js:52-53", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot holds a listing (an item without the flag `b`). The code has this spelling.", "code": "slot_occuppied", "source": "node/server.js:8799-8801", "confirm": {"code": ["node/server.js:8799-8801", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot is not open for you: with a stand, `trade1` to `trade16` (24 for a merchant at level 70 or with a `cstand`, 30 for a merchant at level 80); without a stand but with `p.trades`, `trade1` to `trade4`; else none.", "code": "invalid", "source": "node/server.js:8802-8804; node/server_functions.js:4282-4299", "confirm": {"code": ["node/server.js:8802-8804", "node/server_functions.js:4282-4298", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true` and the wishlist entry in `slots`, with `price`, `rid` and `b`.",
+      "source": "node/server.js:8819",
+      "confirm": {"code": ["node/server.js:8817-8819", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": ["`player` to you", "`game_response` `data` to you"]
+}

@@ -1,0 +1,73 @@
+{
+  "event": "friend",
+  "to": "`request`: the asked character only. `new` and `lost`: each online character of both accounts",
+  "payload": {"type": "FriendRequest | FriendNew | FriendLost", "confirm": {"code": ["node/server.js:12042", "node/server.js:770-801"]}},
+  "example": {"event": "request", "name": "Wizard"},
+  "variants": [
+    {
+      "name": "Request",
+      "type": "FriendRequest",
+      "when": "Another character sent `friend` with `event: \"request\"` and your name.",
+      "example": {"event": "request", "name": "Wizard"},
+      "source": "node/server.js:12042",
+      "confirm": {"code": ["node/server.js:12033-12043"]}
+    },
+    {
+      "name": "New friend",
+      "type": "FriendNew",
+      "when": "A character accepted a friend request (`friend` with `event: \"accept\"`). Each online character of both accounts gets it, with the list of its own account.",
+      "example": {"event": "new", "name": "brightwing", "friends": ["US_k2Wq9xY3vB7nR5tL0pM4aZ8cD1eFq"]},
+      "source": "node/server.js:770-785",
+      "confirm": {"code": ["node/server.js:770-785", "adventure_functions.js:1520-1532", "node/server.js:12108-12109"], "note": "`name` is `R.e2.name` / `R.e1.name`: the account name of the other side"}
+    },
+    {
+      "name": "Lost friend",
+      "type": "FriendLost",
+      "when": "A character of one of the two accounts sent `friend` with `event: \"unfriend\"`. Each online character of both accounts gets it.",
+      "example": {"event": "lost", "friends": []},
+      "source": "node/server.js:787-801",
+      "confirm": {"code": ["node/server.js:787-801", "adventure_functions.js:1520-1532", "node/server.js:12180-12181"]}
+    }
+  ],
+  "types": {
+    "FriendRequest": {
+      "summary": "A friend request from another character.",
+      "fields": [
+        {"name": "event", "type": "\"request\"", "optional": false, "description": "The kind of `friend` event."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that asks. To accept, send `friend` with `event: \"accept\"` and this name."}
+      ],
+      "confirm": {"code": ["node/server.js:12042"]}
+    },
+    "FriendNew": {
+      "summary": "Your account has a new friend.",
+      "fields": [
+        {"name": "event", "type": "\"new\"", "optional": false, "description": "The kind of `friend` event."},
+        {"name": "name", "type": "string", "optional": false, "description": "The account name (`user.name`) of the new friend, not a character name (node/server.js:12108-12109)."},
+        {"name": "friends", "type": "string[]", "optional": false, "description": "The new friend list of your account: account ids (`owner` values). Replace your old list."}
+      ],
+      "confirm": {"code": ["node/server.js:776-781", "adventure_functions.js:1520-1532"]}
+    },
+    "FriendLost": {
+      "summary": "Your account lost a friend.",
+      "fields": [
+        {"name": "event", "type": "\"lost\"", "optional": false, "description": "The kind of `friend` event."},
+        {
+          "name": "friends",
+          "type": "string[]",
+          "optional": false,
+          "description": "The new friend list of your account: account ids (`owner` values). Replace your old list. The server does not say which friend left."
+        }
+      ],
+      "confirm": {"code": ["node/server.js:793-797"]}
+    }
+  },
+  "senders": [
+    {"what": "The `friend` handler, `event: \"request\"`.", "source": "node/server.js:12033-12044"},
+    {"what": "The `/new_friend` route of the game server. The web server calls it from `update_characters` after `friend` `accept` (node/server.js:12108-12109).", "source": "node/server.js:770-785"},
+    {
+      "what": "The `/lost_friend` route of the game server. The web server calls it from `update_characters` after `friend` `unfriend` (node/server.js:12180-12181).",
+      "source": "node/server.js:787-801"
+    },
+    {"what": "`update_characters`: one HTTP call for each online character of the account, to the server of that character.", "source": "adventure_functions.js:1498-1537"}
+  ]
+}

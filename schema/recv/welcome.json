@@ -1,0 +1,36 @@
+{
+  "event": "welcome",
+  "to": "the new socket only",
+  "payload": {
+    "fields": [
+      {"name": "region", "type": "string", "optional": false, "description": "The region of the server, for example `\"EU\"`, `\"US\"` or `\"ASIA\"`."},
+      {"name": "name", "type": "string", "optional": false, "description": "The name of the server in its region, for example `\"I\"`, `\"II\"` or `\"PVP\"`."},
+      {"name": "pvp", "type": "boolean", "optional": false, "description": "`true` on a PvP server (`is_pvp`): a name that starts with `PVP` or `HARDCORE`, and the `TEST` and `DUNGEON` servers (node/server.js:367-418)."},
+      {"name": "gameplay", "type": "\"normal\" | \"hardcore\" | \"test\" | \"dungeon\"", "optional": false, "description": "The game mode of the server. The server name selects it (node/server.js:367-410)."},
+      {"name": "info", "type": "EmptyObject", "optional": false, "description": "`instance.info` of the first map. In practice it is always `{}`: the code reads `socket.first_map` before it sets it (node/server.js:4982-4985). The `start` entry lists the forms of `instance.info`."},
+      {"name": "version", "type": "integer", "optional": false, "description": "`G.version`, the version of the game data, for example `17478`."},
+      {"name": "x", "type": "number", "optional": false, "description": "The start position of the camera: the observer point of the server, or the position of the matched character."},
+      {"name": "y", "type": "number", "optional": false, "description": "The start position of the camera. The server adds 120 to the observer point. For a matched character it adds 120 only when the query has `desktop` (node/server.js:4987, 5003-5006)."},
+      {"name": "map", "type": "MapName", "optional": false, "description": "The start map of the camera: the map of the matched character, or the observer map of the server."},
+      {"name": "in", "type": "InstanceName", "optional": false, "description": "The start instance of the camera."},
+      {"name": "S", "type": "ServerInfoState", "optional": false, "description": "The server event state `E`, the same object as the `server_info` payload. The page \"Server events\" lists its keys."},
+      {"name": "character", "type": "WelcomeCharacter", "optional": true, "description": "Only when the `secret` query parameter matches the secret of a character on this server. A character in a generated map matches only with `map_protocol=1`."}
+    ],
+    "confirm": {"code": ["node/server.js:4977-5019", "node/server.js:203-210", "node/server.js:365", "node/server.js:367-410", "node/server_functions.js:3028-3032"], "note": "`broadcast_e(true)` only reads E here; it sends nothing."}
+  },
+  "types": {
+    "WelcomeCharacter": {
+      "summary": "The character that a `welcome` observer follows: `player_to_client(player)`, with `id` and `name` set to the name of the character.",
+      "extends": "Character",
+      "fields": [
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The name of the character, the same as `id` (node/server.js:4998)."}
+      ],
+      "source": "node/server.js:4990-5009",
+      "confirm": {"code": ["node/server.js:4990-5000", "node/server.js:855-1001"]}
+    }
+  },
+  "example": {"region": "EU", "name": "I", "pvp": false, "gameplay": "normal", "info": {}, "version": 17478, "x": 0, "y": 120, "map": "winterland", "in": "winterland", "S": {"schedule": {"time_offset": 0, "dailies": [13, 20], "nightlies": [23], "night": false}}},
+  "senders": [
+    {"what": "The `connection` handler of the socket. It first sends `map_chunk` events when the start map is a generated map.", "source": "node/server.js:4977-5019"}
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "event": "ureward",
+  "source": "node/server.js:5184-5230",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "\"c0\"", "optional": false, "coerce": "a key of `docs.rewards` (docs/directory.js:376-378), then compared with `!= \"c0\"`", "description": "The account reward. Only `\"c0\"` exists: the reward for the tutorial, one roll on the `cosmo0` cosmetics table."}
+    ],
+    "others": "ignored",
+    "example": {"name": "c0"}, "confirm": {"code": ["node/server.js:5186", "node/server.js:5192", "docs/directory.js:376-378"]}
+  },
+  "responses": [
+    {
+      "name": "Cosmetic",
+      "event": "game_response",
+      "code": "cx_new",
+      "when": "The claim succeeded. `exchange` rolls `cosmo0` and adds the cosmetic to your account. It comes before the `player` update.",
+      "fields": [
+        {"name": "response", "type": "\"cx_new\"", "optional": false, "description": "The code."},
+        {"name": "acx", "type": "Record<string, integer>", "optional": false, "description": "All your cosmetics with their counts (`player.p.acx`)."},
+        {"name": "name", "type": "string", "optional": false, "description": "The new cosmetic."},
+        {"name": "from", "type": "\"cosmo0\"", "optional": false, "description": "The table that gave it."},
+        {"name": "bundle", "type": "boolean", "optional": false, "description": "`true` when the roll gave a bundle (`cxbundle`) and `name` is the bundle. `cosmo0` has two: `pinkb` and `blackw` (G.drops.cosmo0)."}
+      ],
+      "example": {"response": "cx_new", "acx": {"marmor10b": 1}, "name": "marmor10b", "from": "cosmo0", "bundle": false},
+      "source": "node/server_functions.js:4087-4095", "confirm": {"code": ["node/server.js:5220", "node/server_functions.js:4029-4041", "node/server_functions.js:4096-4105", "node/server_functions.js:4087-4095"], "note": "`docs.rewards.c0` is `[[1, \"open\", \"cosmo0\"]]`, so `exchange` opens `cosmo0` and `from` is `\"cosmo0\"`"}
+    },
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "reward_received",
+      "when": "The claim succeeded, after the `player` update. The claim is asynchronous: it comes after a database transaction.",
+      "fields": [
+        {"name": "response", "type": "\"reward_received\"", "optional": false, "description": "The code. The object has no `place` and no `success`."},
+        {"name": "rewards", "type": "string[]", "optional": false, "description": "All the reward names that the account claimed."}
+      ],
+      "example": {"response": "reward_received", "rewards": ["c0"]},
+      "source": "node/server.js:5222", "confirm": {"code": ["node/server.js:5222"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "intro": "No reply has `place` or `failed`. Some are bare strings.",
+    "rows": [
+      {
+        "when": "No character, the character is in the bank (`player.user`), `name` is missing, or `docs.rewards[name]` does not exist.",
+        "replies": [],
+        "source": "node/server.js:5186-5188", "confirm": {"code": ["node/server.js:5186-5188"]}
+      },
+      {
+        "when": "Your character is not verified, or it has no `auth_id`.",
+        "code": "reward_notverified",
+        "form": "bare",
+        "source": "node/server.js:5189-5191", "confirm": {"code": ["node/server.js:5189-5191"]}
+      },
+      {
+        "when": "`name` is not `\"c0\"`, or a claim of this character runs already.",
+        "replies": [],
+        "source": "node/server.js:5192", "confirm": {"code": ["node/server.js:5192"]}
+      },
+      {
+        "when": "Transaction: the account did not finish the tutorial (no user data, or the tutorial is not complete up to its last lesson).",
+        "code": "reward_unavailable",
+        "form": "plain",
+        "extra": [
+          {"name": "reason", "type": "\"tutorial_incomplete\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:5200-5203, 5215-5220", "confirm": {"code": ["node/server.js:5199-5203", "node/server.js:5214-5219", "common:mongodb_functions.js:71-74", "common:mongodb_functions.js:91"]}
+      },
+      {
+        "when": "Transaction: the account has this reward already.",
+        "code": "reward_already",
+        "form": "bare",
+        "source": "node/server.js:5205, 5214", "confirm": {"code": ["node/server.js:5205", "node/server.js:5213", "common:mongodb_functions.js:91"]}
+      },
+      {
+        "when": "The database transaction failed for another reason.",
+        "code": "reward_unavailable",
+        "form": "plain",
+        "extra": [
+          {"name": "reason", "type": "\"exception\"", "optional": false, "description": "The reason from `tx` (common:mongodb_functions.js:95)."}
+        ],
+        "source": "node/server.js:5215-5220", "confirm": {"code": ["node/server.js:5214-5219", "common:mongodb_functions.js:88-95"], "note": "Only on a database error, which a client cannot cause"}
+      },
+      {
+        "when": "Your character left, or the socket now has another account, when the transaction ends.",
+        "code": "reward_unavailable",
+        "form": "plain",
+        "extra": [
+          {"name": "reason", "type": "\"character_gone\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:5215-5220", "confirm": {"code": ["node/server.js:5212-5219"], "note": "`current.owner != owner_id`: the socket has a character of another account now"}
+      },
+      {
+        "when": "Any other error in the claim.",
+        "code": "reward_unavailable",
+        "form": "plain",
+        "extra": [
+          {"name": "reason", "type": "\"server_error\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:5223-5225", "confirm": {"code": ["node/server.js:5223-5225"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "The claim succeeded, between `cx_new` and `reward_received`.",
+      "summary": "Your character (`u+cid`). The cosmetic is in `acx` on your account, not in your inventory.",
+      "source": "node/server.js:5221", "confirm": {"code": ["node/server.js:5221", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`game_response` `cx_new` (from the cosmetics roll) to you",
+    "`player` to you",
+    "`game_response` `reward_received` to you"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "event": "lostandfound",
+  "to": "you: only the socket that sent the request",
+  "payload": {
+    "type": "ResaleItem[]",
+    "confirm": {"code": ["node/server.js:7974-7995", "node/server.js:8326-8391", "node/server_functions.js:641-670", "node/server_functions.js:3190-3192", "node/server_functions.js:4234-4261"]}
+  },
+  "example": [{"name": "wattire", "level": 3, "rid": "kR2mV"}, {"name": "pvptoken", "q": 4, "v": "2026-10-03T21:14:08.512Z", "rid": "Xc81d"}],
+  "senders": [
+    {"what": "The `lostandfound` handler without `request_id`: the list in the order of `S.found`. With `request_id`, the list comes reversed as `items` in `game_response` `data` instead.", "source": "node/server.js:7992-7995"},
+    {"what": "The `sbuy` handler with `f` after a purchase: the new list, also with `request_id`.", "source": "node/server.js:8391"}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "event": "tauri_auth",
+  "to": "the socket that sent `auth` only",
+  "payload": {
+    "fields": [
+      {"name": "status", "type": "\"persisted_steam_id\" | \"steam_ticket_verified\"", "optional": false, "description": "`\"persisted_steam_id\"`: the account or character already had a Steam id, and the server did not check the ticket. `\"steam_ticket_verified\"`: Steam accepted the ticket."},
+      {"name": "pid", "type": "string", "optional": false, "description": "The Steam id: 16 to 20 digits as a string (node/server_functions.js:873-877; adventure_functions.js:35 for a ticket)."},
+      {"name": "ticket_received", "type": "boolean", "optional": false, "description": "`true` when `auth` had a `ticket`."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:922-971", "node/server_functions.js:873-877", "adventure_functions.js:6-38"]}
+  },
+  "example": {"status": "steam_ticket_verified", "pid": "76561198012345678", "ticket_received": true},
+  "senders": [
+    {"what": "`verify_tauri_steam_auth`, from the `auth` handler with `epl: \"tauri_steam\"`. It comes before `start`.", "source": "node/server_functions.js:922-971"}
+  ]
+}

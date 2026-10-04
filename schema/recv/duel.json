@@ -1,0 +1,13 @@
+{
+  "event": "duel",
+  "to": "the challenged character only",
+  "payload": {
+    "fields": [
+      {"name": "event", "type": "\"chellenge\"", "optional": false, "description": "Always `\"chellenge\"`. The server spells it this way."},
+      {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that sent the challenge."}
+    ],
+    "confirm": {"code": ["node/server.js:12204-12212"]}
+  },
+  "example": {"event": "chellenge", "name": "Warrior"},
+  "senders": [{"what": "The `duel` handler with `event: \"challenge\"`, after its checks pass. A `game_response` `challenge_received` to the same character follows.", "source": "node/server.js:12212"}]
+}

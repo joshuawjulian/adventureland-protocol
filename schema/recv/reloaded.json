@@ -1,0 +1,14 @@
+{
+  "event": "reloaded",
+  "to": "every socket (`broadcast`)",
+  "payload": {
+    "fields": [
+      {"name": "change", "type": "string", "optional": false, "description": "A text from the admin that describes the change, for example `\"cx\"`. It is `\"\"` when the admin gives none."}
+    ],
+    "confirm": {"code": ["node/server.js:651", "node/server.js:732-734"], "note": "`change` is whatever the admin passes (`change || \"\"`), not checked."}
+  },
+  "example": {"change": "cx"},
+  "senders": [
+    {"what": "`reload_server(to_broadcast, change)` with a true `to_broadcast`, after it loads the design files and builds `G` and `D` again. No handler calls it: an admin runs it through `servers_eval` (design/cosmetics.js:195).", "source": "node/server.js:651-734"}
+  ]
+}

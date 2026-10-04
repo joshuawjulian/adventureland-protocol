@@ -1,0 +1,22 @@
+{
+  "event": "misc_npc",
+  "source": "node/server.js:7917-7932",
+  "request": {
+    "fields": [
+      {"name": "npc", "type": "string", "optional": false, "coerce": "none: used as an object key", "description": "The key of an NPC. The server keys NPCs in `instance.players` as `NPC_prefix` (`\"NPC0000000000000000NPC\"`, node/server_functions.js:40) plus the NPC id or name (node/server_functions.js:1263, 1949). The handler looks the id up in `players`, which holds only the characters of connected sockets, keyed by socket id (node/server.js:11890). Thus it never finds an NPC."}
+    ],
+    "others": "ignored",
+    "example": {"npc": "NPC0000000000000000NPCMarven"},
+    "confirm": {"code": ["node/server.js:7922", "node/server.js:7929", "node/server_functions.js:40", "node/server_functions.js:1263", "node/server_functions.js:1949", "node/server.js:11890"], "note": "The handler reads only `npc`"}
+  },
+  "failures": {
+    "event": "game_response",
+    "place": "misc_npc",
+    "intro": "The handler has no game effect. Its last step only writes a server log line for Marven.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:7919-7921", "confirm": {"code": ["node/server.js:7919-7921"]}},
+      {"when": "`players[npc]` is not an NPC. This is always true: `players` holds no NPC.", "replies": [], "source": "node/server.js:7922-7925", "confirm": {"code": ["node/server.js:7922-7925", "node/server.js:11890"]}},
+      {"when": "You are more than 1,000 px from the NPC. The server cannot reach this check.", "code": "distance", "form": "bare", "source": "node/server.js:7926-7928", "confirm": {"code": ["node/server.js:7926-7928"], "note": "Unreachable: the check before always returns"}}
+    ]
+  }
+}

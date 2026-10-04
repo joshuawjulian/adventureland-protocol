@@ -1,0 +1,40 @@
+{
+  "event": "blocker",
+  "source": "node/server.js:5590-5598",
+  "request": {
+    "fields": [
+      {"name": "type", "type": "\"pvp\"", "optional": false, "coerce": "compared with `== \"pvp\"`", "description": "The feature to ask about. Only `\"pvp\"` (the arena) has an effect."}
+    ],
+    "others": "ignored",
+    "example": {"type": "pvp"}, "confirm": {"code": ["node/server.js:5591"]}
+  },
+  "responses": [
+    {
+      "name": "State",
+      "event": "blocker",
+      "when": "`type` is `\"pvp\"`. Also without a character.",
+      "fields": [
+        {"name": "type", "type": "\"pvp\"", "optional": false, "description": "The feature."},
+        {"name": "allow", "type": "1", "optional": true, "description": "Present when the `arena` instance allows entry (`instances.arena.allow`). Absent when it does not."}
+      ],
+      "example": {"type": "pvp", "allow": 1},
+      "source": "node/server.js:5592-5596", "confirm": {"code": ["node/server.js:5592-5596"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "`type` is not `\"pvp\"`.", "replies": [], "source": "node/server.js:5591", "confirm": {"code": ["node/server.js:5591"]}},
+      {
+        "when": "The server has no `arena` instance: only a server whose `gameplay` is `\"normal\"` makes one (not `hardcore`, `test` or `dungeon`). Reading `instances.arena.allow` throws, and the wrapper adds 16 call-cost.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "a bare string"}
+        ],
+        "source": "node/server.js:5592, 4947-4966", "confirm": {"code": ["node/server.js:5592", "node/server.js:581-584", "node/server.js:4947-4966"]}
+      }
+    ]
+  },
+  "order": [
+    "`blocker` to you"
+  ]
+}

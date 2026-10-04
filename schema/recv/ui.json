@@ -1,0 +1,663 @@
+{
+  "event": "ui",
+  "to": "nearby in almost all cases: every client whose view holds the entity that `xy_emit` centers on (the actor, the NPC, the seller or the monster). `fishing_none` and `mining_none` go only to the socket of the character. `mheal` rides in the monster `events` of `entities`",
+  "payload": {"type": "UiNamed | UiBare | UiFromTo | UiThrow | UiFromTargets | UiBeaconOfResolve | UiArea | UiAbsorb | UiTargetId | UiGatherFail | UiGatherStart | UiGatherNone | UiMluckFind | UiNpcSell | UiNpcBuy | UiResale | UiTrade | UiSwap | UiItemSent | UiGoldSent | UiCxSent | UiResist | UiRestoreMp | UiMlevel | UiDisengage | UiMheal | UiSlots | UiWheel | UiCaveEnter", "confirm": {"code": ["node/server_functions.js:3744-3817", "node/server.js:14639-14641"], "note": "Every emit of `ui` is cited on its variant (grep of `\"ui\"` in node/ and node/logic/); `xy_emit` sends the object unchanged."}},
+  "variants": [
+    {
+      "name": "Name only",
+      "type": "UiNamed",
+      "when": "`level_up`: the character reached a new level. `dampened`: a field generator stopped a `blink` or a magiport of the character. The others: the character used that skill (`track`, `magiport` on the safe PvE path, `alchemy`, and the merchant buffs `mcourage`, `mfrenzy`, `massproduction`, `massexchange` and their `pp` forms).",
+      "reply_to": ["skill"],
+      "example": {"type": "level_up", "name": "Wizard"},
+      "source": "node/server.js:1343, 10300, 10604, 10816, 10947, 14695, 14706",
+      "confirm": {"code": ["node/server.js:1343", "node/server.js:10290-10300", "node/server.js:10604", "node/server.js:10816", "node/server.js:10947", "node/server.js:14693-14709", "node/server_functions.js:3744-3817"]}
+    },
+    {
+      "name": "Type only",
+      "type": "UiBare",
+      "when": "A priest used `darkblessing`, or a warrior used `warcry`. The payload does not tell who used it (see Notes).",
+      "reply_to": ["skill"],
+      "example": {"type": "warcry"},
+      "source": "node/server.js:10492-10506",
+      "confirm": {"code": ["node/server.js:10492-10506"]}
+    },
+    {
+      "name": "From one to one",
+      "type": "UiFromTo",
+      "when": "A character used `mluck`, `rspeed`, `reflection`, `energize`, `4fingers`, or `entangle` (also for the `tangle` skill) on a target.",
+      "reply_to": ["skill"],
+      "example": {"type": "mluck", "from": "MerchantBob", "to": "Wizard"},
+      "source": "node/server.js:10377, 10396, 10890, 10896, 10905, 10928",
+      "confirm": {"code": ["node/server.js:10370-10377", "node/server.js:10396", "node/server.js:10890", "node/server.js:10896", "node/server.js:10905", "node/server.js:10928"]}
+    },
+    {
+      "name": "Throw",
+      "type": "UiThrow",
+      "when": "A merchant used `throw`.",
+      "reply_to": ["skill"],
+      "example": {"type": "throw", "from": "MerchantBob", "to": "48213", "item": "hpot0"},
+      "source": "node/server.js:10346",
+      "confirm": {"code": ["node/server.js:10346"]}
+    },
+    {
+      "name": "Paladin support",
+      "type": "UiFromTargets",
+      "when": "A paladin used `cleansing_light` or `guardians_oath`.",
+      "reply_to": ["skill"],
+      "example": {"type": "cleansing_light", "from": "Paladin", "targets": ["Wizard"]},
+      "source": "node/server.js:10233, 10254",
+      "confirm": {"code": ["node/server.js:10233", "node/server.js:10254"]}
+    },
+    {
+      "name": "Beacon of Resolve",
+      "type": "UiBeaconOfResolve",
+      "when": "A paladin used `beacon_of_resolve` (with `from`), or a paladin cavalry NPC gave the condition (with `name`).",
+      "reply_to": ["skill"],
+      "example": {"type": "beacon_of_resolve", "from": "Paladin", "targets": ["Paladin", "Wizard", "Warrior"]},
+      "source": "node/server.js:10275; node/logic/cavalry.js:443",
+      "confirm": {"code": ["node/server.js:10260-10275", "node/server_functions.js:505-508", "node/logic/cavalry.js:434-443"]}
+    },
+    {
+      "name": "Area skill",
+      "type": "UiArea",
+      "when": "A character used `agitate`, `stomp`, `scare`, `cleave`, `shadowstrike` or `fanofknives`. A `cave_sentinel` in the Cave of Many Dreams also sends `stomp`.",
+      "reply_to": ["skill"],
+      "example": {"type": "stomp", "name": "Warrior", "ids": ["48213", "48217"]},
+      "source": "node/server.js:10564-10568, 10631, 10699, 10725, 10801; node/logic/cave_of_many_dreams.js:1482",
+      "confirm": {"code": ["node/server.js:10562-10568", "node/server.js:10607-10631", "node/server.js:10662-10699", "node/server.js:10702-10725", "node/server.js:10753-10801", "node/logic/cave_of_many_dreams.js:1475-1482"]}
+    },
+    {
+      "name": "Absorb",
+      "type": "UiAbsorb",
+      "when": "A priest used `absorb` on a character.",
+      "reply_to": ["skill"],
+      "example": {"type": "absorb", "name": "Priest", "from": "Wizard", "ids": ["48213"]},
+      "source": "node/server.js:10659",
+      "confirm": {"code": ["node/server.js:10634-10659"]}
+    },
+    {
+      "name": "Skill on a monster",
+      "type": "UiTargetId",
+      "when": "A ranger used `huntersmark`, or a character used `charm`. A failed `charm` has `fail: true`.",
+      "reply_to": ["skill"],
+      "example": {"type": "charm", "name": "Rogue", "id": "48213", "fail": true},
+      "source": "node/server.js:10739, 10745, 10750",
+      "confirm": {"code": ["node/server.js:10739", "node/server.js:10742-10751"]}
+    },
+    {
+      "name": "Fishing or mining fails",
+      "type": "UiGatherFail",
+      "when": "The `skill` request for `fishing` or `mining` found no zone of that kind next to the character, or the character moves.",
+      "reply_to": ["skill"],
+      "example": {"type": "fishing_fail", "name": "MerchantBob", "cevent": true, "reason": "location"},
+      "source": "node/server.js:10154-10160",
+      "confirm": {"code": ["node/server.js:10133-10161"], "note": "`request_id` is `data.request_id`, so JSON drops it when the request had none."}
+    },
+    {
+      "name": "Fishing or mining starts",
+      "type": "UiGatherStart",
+      "when": "The `skill` request for `fishing` or `mining` started the timer of the skill.",
+      "reply_to": ["skill"],
+      "example": {"type": "mining_start", "name": "MerchantBob", "direction": 2},
+      "source": "node/server.js:10163",
+      "confirm": {"code": ["node/server.js:10141-10152", "node/server.js:10163"]}
+    },
+    {
+      "name": "Fishing or mining finds nothing",
+      "type": "UiGatherNone",
+      "when": "The timer of `fishing` or `mining` ended and the drop gave nothing. Only the socket of the character gets it.",
+      "example": {"type": "fishing_none", "name": "MerchantBob", "cevent": true},
+      "source": "node/server.js:15062-15067, 15099-15104",
+      "confirm": {"code": ["node/server.js:15062-15067", "node/server.js:15099-15104"], "note": "Sent with `player.socket.emit`, not `xy_emit`."}
+    },
+    {
+      "name": "Merchant luck",
+      "type": "UiMluckFind",
+      "when": "A character with the `mluck` condition looted an item from a chest. With a 2% chance, the merchant of that `mluck` got a copy.",
+      "example": {"type": "+M", "name": "MerchantBob", "item": {"name": "ringsj", "level": 0, "m": "Wizard"}, "num": 12, "cevent": "mluck", "event": "mluck"},
+      "source": "node/server.js:2080-2095",
+      "confirm": {"code": ["node/server.js:2080-2095", "node/server.js:1981-1990", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    {
+      "name": "Sale to an NPC",
+      "type": "UiNpcSell",
+      "when": "The `sell` request succeeded.",
+      "reply_to": ["sell"],
+      "example": {"type": "-$", "id": "basics", "name": "Wizard", "item": {"name": "hpot0", "q": 10}, "num": 3, "event": "sell"},
+      "source": "node/server.js:8086-8093",
+      "confirm": {"code": ["node/server.js:8048-8049", "node/server.js:8080-8093", "js/old_common_functions.js:229-236", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"], "note": "`id` is the `id` of the NPC in `G.maps[map].npcs` (js/old_common_functions.js:233-236)."}
+    },
+    {
+      "name": "Purchase from an NPC",
+      "type": "UiNpcBuy",
+      "when": "The `buy` request succeeded.",
+      "reply_to": ["buy"],
+      "example": {"type": "+$", "id": "fancypots", "name": "Wizard", "item": {"name": "hpot0", "q": 100}, "event": "buy"},
+      "source": "node/server.js:8452-8458",
+      "confirm": {"code": ["node/server.js:8449-8458", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    {
+      "name": "Secondhands or lost and found",
+      "type": "UiResale",
+      "when": "The `sbuy` request bought an item. `+$p`: from `secondhands`. `+$f`: from `lostandfound` (`f` in the request).",
+      "reply_to": ["sbuy"],
+      "example": {"type": "+$p", "id": "secondhands", "name": "Wizard", "item": {"name": "staff", "level": 6, "rid": "aB3dE"}},
+      "source": "node/server.js:8393",
+      "confirm": {"code": ["node/server.js:8326-8344", "node/server.js:8380-8393", "node/server_functions.js:613", "node/server_functions.js:645", "js/old_common_functions.js:230-250", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    {
+      "name": "Player trade",
+      "type": "UiTrade",
+      "when": "`trade_sell` (you sell to a buy order) or `trade_buy` (you buy a listing) succeeded.",
+      "reply_to": ["trade_sell", "trade_buy"],
+      "example": {"type": "+$$", "seller": "Wizard", "buyer": "MerchantBob", "item": {"name": "hpot0", "q": 5, "price": 1000}, "slot": "trade3", "num": 7, "snum": 2},
+      "source": "node/server.js:8940-8948, 9048-9055",
+      "confirm": {"code": ["node/server.js:8829-8834", "node/server.js:8861-8875", "node/server.js:8913", "node/server.js:8940-8948", "node/server.js:9048-9055", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    {
+      "name": "Trade swap",
+      "type": "UiSwap",
+      "when": "The `trade_swap` request succeeded.",
+      "reply_to": ["trade_swap"],
+      "example": {
+        "type": "swap",
+        "event": true,
+        "seller": "MerchantBob",
+        "buyer": "Wizard",
+        "item": {"name": "candypop", "q": 20},
+        "received": {"name": "staff", "level": 8},
+        "slot": "trade2",
+        "num": 7,
+        "snum": 12
+      },
+      "source": "node/server.js:9161-9171",
+      "confirm": {"code": ["node/server.js:9067", "node/server.js:9114-9137", "node/server.js:9161-9171", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    {
+      "name": "Item sent",
+      "type": "UiItemSent",
+      "when": "The `send` request with `num` succeeded.",
+      "reply_to": ["send"],
+      "example": {"type": "item_sent", "receiver": "MerchantBob", "sender": "Wizard", "item": {"name": "hpot0", "q": 50}, "num": 5, "fnum": 0, "event": true},
+      "source": "node/server.js:8522-8530",
+      "confirm": {"code": ["node/server.js:8477-8530", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    {
+      "name": "Gold sent",
+      "type": "UiGoldSent",
+      "when": "The `send` request with `gold` succeeded.",
+      "reply_to": ["send"],
+      "example": {"type": "gold_sent", "receiver": "MerchantBob", "sender": "Wizard", "gold": 97500, "event": true},
+      "source": "node/server.js:8565-8571",
+      "confirm": {"code": ["node/server.js:8552-8571", "node/server_functions.js:505-511"]}
+    },
+    {
+      "name": "Cosmetic sent",
+      "type": "UiCxSent",
+      "when": "The `send` request with `cx` succeeded.",
+      "reply_to": ["send"],
+      "example": {"type": "cx_sent", "receiver": "MerchantBob", "sender": "Wizard", "cx": "hat100", "event": true},
+      "source": "node/server.js:8604-8610",
+      "confirm": {"code": ["node/server.js:8588-8610"]}
+    },
+    {
+      "name": "Resist",
+      "type": "UiResist",
+      "when": "`add_condition` rolled against the resistance of the target (`G.conditions[name].defense`) and the target resisted.",
+      "example": {"type": "stunned_resist", "id": "48213"},
+      "source": "node/server_functions.js:3244-3249",
+      "confirm": {"code": ["node/server_functions.js:3236-3249"], "note": "The `type` values are the conditions with `defense` in G 17478."}
+    },
+    {
+      "name": "MP restore",
+      "type": "UiRestoreMp",
+      "when": "`consume_mp` rolled the `restore_mp` attribute of the character (for example from Mana Gloves) and won.",
+      "example": {"type": "restore_mp", "id": "Wizard", "amount": 80},
+      "source": "node/server_functions.js:3375-3378",
+      "confirm": {"code": ["node/server_functions.js:3364-3378"]}
+    },
+    {
+      "name": "Monster level",
+      "type": "UiMlevel",
+      "when": "`level_monster` ran without `silent`: the monster lived long enough, killed characters, or a monster hunt took a level away.",
+      "example": {"type": "mlevel", "id": "48213", "mult": 1},
+      "source": "node/server.js:13319-13346",
+      "confirm": {"code": ["node/server.js:13319-13346", "node/server.js:2656"]}
+    },
+    {
+      "name": "Disengage",
+      "type": "UiDisengage",
+      "when": "`stop_pursuit` ran on a monster that stays in the world. A spawned monster disappears instead, unless the stop is a redirect.",
+      "example": {"type": "disengage", "id": "48213", "event": true, "cause": "bored"},
+      "source": "node/server.js:13839-13882",
+      "confirm": {"code": ["node/server.js:13839-13882"], "note": "Every `stop_pursuit` caller passes `cause` (node/server.js and node/server_functions.js: 17 calls)."}
+    },
+    {
+      "name": "Monster heal",
+      "type": "UiMheal",
+      "when": "A monster with `self_healing` or `healing` healed. It arrives inside the monster `events` of `entities`, not as its own socket event.",
+      "example": {"type": "mheal", "id": "48213", "heal": 400},
+      "source": "node/server.js:14098-14123",
+      "confirm": {"code": ["node/server.js:14098-14123", "node/server.js:14639-14641"]}
+    },
+    {
+      "name": "Tavern slots",
+      "type": "UiSlots",
+      "when": "The `bet` request with `type: \"slots\"` started a spin.",
+      "reply_to": ["bet"],
+      "example": {"type": "slots", "player": "Wizard", "stops": [4, 11, 7], "ms": 3600},
+      "source": "node/logic/tavern_slots.js:67",
+      "confirm": {"code": ["node/logic/tavern_slots.js:33-34", "node/logic/tavern_slots.js:48-67"]}
+    },
+    {
+      "name": "Tavern wheel",
+      "type": "UiWheel",
+      "when": "The `bet` request with `type: \"wheel\"` started a spin.",
+      "reply_to": ["bet"],
+      "example": {"type": "wheel", "player": "Wizard", "side": "sun", "index": 1, "ms": 4000},
+      "source": "node/logic/tavern_wheel.js:48",
+      "confirm": {"code": ["node/logic/tavern_wheel.js:11-24", "node/logic/tavern_wheel.js:48"]}
+    },
+    {
+      "name": "Cave entry",
+      "type": "UiCaveEnter",
+      "when": "The start of the entry animation has `names` and `duration`. If the entry then fails, a second event has `key` and `cancel: true`.",
+      "reply_to": ["enter", "interaction"],
+      "example": {"type": "cave_enter", "names": ["Warrior", "Priest"], "duration": 1800, "key": "9f2c4be1a07d3e58c6b1f024"},
+      "source": "node/logic/cave_of_many_dreams.js:16; node/logic/generated_maps.js:350, 567",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:2-16", "node/logic/generated_maps.js:303-308", "node/logic/generated_maps.js:349-350", "node/logic/generated_maps.js:473", "node/logic/generated_maps.js:529-530", "node/logic/generated_maps.js:566-567"]}
+    }
+  ],
+  "types": {
+    "UiNamed": {
+      "summary": "A `ui` event about one character: `type` and the name of that character.",
+      "fields": [
+        {"name": "type", "type": "\"level_up\" | \"dampened\" | \"track\" | \"magiport\" | \"alchemy\" | \"mcourage\" | \"mfrenzy\" | \"massproduction\" | \"massproductionpp\" | \"massexchange\" | \"massexchangepp\"", "optional": false, "description": "What happened."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character."}
+      ],
+      "example": {"type": "level_up", "name": "Wizard"},
+      "source": "node/server.js:1343, 10300, 10604, 10816, 10947, 14695, 14706",
+      "confirm": {"code": ["node/server.js:1343", "node/server.js:10290-10300", "node/server.js:10604", "node/server.js:10816", "node/server.js:10947", "node/server.js:14693-14709", "node/server_functions.js:3744-3817"]}
+    },
+    "UiBare": {
+      "summary": "A `ui` event with only `type`: a `darkblessing` or a `warcry`.",
+      "fields": [
+        {"name": "type", "type": "\"darkblessing\" | \"warcry\"", "optional": false, "description": "The skill."}
+      ],
+      "example": {"type": "warcry"},
+      "source": "node/server.js:10492-10506",
+      "confirm": {"code": ["node/server.js:10492-10506"]}
+    },
+    "UiFromTo": {
+      "summary": "A `ui` event for a skill from one character on one target.",
+      "fields": [
+        {"name": "type", "type": "\"mluck\" | \"rspeed\" | \"reflection\" | \"energize\" | \"4fingers\" | \"entangle\"", "optional": false, "description": "The skill. The `tangle` skill also sends `\"entangle\"` (node/server.js:10370-10377)."},
+        {"name": "from", "type": "CharacterName", "optional": false, "description": "The character that used the skill."},
+        {"name": "to", "type": "EntityId", "optional": false, "description": "The target. `entangle`: the `id` of the target (a monster or a character). The others: the name of the target character."}
+      ],
+      "example": {"type": "mluck", "from": "MerchantBob", "to": "Wizard"},
+      "source": "node/server.js:10377, 10396, 10890, 10896, 10905, 10928",
+      "confirm": {"code": ["node/server.js:10370-10377", "node/server.js:10396", "node/server.js:10890", "node/server.js:10896", "node/server.js:10905", "node/server.js:10928"]}
+    },
+    "UiThrow": {
+      "summary": "A `ui` event for the `throw` skill: who threw which item at whom.",
+      "fields": [
+        {"name": "type", "type": "\"throw\"", "optional": false, "description": "The skill."},
+        {"name": "from", "type": "CharacterName", "optional": false, "description": "The character that threw the item."},
+        {"name": "to", "type": "EntityId", "optional": false, "description": "The `id` of the target."},
+        {"name": "item", "type": "ItemName", "optional": false, "description": "The item that the character threw."}
+      ],
+      "example": {"type": "throw", "from": "MerchantBob", "to": "48213", "item": "hpot0"},
+      "source": "node/server.js:10346",
+      "confirm": {"code": ["node/server.js:10346"]}
+    },
+    "UiFromTargets": {
+      "summary": "A `ui` event for a paladin skill on one friendly character.",
+      "fields": [
+        {"name": "type", "type": "\"cleansing_light\" | \"guardians_oath\"", "optional": false, "description": "The skill."},
+        {"name": "from", "type": "CharacterName", "optional": false, "description": "The paladin."},
+        {"name": "targets", "type": "CharacterName[]", "optional": false, "description": "The target character. Always one name."}
+      ],
+      "example": {"type": "cleansing_light", "from": "Paladin", "targets": ["Wizard"]},
+      "source": "node/server.js:10233, 10254",
+      "confirm": {"code": ["node/server.js:10233", "node/server.js:10254"]}
+    },
+    "UiBeaconOfResolve": {
+      "summary": "A `ui` event for `beacon_of_resolve`: the characters that got the condition.",
+      "fields": [
+        {"name": "type", "type": "\"beacon_of_resolve\"", "optional": false, "description": "The skill."},
+        {"name": "from", "type": "CharacterName", "optional": true, "description": "Only from a player: the paladin. The paladin is also in `targets`."},
+        {"name": "name", "type": "string", "optional": true, "description": "Only from a cavalry NPC: the `id` of the NPC (node/logic/cavalry.js:443)."},
+        {"name": "targets", "type": "CharacterName[]", "optional": false, "description": "The characters that got `beacon_of_resolve`. From a player it always has the paladin (`is_same` is true for the same name, node/server_functions.js:506-508). From a cavalry NPC it has at least one name."}
+      ],
+      "example": {"type": "beacon_of_resolve", "from": "Paladin", "targets": ["Paladin", "Wizard", "Warrior"]},
+      "source": "node/server.js:10275; node/logic/cavalry.js:443",
+      "confirm": {"code": ["node/server.js:10260-10275", "node/server_functions.js:505-508", "node/logic/cavalry.js:434-443"]}
+    },
+    "UiArea": {
+      "summary": "A `ui` event for an area skill: who used it and the ids that it affected.",
+      "fields": [
+        {"name": "type", "type": "\"agitate\" | \"stomp\" | \"scare\" | \"cleave\" | \"shadowstrike\" | \"fanofknives\"", "optional": false, "description": "The skill."},
+        {"name": "name", "type": "EntityId", "optional": false, "description": "The character that used the skill. For the `stomp` of a cave sentinel, the `id` of that monster (node/logic/cave_of_many_dreams.js:1482)."},
+        {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The monsters (and in PvP, the characters) that the skill affected. It can be empty. `fanofknives` lists the targets of its projectiles."}
+      ],
+      "example": {"type": "stomp", "name": "Warrior", "ids": ["48213", "48217"]},
+      "source": "node/server.js:10564-10568, 10631, 10699, 10725, 10801; node/logic/cave_of_many_dreams.js:1482",
+      "confirm": {"code": ["node/server.js:10562-10568", "node/server.js:10607-10631", "node/server.js:10662-10699", "node/server.js:10702-10725", "node/server.js:10753-10801", "node/logic/cave_of_many_dreams.js:1475-1482"]}
+    },
+    "UiAbsorb": {
+      "summary": "A `ui` event for the `absorb` skill: the monsters that now target the priest.",
+      "fields": [
+        {"name": "type", "type": "\"absorb\"", "optional": false, "description": "The skill."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The priest."},
+        {"name": "from", "type": "any", "optional": false, "description": "The `id` of the `skill` request, as sent: the character whose monsters the priest took."},
+        {"name": "ids", "type": "EntityId[]", "optional": false, "description": "The monsters that now target the priest. It can be empty."}
+      ],
+      "example": {"type": "absorb", "name": "Priest", "from": "Wizard", "ids": ["48213"]},
+      "source": "node/server.js:10659",
+      "confirm": {"code": ["node/server.js:10634-10659"]}
+    },
+    "UiTargetId": {
+      "summary": "A `ui` event for `huntersmark` or `charm`: who used it and on which target.",
+      "fields": [
+        {"name": "type", "type": "\"huntersmark\" | \"charm\"", "optional": false, "description": "The skill."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that used the skill."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` of the target."},
+        {"name": "fail", "type": "true", "optional": true, "description": "Only on a `charm` that failed. The user also gets the bare `game_response` `charm_failed`."}
+      ],
+      "example": {"type": "charm", "name": "Rogue", "id": "48213", "fail": true},
+      "source": "node/server.js:10739, 10745, 10750",
+      "confirm": {"code": ["node/server.js:10739", "node/server.js:10742-10751"]}
+    },
+    "UiGatherFail": {
+      "summary": "A `ui` event: `fishing` or `mining` did not start.",
+      "fields": [
+        {"name": "type", "type": "\"fishing_fail\" | \"mining_fail\"", "optional": false, "description": "The skill name plus `_fail`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Asks the official client to fire a code event."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the `skill` request, echoed. Absent when the request had none."},
+        {"name": "reason", "type": "\"location\" | \"moving\"", "optional": false, "description": "`\"location\"`: no zone of that kind is 24 px up, down, left or right of the character. `\"moving\"`: the character moves."}
+      ],
+      "example": {"type": "fishing_fail", "name": "MerchantBob", "cevent": true, "reason": "location"},
+      "source": "node/server.js:10154-10160",
+      "confirm": {"code": ["node/server.js:10133-10161"], "note": "`request_id` is `data.request_id`, so JSON drops it when the request had none."}
+    },
+    "UiGatherStart": {
+      "summary": "A `ui` event: `fishing` or `mining` started.",
+      "fields": [
+        {"name": "type", "type": "\"fishing_start\" | \"mining_start\"", "optional": false, "description": "The skill name plus `_start`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "direction", "type": "0 | 1 | 2 | 3", "optional": false, "description": "The side of the zone: `0` down, `1` left, `2` right, `3` up. When more than one side is in the zone, the last match in that order wins (node/server.js:10141-10152)."}
+      ],
+      "example": {"type": "mining_start", "name": "MerchantBob", "direction": 2},
+      "source": "node/server.js:10163",
+      "confirm": {"code": ["node/server.js:10141-10152", "node/server.js:10163"]}
+    },
+    "UiGatherNone": {
+      "summary": "A `ui` event: `fishing` or `mining` ended with no item.",
+      "fields": [
+        {"name": "type", "type": "\"fishing_none\" | \"mining_none\"", "optional": false, "description": "The skill name plus `_none`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Asks the official client to fire a code event."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the `skill` request, echoed. Absent when the request had none."}
+      ],
+      "example": {"type": "fishing_none", "name": "MerchantBob", "cevent": true},
+      "source": "node/server.js:15062-15067, 15099-15104",
+      "confirm": {"code": ["node/server.js:15062-15067", "node/server.js:15099-15104"], "note": "Sent with `player.socket.emit`, not `xy_emit`."}
+    },
+    "UiMluckFind": {
+      "summary": "A `ui` event: merchant luck gave a merchant a copy of a looted item.",
+      "fields": [
+        {"name": "type", "type": "\"+M\"", "optional": false, "description": "Merchant luck."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The merchant that got the copy."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The copy. `m` is the name of the character that looted the item."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The inventory slot of the merchant that got the copy."},
+        {"name": "cevent", "type": "\"mluck\"", "optional": false, "description": "Asks the official client to fire the code event `mluck`."},
+        {"name": "event", "type": "\"mluck\"", "optional": false, "description": "Always `\"mluck\"`."}
+      ],
+      "example": {"type": "+M", "name": "MerchantBob", "item": {"name": "ringsj", "level": 0, "m": "Wizard"}, "num": 12, "cevent": "mluck", "event": "mluck"},
+      "source": "node/server.js:2080-2095",
+      "confirm": {"code": ["node/server.js:2080-2095", "node/server.js:1981-1990", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    "UiNpcSell": {
+      "summary": "A `ui` event: a character sold an item to an NPC merchant.",
+      "fields": [
+        {"name": "type", "type": "\"-$\"", "optional": false, "description": "A sale to an NPC."},
+        {"name": "id", "type": "string", "optional": false, "description": "The `id` of the NPC, for example `\"basics\"`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The seller."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item sold. For a stack, `q` is the quantity sold."},
+        {"name": "num", "type": "any", "optional": false, "description": "The `num` of the `sell` request, as sent: the inventory slot of the item."},
+        {"name": "event", "type": "\"sell\"", "optional": false, "description": "Always `\"sell\"`."}
+      ],
+      "example": {"type": "-$", "id": "basics", "name": "Wizard", "item": {"name": "hpot0", "q": 10}, "num": 3, "event": "sell"},
+      "source": "node/server.js:8086-8093",
+      "confirm": {"code": ["node/server.js:8048-8049", "node/server.js:8080-8093", "js/old_common_functions.js:229-236", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"], "note": "`id` is the `id` of the NPC in `G.maps[map].npcs` (js/old_common_functions.js:233-236)."}
+    },
+    "UiNpcBuy": {
+      "summary": "A `ui` event: a character bought an item from an NPC merchant.",
+      "fields": [
+        {"name": "type", "type": "\"+$\"", "optional": false, "description": "A purchase from an NPC."},
+        {"name": "id", "type": "string", "optional": false, "description": "The `id` of the NPC, for example `\"fancypots\"`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The buyer."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item bought, with the quantity bought."},
+        {"name": "event", "type": "\"buy\"", "optional": false, "description": "Always `\"buy\"`."}
+      ],
+      "example": {"type": "+$", "id": "fancypots", "name": "Wizard", "item": {"name": "hpot0", "q": 100}, "event": "buy"},
+      "source": "node/server.js:8452-8458",
+      "confirm": {"code": ["node/server.js:8449-8458", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    "UiResale": {
+      "summary": "A `ui` event: a character bought an item from `secondhands` or from `lostandfound`.",
+      "fields": [
+        {"name": "type", "type": "\"+$p\" | \"+$f\"", "optional": false, "description": "`\"+$p\"`: secondhands. `\"+$f\"`: lost and found."},
+        {"name": "id", "type": "\"secondhands\" | \"lostandfound\"", "optional": false, "description": "The `id` of the NPC."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The buyer."},
+        {"name": "item", "type": "TradeSlotItem", "optional": false, "description": "The item, from `cache_item(item, 1)`. It keeps `rid` (5 random characters, node/server_functions.js:613, 645). `cache_item` with `trade` removes `grace` and `src` (node/server_functions.js:4203)."}
+      ],
+      "example": {"type": "+$p", "id": "secondhands", "name": "Wizard", "item": {"name": "staff", "level": 6, "rid": "aB3dE"}},
+      "source": "node/server.js:8393",
+      "confirm": {"code": ["node/server.js:8326-8344", "node/server.js:8380-8393", "node/server_functions.js:613", "node/server_functions.js:645", "js/old_common_functions.js:230-250", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    "UiTrade": {
+      "summary": "A `ui` event: a sale or a purchase at a merchant stand.",
+      "fields": [
+        {"name": "type", "type": "\"+$$\"", "optional": false, "description": "A player trade."},
+        {"name": "seller", "type": "CharacterName", "optional": false, "description": "The character that gave the item."},
+        {"name": "buyer", "type": "CharacterName", "optional": false, "description": "The character that paid."},
+        {"name": "item", "type": "TradeSlotItem", "optional": false, "description": "The item, with `q` set to the quantity traded. It has `price`, the gold for one unit. From `trade_buy` it also keeps `rid`."},
+        {"name": "slot", "type": "TradeSlotName", "optional": false, "description": "The trade slot of the listing or the buy order."},
+        {"name": "num", "type": "any", "optional": true, "description": "From `trade_sell`: the inventory slot of the buyer that got the item. From `trade_buy`: the `num` of the request, unchanged (a server bug: it is not the slot that got the item). Absent when that request has no `num`."},
+        {"name": "snum", "type": "InventoryIndex", "optional": true, "description": "Only from `trade_sell`: the inventory slot of the seller that the item came from."}
+      ],
+      "example": {"type": "+$$", "seller": "Wizard", "buyer": "MerchantBob", "item": {"name": "hpot0", "q": 5, "price": 1000}, "slot": "trade3", "num": 7, "snum": 2},
+      "source": "node/server.js:8940-8948, 9048-9055",
+      "confirm": {"code": ["node/server.js:8829-8834", "node/server.js:8861-8875", "node/server.js:8913", "node/server.js:8940-8948", "node/server.js:9048-9055", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    "UiSwap": {
+      "summary": "A `ui` event: a character accepted a trade offer at a merchant stand.",
+      "fields": [
+        {"name": "type", "type": "\"swap\"", "optional": false, "description": "A trade offer was accepted."},
+        {"name": "event", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "seller", "type": "CharacterName", "optional": false, "description": "The owner of the stand."},
+        {"name": "buyer", "type": "CharacterName", "optional": false, "description": "The character that accepted the offer."},
+        {"name": "item", "type": "TradeSlotItem", "optional": false, "description": "The listed item, without `want` and `rid` (the server deletes them before the event, node/server.js:9132-9133)."},
+        {"name": "received", "type": "TradeSlotItem", "optional": false, "description": "The item that the owner got. For a stack, `q` is the units given."},
+        {"name": "slot", "type": "TradeSlotName", "optional": false, "description": "The trade slot of the offer."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The inventory slot of the buyer that got the listed item."},
+        {"name": "snum", "type": "InventoryIndex", "optional": false, "description": "The inventory slot of the owner that got the item of the buyer."}
+      ],
+      "example": {
+        "type": "swap",
+        "event": true,
+        "seller": "MerchantBob",
+        "buyer": "Wizard",
+        "item": {"name": "candypop", "q": 20},
+        "received": {"name": "staff", "level": 8},
+        "slot": "trade2",
+        "num": 7,
+        "snum": 12
+      },
+      "source": "node/server.js:9161-9171",
+      "confirm": {"code": ["node/server.js:9067", "node/server.js:9114-9137", "node/server.js:9161-9171", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    "UiItemSent": {
+      "summary": "A `ui` event: a character sent an item to another character.",
+      "fields": [
+        {"name": "type", "type": "\"item_sent\"", "optional": false, "description": "An item was sent."},
+        {"name": "receiver", "type": "CharacterName", "optional": false, "description": "The character that got the item."},
+        {"name": "sender", "type": "CharacterName", "optional": false, "description": "The character that sent the item."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item. `q` is always set: the quantity sent, also `1` for an item that does not stack."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The inventory slot of the receiver that got the item."},
+        {"name": "fnum", "type": "InventoryIndex", "optional": false, "description": "The inventory slot of the sender that the item came from."},
+        {"name": "event", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"type": "item_sent", "receiver": "MerchantBob", "sender": "Wizard", "item": {"name": "hpot0", "q": 50}, "num": 5, "fnum": 0, "event": true},
+      "source": "node/server.js:8522-8530",
+      "confirm": {"code": ["node/server.js:8477-8530", "node/server_functions.js:4190-4203", "node/server_functions.js:4234-4261"]}
+    },
+    "UiGoldSent": {
+      "summary": "A `ui` event: a character sent gold to another character.",
+      "fields": [
+        {"name": "type", "type": "\"gold_sent\"", "optional": false, "description": "Gold was sent."},
+        {"name": "receiver", "type": "CharacterName", "optional": false, "description": "The character that got the gold."},
+        {"name": "sender", "type": "CharacterName", "optional": false, "description": "The character that sent the gold."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gold that the receiver got. When the two characters have different owners and different IP addresses, the server keeps 2.5% (`parseInt(gold * 0.975)`, node/server.js:8557-8559). It does not take a fee on 1 gold."},
+        {"name": "event", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"type": "gold_sent", "receiver": "MerchantBob", "sender": "Wizard", "gold": 97500, "event": true},
+      "source": "node/server.js:8565-8571",
+      "confirm": {"code": ["node/server.js:8552-8571", "node/server_functions.js:505-511"]}
+    },
+    "UiCxSent": {
+      "summary": "A `ui` event: a character sent a cosmetic to another character of the same owner.",
+      "fields": [
+        {"name": "type", "type": "\"cx_sent\"", "optional": false, "description": "A cosmetic was sent."},
+        {"name": "receiver", "type": "CharacterName", "optional": false, "description": "The character that got the cosmetic."},
+        {"name": "sender", "type": "CharacterName", "optional": false, "description": "The character that sent the cosmetic."},
+        {"name": "cx", "type": "string", "optional": false, "description": "The `cx` of the `send` request: the cosmetic name."},
+        {"name": "event", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"type": "cx_sent", "receiver": "MerchantBob", "sender": "Wizard", "cx": "hat100", "event": true},
+      "source": "node/server.js:8604-8610",
+      "confirm": {"code": ["node/server.js:8588-8610"]}
+    },
+    "UiResist": {
+      "summary": "A `ui` event: an entity resisted a condition.",
+      "fields": [
+        {"name": "type", "type": "\"stunned_resist\" | \"deepfreezed_resist\" | \"frozen_resist\" | \"burned_resist\" | \"poisoned_resist\"", "optional": false, "description": "The condition plus `_resist`. These are the conditions with `defense` in G: `stunned` (`phresistance`), `deepfreezed` and `frozen` (`fzresistance`), `burned` (`firesistance`), `poisoned` (`pnresistance`)."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` of the entity that resisted."}
+      ],
+      "example": {"type": "stunned_resist", "id": "48213"},
+      "source": "node/server_functions.js:3244-3249",
+      "confirm": {"code": ["node/server_functions.js:3236-3249"], "note": "The `type` values are the conditions with `defense` in G 17478."}
+    },
+    "UiRestoreMp": {
+      "summary": "A `ui` event: a skill gave MP back instead of using it.",
+      "fields": [
+        {"name": "type", "type": "\"restore_mp\"", "optional": false, "description": "MP restore."},
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The character."},
+        {"name": "amount", "type": "number", "optional": false, "description": "The MP that the character got: two times the MP cost."}
+      ],
+      "example": {"type": "restore_mp", "id": "Wizard", "amount": 80},
+      "source": "node/server_functions.js:3375-3378",
+      "confirm": {"code": ["node/server_functions.js:3364-3378"]}
+    },
+    "UiMlevel": {
+      "summary": "A `ui` event: a monster gained or lost a level.",
+      "fields": [
+        {"name": "type", "type": "\"mlevel\"", "optional": false, "description": "A monster level change."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` of the monster."},
+        {"name": "mult", "type": "1 | -1", "optional": false, "description": "`1`: one level up. `-1`: one level down (`delevel`, node/server.js:2656)."}
+      ],
+      "example": {"type": "mlevel", "id": "48213", "mult": 1},
+      "source": "node/server.js:13319-13346",
+      "confirm": {"code": ["node/server.js:13319-13346", "node/server.js:2656"]}
+    },
+    "UiDisengage": {
+      "summary": "A `ui` event: a monster stopped its attack.",
+      "fields": [
+        {"name": "type", "type": "\"disengage\"", "optional": false, "description": "The monster stops."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` of the monster."},
+        {"name": "event", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "cause", "type": "string", "optional": false, "description": "Why, for the log of the official client: `\"bored\"`, `\"player_gone\"`, `\"scare\"`, `\"defeat\"`, `\"exceeds_range\"`, `\"cant_move\"`, `\"cant_move_smart\"`, `\"firecrackers\"`, `\"warpstomp\"`, `\"anger\"`, `\"disengage\"`, `\"stop()\"`, `\"kill_monster call\"`, or a redirect (`\"redirect\"`, `\"agitate redirect\"`, `\"absorb redirect\"`, `\"taunt redirect\"`)."}
+      ],
+      "example": {"type": "disengage", "id": "48213", "event": true, "cause": "bored"},
+      "source": "node/server.js:13839-13882",
+      "confirm": {"code": ["node/server.js:13839-13882"], "note": "Every `stop_pursuit` caller passes `cause` (node/server.js and node/server_functions.js: 17 calls)."}
+    },
+    "UiMheal": {
+      "summary": "A `ui` event: a monster healed itself or another monster.",
+      "fields": [
+        {"name": "type", "type": "\"mheal\"", "optional": false, "description": "A monster heal."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` of the entity that got the HP."},
+        {"name": "heal", "type": "number", "optional": false, "description": "The HP that the entity got. Poison halves the heal."}
+      ],
+      "example": {"type": "mheal", "id": "48213", "heal": 400},
+      "source": "node/server.js:14098-14123",
+      "confirm": {"code": ["node/server.js:14098-14123", "node/server.js:14639-14641"]}
+    },
+    "UiSlots": {
+      "summary": "A `ui` event: a character spun the slot machine of the tavern.",
+      "fields": [
+        {"name": "type", "type": "\"slots\"", "optional": false, "description": "A slots spin."},
+        {"name": "player", "type": "CharacterName", "optional": false, "description": "The character that plays."},
+        {"name": "stops", "type": "integer[]", "optional": false, "description": "The stop of each reel: an index into `G.games.slots.reels[reel]`. One number per reel."},
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The spin time: `G.games.slots.spin`."}
+      ],
+      "example": {"type": "slots", "player": "Wizard", "stops": [4, 11, 7], "ms": 3600},
+      "source": "node/logic/tavern_slots.js:67",
+      "confirm": {"code": ["node/logic/tavern_slots.js:33-34", "node/logic/tavern_slots.js:48-67"]}
+    },
+    "UiWheel": {
+      "summary": "A `ui` event: a character spun the Fortune's Wheel of the tavern.",
+      "fields": [
+        {"name": "type", "type": "\"wheel\"", "optional": false, "description": "A wheel spin."},
+        {"name": "player", "type": "CharacterName", "optional": false, "description": "The character that plays."},
+        {"name": "side", "type": "\"sun\" | \"moon\"", "optional": false, "description": "The side that the character bet on: a value of `G.games.wheel.sides`."},
+        {"name": "index", "type": "integer", "optional": false, "description": "The slice where the wheel stops: an index into `G.games.wheel.slices`. The result is known now; the payout comes when the spin ends."},
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The spin time: `G.games.wheel.spin`."}
+      ],
+      "example": {"type": "wheel", "player": "Wizard", "side": "sun", "index": 1, "ms": 4000},
+      "source": "node/logic/tavern_wheel.js:48",
+      "confirm": {"code": ["node/logic/tavern_wheel.js:11-24", "node/logic/tavern_wheel.js:48"]}
+    },
+    "UiCaveEnter": {
+      "summary": "A `ui` event: a party starts to enter the Cave of Many Dreams, or the entry failed.",
+      "fields": [
+        {"name": "type", "type": "\"cave_enter\"", "optional": false, "description": "A cave entry."},
+        {"name": "names", "type": "CharacterName[]", "optional": true, "description": "Only at the start: the characters that enter."},
+        {"name": "duration", "type": "Milliseconds", "optional": true, "description": "Only at the start: the length of the animation, always `1800`."},
+        {"name": "key", "type": "string", "optional": false, "description": "The key of the run: 24 hex characters (node/logic/generated_maps.js:473). On a return to a run, the key of that run."},
+        {"name": "cancel", "type": "true", "optional": true, "description": "Only when the entry failed after the animation started."}
+      ],
+      "example": {"type": "cave_enter", "names": ["Warrior", "Priest"], "duration": 1800, "key": "9f2c4be1a07d3e58c6b1f024"},
+      "source": "node/logic/cave_of_many_dreams.js:16; node/logic/generated_maps.js:350, 567",
+      "confirm": {"code": ["node/logic/cave_of_many_dreams.js:2-16", "node/logic/generated_maps.js:303-308", "node/logic/generated_maps.js:349-350", "node/logic/generated_maps.js:473", "node/logic/generated_maps.js:529-530", "node/logic/generated_maps.js:566-567"]}
+    }
+  },
+  "senders": [
+    {"what": "`calculate_player_stats` after a level up: `level_up`.", "source": "node/server.js:1343"},
+    {"what": "`add_item` with `m` (chest loot from `open_chest` and encouragement loot): `+M`.", "source": "node/server.js:2080-2095"},
+    {"what": "The `sell` handler: `-$`.", "source": "node/server.js:8086-8093"},
+    {"what": "The `sbuy` handler: `+$p` or `+$f`.", "source": "node/server.js:8393"},
+    {"what": "The `buy` handler: `+$`.", "source": "node/server.js:8452-8458"},
+    {"what": "The `send` handler: `item_sent`, `gold_sent`, `cx_sent`.", "source": "node/server.js:8522-8530, 8565-8571, 8604-8610"},
+    {"what": "The `trade_sell` and `trade_buy` handlers: `+$$`.", "source": "node/server.js:8940-8948, 9048-9055"},
+    {"what": "The `trade_swap` handler: `swap`.", "source": "node/server.js:9161-9171"},
+    {"what": "The `skill` handler: `fishing` and `mining` (`_fail`, `_start`).", "source": "node/server.js:10154-10163"},
+    {"what": "The `skill` handler: paladin and merchant support skills, `throw`, `entangle`, `4fingers`, `darkblessing`, `warcry`.", "source": "node/server.js:10233-10506"},
+    {"what": "The `skill` handler: `fanofknives`, `track`, `agitate`, `absorb`, `stomp`, `scare`, `huntersmark`, `charm`, `cleave`, `shadowstrike`, `magiport`.", "source": "node/server.js:10564-10816"},
+    {"what": "The `skill` handler: `mluck`, `rspeed`, `reflection`, `energize`, `alchemy`.", "source": "node/server.js:10890-10947"},
+    {"what": "`add_condition` when the target resists: `<condition>_resist`.", "source": "node/server_functions.js:3248"},
+    {"what": "`consume_mp` with `restore_mp`: `restore_mp`.", "source": "node/server_functions.js:3377"},
+    {"what": "`level_monster`: `mlevel`.", "source": "node/server.js:13345"},
+    {"what": "`stop_pursuit`: `disengage`.", "source": "node/server.js:13881"},
+    {"what": "`update_instance`, monster abilities: `mheal`, in the monster `events`.", "source": "node/server.js:14106, 14121"},
+    {"what": "The condition timers of a character: `dampened` (`blink` and `magiport` near a field generator).", "source": "node/server.js:14695, 14706"},
+    {"what": "The `fishing` and `mining` timers: `fishing_none`, `mining_none` (only to the character).", "source": "node/server.js:15062-15067, 15099-15104"},
+    {"what": "The `bet` handler: `slots` and `wheel`.", "source": "node/logic/tavern_slots.js:67; node/logic/tavern_wheel.js:48"},
+    {"what": "Cave entry (`enter` to `dreams`, or `interaction` with `type: \"cave\"`, `action: \"enter\"`): `cave_enter`.", "source": "node/logic/cave_of_many_dreams.js:16; node/logic/generated_maps.js:350, 567"},
+    {"what": "A `cave_sentinel` in the Cave of Many Dreams: `stomp`.", "source": "node/logic/cave_of_many_dreams.js:1482"},
+    {"what": "A paladin cavalry NPC: `beacon_of_resolve`.", "source": "node/logic/cavalry.js:443"}
+  ]
+}

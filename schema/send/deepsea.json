@@ -1,0 +1,8 @@
+{
+  "event": "deepsea",
+  "source": "node/server.js:12982-12995",
+  "request": {"fields": [], "note": "No payload. The handler reads no field.", "confirm": {"code": ["node/server.js:12982-12983"], "note": "The handler returns before it reads anything"}},
+  "responses": [
+    {"name": "Nothing", "kind": "none", "when": "Every call. The handler starts with `return;`. The dead code after it sets your temporary skin to `\"deepsea\"`.", "source": "node/server.js:12983", "confirm": {"code": ["node/server.js:12982-12983"]}}
+  ]
+}

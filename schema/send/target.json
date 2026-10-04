@@ -1,0 +1,61 @@
+{
+  "event": "target",
+  "source": "node/server.js:5129-5183",
+  "request": {
+    "fields": [
+      {"name": "id", "type": "EntityId | null", "optional": true, "coerce": "none: used as an object key. The server looks in the monsters of your instance, then its characters, then its NPCs (`NPC_prefix + id`). It stores the raw value in `player.target`, so a number stays a number", "description": "The new target: a monster id, a character name, or an NPC id without the NPC prefix. If nothing in your instance has this id (also when it is missing or `null`), the target becomes `null`."},
+      {"name": "xid", "type": "EntityId | null", "optional": true, "coerce": "the same as `id`; stored in `player.focus`", "description": "The new focus entity, by the same rules. If nothing in your instance has this id, the focus becomes `null`."}
+    ],
+    "others": "ignored",
+    "example": {"id": "48213", "xid": null}, "confirm": {"code": ["node/server.js:5135-5156"]}
+  },
+  "responses": [
+    {
+      "name": "Update",
+      "event": "player",
+      "when": "All checks pass, before the `game_response`.",
+      "summary": "Your character with the new `target` and `focus` (`u+nc`: the server does not recalculate your stats).",
+      "example": {"id": "Merlin", "target": "48213", "focus": null},
+      "example_trimmed": true,
+      "source": "node/server.js:5181", "confirm": {"code": ["node/server.js:5135-5136", "node/server.js:5145", "node/server.js:5155", "node/server.js:5181", "node/server.js:4550-4594"]}
+    },
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. Also when an id matched nothing: the target (or focus) is then `null`, with no failure.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"target\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "target"},
+      "source": "node/server.js:5182", "confirm": {"code": ["node/server.js:5182", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5131-5133", "confirm": {"code": ["node/server.js:5130-5133"]}},
+      {
+        "when": "In the GM map `cgallery`: the focus is a cosmetic NPC that is not a body, and `player.cx.length > 5`. `player.cx` is an object without `length`, so this does not occur in practice.",
+        "code": "invalid",
+        "source": "node/server.js:5170-5174", "confirm": {"code": ["node/server.js:5163-5175", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "In `cgallery` only: the focus is a cosmetic NPC. The server shows that cosmetic on you (`tskin` or `tcx`) and sends this update before the usual one.",
+      "summary": "Your character with the cosmetic preview.",
+      "source": "node/server.js:5163-5179", "confirm": {"code": ["node/server.js:5163-5179", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`player` to you (one more before it in `cgallery`)",
+    "`game_response` `data` to you"
+  ]
+}

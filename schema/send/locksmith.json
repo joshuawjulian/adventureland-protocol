@@ -1,0 +1,179 @@
+{
+  "event": "locksmith",
+  "source": "node/server.js:6791-6861",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"6\"` also works. Any other value reads an empty slot", "description": "The slot of the item."},
+      {"name": "operation", "type": "\"lock\" | \"seal\" | \"unlock\"", "optional": false, "coerce": "compared with `==`", "description": "What to do. Each value is a variant (below). Another value changes nothing, takes no gold and gets the `data` success reply."},
+      {"name": "item_num", "type": "any", "optional": true, "description": "No effect. The handler reads `player.items[item_num]` first, then uses the item at `num`."}
+    ],
+    "others": "ignored",
+    "example": {"num": 6, "operation": "lock"},
+    "confirm": {"code": ["node/server.js:6793", "node/server.js:6801", "node/server.js:6809", "node/server.js:6839", "node/server.js:6850"], "note": "The handler reads `item_num` (unused after), `num` and `operation`"}
+  },
+  "variants": {
+    "key": "operation",
+    "list": [
+      {
+        "value": "unlock",
+        "when": "Removes a lock (`l: \"l\"`, 250,000 gold), starts an unseal (`l: \"s\"`, 250,000 gold, 2 days), or ends an unseal whose time is over (`l: \"u\"`, no gold).",
+        "request": {
+          "example": {"num": 6, "operation": "unlock"},
+          "confirm": {"code": ["node/server.js:6809"]}
+        },
+        "responses": [
+          {"name": "Unlocked", "event": "game_response", "code": "locksmith_unlocked", "when": "On an item with `l: \"l\"`: the server takes 250,000 gold and deletes `l`.", "type": "\"locksmith_unlocked\"", "example": "locksmith_unlocked", "source": "node/server.js:6837", "confirm": {"code": ["node/server.js:6831-6837"]}},
+          {"name": "Unseal started", "event": "game_response", "code": "locksmith_unsealed", "when": "On an item with `l: \"s\"`: the server takes 250,000 gold, sets `l: \"u\"` and sets `ld` to the time 2 days from now.", "type": "\"locksmith_unsealed\"", "example": "locksmith_unsealed", "source": "node/server.js:6821", "confirm": {"code": ["node/server.js:6814-6821"]}},
+          {"name": "Unseal complete", "event": "game_response", "code": "locksmith_unseal_complete", "when": "On an item with `l: \"u\"` after the time in `ld`: the server deletes `l`. It takes no gold.", "type": "\"locksmith_unseal_complete\"", "example": "locksmith_unseal_complete", "source": "node/server.js:6826", "confirm": {"code": ["node/server.js:6822-6826"]}},
+          {
+            "name": "Unsealing",
+            "event": "game_response",
+            "code": "locksmith_unsealing",
+            "when": "On an item with `l: \"u\"` before the time in `ld`. Nothing changes. A `player` update comes first.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"locksmith_unsealing\"", "optional": false, "description": "The code."},
+              {"name": "place", "type": "\"locksmith\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the result comes later."},
+              {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "hours", "type": "number", "optional": false, "description": "The hours until the unseal completes. It has a fraction."}
+            ],
+            "example": {"hours": 37.52, "success": false, "in_progress": true, "response": "locksmith_unsealing", "place": "locksmith"},
+            "source": "node/server.js:6822-6830",
+            "confirm": {"code": ["node/server.js:6822-6830", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "On an item without `l`.",
+              "code": "locksmith_aunlocked",
+              "extra": [
+                {"name": "reason", "type": "\"already_unlocked\"", "optional": false, "description": "Why."}
+              ],
+              "note": "after a `player` update",
+              "source": "node/server.js:6810-6813",
+              "confirm": {"code": ["node/server.js:6810-6813", "node/server_functions.js:3393-3419"]}
+            },
+            {"when": "On an item with `l: \"s\"`. Your gold is less than 250,000.", "code": "gold_not_enough", "source": "node/server.js:6814-6817", "confirm": {"code": ["node/server.js:6814-6817", "node/server_functions.js:3393-3419"]}},
+            {"when": "On an item with `l: \"l\"`. Your gold is less than 250,000.", "code": "gold_not_enough", "source": "node/server.js:6831-6834", "confirm": {"code": ["node/server.js:6831-6834", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "order": {
+          "Unlock, unseal start or unseal end": [
+            "`game_response` with the code as a bare string (`locksmith_unlocked`, `locksmith_unsealed` or `locksmith_unseal_complete`) to you",
+            "`player` to you",
+            "`game_response` `data` to you"
+          ],
+          "Unseal still running": ["`player` to you", "`game_response` `locksmith_unsealing` to you"]
+        },
+        "source": "node/server.js:6809-6838"
+      },
+      {
+        "value": "lock",
+        "when": "Locks the item for 250,000 gold.",
+        "request": {
+          "example": {"num": 6, "operation": "lock"},
+          "confirm": {"code": ["node/server.js:6839"]}
+        },
+        "responses": [
+          {"name": "Locked", "event": "game_response", "code": "locksmith_locked", "when": "The server takes 250,000 gold and sets `l: \"l\"`.", "type": "\"locksmith_locked\"", "example": "locksmith_locked", "source": "node/server.js:6849", "confirm": {"code": ["node/server.js:6847-6849"]}}
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The item has any `l` value.",
+              "code": "locksmith_alocked",
+              "extra": [
+                {"name": "reason", "type": "\"already_locked\"", "optional": false, "description": "Why."}
+              ],
+              "note": "after a `player` update",
+              "source": "node/server.js:6840-6843",
+              "confirm": {"code": ["node/server.js:6840-6843", "node/server_functions.js:3393-3419"]}
+            },
+            {"when": "Your gold is less than 250,000.", "code": "gold_not_enough", "source": "node/server.js:6844-6846", "confirm": {"code": ["node/server.js:6844-6846", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "order": [
+          "`game_response` `locksmith_locked` (a bare string) to you",
+          "`player` to you",
+          "`game_response` `data` to you"
+        ],
+        "source": "node/server.js:6839-6849"
+      },
+      {
+        "value": "seal",
+        "when": "Seals the item for 250,000 gold.",
+        "request": {
+          "example": {"num": 6, "operation": "seal"},
+          "confirm": {"code": ["node/server.js:6850"]}
+        },
+        "responses": [
+          {"name": "Sealed", "event": "game_response", "code": "locksmith_sealed", "when": "The server takes 250,000 gold and sets `l: \"s\"`. It does not check the `l` value now.", "type": "\"locksmith_sealed\"", "example": "locksmith_sealed", "source": "node/server.js:6856", "confirm": {"code": ["node/server.js:6854-6856"]}}
+        ],
+        "failures": {
+          "rows": [
+            {"when": "Your gold is less than 250,000.", "code": "gold_not_enough", "source": "node/server.js:6851-6853", "confirm": {"code": ["node/server.js:6851-6853", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "order": [
+          "`game_response` `locksmith_sealed` (a bare string) to you",
+          "`player` to you",
+          "`game_response` `data` to you"
+        ],
+        "source": "node/server.js:6850-6857"
+      },
+      {
+        "other": true,
+        "name": "Other",
+        "when": "Any other value, or no `operation`: nothing changes and the server takes no gold.",
+        "request": {
+          "fields": [
+            {"name": "operation", "type": "string", "optional": true, "coerce": "compared with `==`", "description": "Any value other than `\"unlock\"`, `\"lock\"` and `\"seal\"`, or no value."}
+          ],
+          "example": {"num": 6},
+          "confirm": {"code": ["node/server.js:6809", "node/server.js:6839", "node/server.js:6850", "node/server.js:6857-6860"], "note": "No branch matches; the handler falls through to the success reply"}
+        },
+        "order": ["`player` to you", "`game_response` `data` to you"]
+      }
+    ]
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "After the code reply of the variant and the `player` update. Also for an unknown `operation`. Not after `locksmith_unsealing`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"locksmith\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "locksmith"},
+      "source": "node/server.js:6860",
+      "confirm": {"code": ["node/server.js:6858-6860", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "locksmith",
+    "rows": [
+      {
+        "when": "No character. The handler reads `player.items` before it checks `player`, and throws.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "the shared error step"}
+        ],
+        "source": "node/server.js:6793",
+        "confirm": {"code": ["node/server.js:6792-6793", "node/server.js:4947-4966"], "note": "`player.items` on `undefined` throws; the wrapper sends `game_error` `\"ERROR!\"`"}
+      },
+      {"when": "The character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:6795-6797", "confirm": {"code": ["node/server.js:6795-6797", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are more than `B.sell_dist` (400 px) from the `locksmith` NPC on `desertland`. A character with a `computer` passes this check.", "code": "distance", "source": "node/server.js:6798-6800", "confirm": {"code": ["node/server.js:6798-6800", "node/server.js:220", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot `num` is empty.", "code": "no_item", "source": "node/server.js:6801-6804", "confirm": {"code": ["node/server.js:6801-6804", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item is of type `uscroll`, `cscroll`, `pscroll`, `offering` or `tome`.", "code": "locksmith_cant", "source": "node/server.js:6805-6808", "confirm": {"code": ["node/server.js:6805-6808", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {"event": "player", "to": "you", "when": "Success, between the code and the `data` reply. Also before `locksmith_unsealing`, `locksmith_aunlocked` and `locksmith_alocked`.", "summary": "Your state with `reopen: true`. The item shows the new `l` (and `ld` while it unseals).", "source": "node/server.js:6811, 6828, 6841, 6859", "confirm": {"code": ["node/server.js:6811", "node/server.js:6828", "node/server.js:6841", "node/server.js:6858-6859", "node/server.js:4550-4594"]}}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "event": "ccreport",
+  "to": "the socket that sent `ccreport` only",
+  "payload": {
+    "fields": [
+      {"name": "calls", "type": "CallLogEntry[]", "optional": false, "description": "`socket.calls`: the calls of the last 4 s, oldest first. The sum of the costs is the call cost now (node/server_functions.js:5354-5361)."},
+      {"name": "climit", "type": "integer", "optional": false, "description": "`limits.calls`, 200 (node/server.js:257). Caution: a socket without a character has a limit of 50, not this value (node/server.js:4905-4906)."},
+      {"name": "total", "type": "integer", "optional": false, "description": "`socket.total_calls`: the number of events that this socket sent since it connected."}
+    ],
+    "confirm": {"code": ["node/server.js:5437-5439", "node/server_functions.js:5336-5363", "node/server.js:257"]}
+  },
+  "example": {"calls": [["2026-10-04T12:00:00.120Z", "move", 3], ["2026-10-04T12:00:01.250Z", "attack", 1], ["2026-10-04T12:00:02.400Z", "ccreport", 1]], "climit": 200, "total": 1482},
+  "senders": [
+    {"what": "The `ccreport` handler.", "source": "node/server.js:5437-5439"}
+  ]
+}

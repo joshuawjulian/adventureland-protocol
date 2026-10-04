@@ -1,0 +1,11 @@
+# Build output of the seven course projects and the test server (docs/COURSE.md, "Ignored build output").
+node_modules/
+.venv/
+__pycache__/
+.mypy_cache/
+bin/
+obj/
+target/
+cp.txt
+.al-cache/
+test-server/G.json

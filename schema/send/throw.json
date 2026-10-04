@@ -1,0 +1,59 @@
+{
+  "event": "throw",
+  "source": "node/server.js:9484-9553",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key (`player.items[num]`), so a number or a numeric string; any other value is an empty slot", "description": "The slot of the item to throw. `G.items[name].throw` must be set: `confetti`, `firecrackers`, `whiteegg` or `smoke` in G 17478."},
+      {"name": "x", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(x) || 0`", "description": "The map x of the target position, on your map."},
+      {"name": "y", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(y) || 0`", "description": "The map y of the target position, on your map."}
+    ],
+    "others": "ignored",
+    "example": {"num": 10, "x": 120, "y": -40}, "confirm": {"code": ["node/server.js:9489", "node/server.js:9504-9505"], "note": "The handler reads only `num`, `x` and `y`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The item was thrown. The server removed one item from the slot.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"throw\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "throw"},
+      "source": "node/server.js:9548-9549", "confirm": {"code": ["node/server.js:9509", "node/server.js:9548-9549", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "throw",
+    "intro": "**Server bug:** the `too_far` failure does not stop the handler. The throw still happens, and the success replies follow it.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9486-9488", "confirm": {"code": ["node/server.js:9485-9488"]}},
+      {"when": "The slot holds a placeholder (an upgrade or a compound runs).", "code": "item_placeholder", "source": "node/server.js:9491-9493", "confirm": {"code": ["node/server.js:9491-9493", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item is locked (`l`).", "code": "item_locked", "source": "node/server.js:9494-9496", "confirm": {"code": ["node/server.js:9494-9496", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item is on your merchant stand (`b`).", "code": "item_blocked", "source": "node/server.js:9497-9499", "confirm": {"code": ["node/server.js:9497-9499", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has no `throw` in `G.items`.", "code": "invalid", "source": "node/server.js:9500-9503", "confirm": {"code": ["node/server.js:9500-9503", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "The target position is more than `player.str * 3` px from you. **Server bug:** the handler does not return here (node/server.js:9507). It uses the item and does the throw, and you also get the `player` and the success reply.",
+        "replies": [
+          {"code": "too_far"},
+          {"see": "Success", "note": "after `eval` and `player`: the throw still happens"}
+        ],
+        "source": "node/server.js:9506-9508", "confirm": {"code": ["node/server.js:9504-9509", "node/server.js:9548-9549", "node/server_functions.js:3393-3419"], "note": "No `return` after `fail_response(\"too_far\")`"}
+      },
+      {"when": "The slot is empty.", "code": "no_item", "source": "node/server.js:9550-9552", "confirm": {"code": ["node/server.js:9489-9490", "node/server.js:9550-9552", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {"event": "eval", "to": "clients near the target position", "when": "Success with `confetti`, `firecrackers`, `whiteegg` or `smoke`. The payload is a bare string of JavaScript, not an object.", "type": "string", "example": "confetti_shower({in:'main',map:'main',real_x:120,real_y:-40})", "source": "node/server.js:9510-9547", "confirm": {"code": ["node/server.js:9510-9547", "node/server_functions.js:3744-3779"], "note": "`xy_emit` centers on the target position"}},
+    {"event": "player", "to": "you", "when": "Success, before the `game_response`.", "summary": "Your state with `reopen: true`. The slot has one item less.", "source": "node/server.js:9548", "confirm": {"code": ["node/server.js:9548", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "`eval` (a bare JavaScript string) to clients near the target position",
+    "`player` with `reopen: true` to you",
+    "`game_response` `data` with `success: true` to you"
+  ]
+}

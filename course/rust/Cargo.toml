@@ -1,0 +1,21 @@
+# Cargo.toml: the course project. One crate, "albot": the library is src/lib.rs
+# (one file per module in src/), and each program is src/bin/<program>.rs.
+# Run a program: cargo run --bin al-test
+[package]
+name = "albot"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+
+[dependencies]
+# The async runtime: tasks, timers, channels, #[tokio::main]. "full" turns on all of them.
+tokio = { version = "1.40", features = ["full"] }
+# WebSocket client for tokio. The rustls feature gives wss:// without OpenSSL on the system.
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+# split() and the send/next helpers of the WebSocket stream.
+futures-util = "0.3"
+# JSON: derive(Deserialize) for typed payloads, and serde_json::Value for the rest.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# HTTP client for the website API. No default features: no OpenSSL; rustls instead.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

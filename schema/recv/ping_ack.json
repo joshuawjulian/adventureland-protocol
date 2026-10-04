@@ -1,0 +1,16 @@
+{
+  "event": "ping_ack",
+  "to": "the socket that sent `ping_trig` only",
+  "payload": {
+    "fields": [
+      {"name": "id", "type": "any", "optional": true, "description": "The `id` that `ping_trig` sent. The official client sends a random string of 5 characters (js/functions.js:230-235)."},
+      {"name": "ui", "type": "any", "optional": true, "description": "The `ui` that `ping_trig` sent. The official client sends `true` when it shows the ping in the log."}
+    ],
+    "open": true,
+    "confirm": {"code": ["node/server.js:5126-5128", "node/server.js:4893-4895"], "note": "The request is echoed as is, so a request that is not an object comes back as that value; a missing one comes back as `{}`."}
+  },
+  "example": {"id": "x7Kq2", "ui": true},
+  "senders": [
+    {"what": "The `ping_trig` handler. It sends back the payload of the request unchanged. A request without a payload gets `{}`.", "source": "node/server.js:5126-5128"}
+  ]
+}

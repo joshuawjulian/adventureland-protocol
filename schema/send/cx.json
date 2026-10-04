@@ -1,0 +1,71 @@
+{
+  "event": "cx",
+  "source": "node/server.js:5248-5281",
+  "request": {
+    "fields": [
+      {"name": "slot", "type": "string", "optional": true, "coerce": "tested as true or false; without `name`, used as a key of `cx`", "description": "Without `name`: the slot to clear (the variant Clear). With `name`: it matters only for a `body`, `armor` or `character` cosmetic (the variant Put on)."},
+      {"name": "name", "type": "string", "optional": true, "coerce": "a key of `T` (the sprite type of each cosmetic) and of `all_cx(player)`", "description": "The cosmetic to put on. A true `slot` and no `name` selects the variant Clear; every other request is the variant Put on."}
+    ],
+    "others": "ignored",
+    "example": {"name": "hat221"}, "confirm": {"code": ["node/server.js:5258", "node/server.js:5265", "node/server.js:5267-5275"]}
+  },
+  "variants": {
+    "key": "name",
+    "list": [
+      {
+        "name": "Clear",
+        "match": "a true `slot` and no `name`",
+        "when": "Clears a cosmetic slot.",
+        "request": {
+          "fields": [
+            {"name": "slot", "type": "string", "optional": false, "coerce": "tested as true or false, then used as a key of `cx`", "description": "The slot to clear. Slots: `upper`, `chin`, `makeup`, `tail`, `gravestone`, `back`, `face`, `hat`, `head`, `hair`. A clear of `back` also clears `tail`; a clear of `face` also clears `makeup`. You cannot clear the skin."}
+          ],
+          "example": {"slot": "hat"}, "confirm": {"code": ["node/server.js:5258-5265"]}
+        },
+        "source": "node/server.js:5258-5265"
+      },
+      {
+        "name": "Put on",
+        "match": "a `name`, or no `slot`",
+        "when": "Puts a cosmetic on. Its sprite type picks the slot.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "string", "optional": false, "coerce": "a key of `T` (the sprite type of each cosmetic) and of `all_cx(player)`", "description": "The cosmetic to put on. Its sprite type picks the slot (`cxtype_to_slot`, js/old_common_functions.js:135-152). A `body`, `armor` or `character` cosmetic goes to the skin when `slot` is `\"skin\"`. A `body` or `armor` cosmetic goes to `upper` when `slot` is `\"upper\"`. Each other cosmetic goes to its own slot, whatever `slot` says."},
+            {"name": "slot", "type": "string", "optional": true, "coerce": "compared with `==` to `\"skin\"` and `\"upper\"`", "description": "It matters only for a `body`, `armor` or `character` cosmetic (see `name`)."}
+          ],
+          "example": {"name": "hat221"}, "confirm": {"code": ["node/server.js:5266-5276", "js/old_common_functions.js:135-152"]}
+        },
+        "failures": {
+          "rows": [
+            {"when": "`name` is not a known cosmetic (`T[name]`), or you do not own it (`all_cx(player)`) and your `role` is not `\"cx\"`. A request with neither `slot` nor `name` also ends here.", "code": "cx_not_found", "source": "node/server.js:5266-5269", "confirm": {"code": ["node/server.js:5256", "node/server.js:5266-5269", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "source": "node/server.js:5266-5277"
+      }
+    ]
+  },
+  "responses": [
+    {"name": "Update", "event": "player", "when": "All checks pass, before the `game_response`. Also when nothing changed.", "summary": "Your character (`u+cid`) with the new `skin` and `cx`. The server removes each `cx` entry whose sprite type does not fit its slot (`prune_cx`, js/old_common_functions.js:341-351).", "example": {"id": "Merlin", "skin": "marmor12d", "cx": {"head": "makeup117", "hat": "hat221"}, "cid": 419}, "example_trimmed": true, "source": "node/server.js:5278-5279", "confirm": {"code": ["node/server.js:5278-5279", "js/old_common_functions.js:341-351", "node/server.js:4550-4594"]}},
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. The server also sends it when it made no change. Examples: a `body`, `armor` or `character` cosmetic with another `slot`. Or a sprite type with no slot: `full`, `skin`, `animation`, `v_animation`, `emblem`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"cx\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "cx"},
+      "source": "node/server.js:5280", "confirm": {"code": ["node/server.js:5280", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5250-5252", "confirm": {"code": ["node/server.js:5249-5252"]}}
+    ]
+  },
+  "order": ["`player` to you", "`game_response` `data` to you"]
+}

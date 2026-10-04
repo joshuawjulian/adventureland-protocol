@@ -1,0 +1,11 @@
+{
+  "name": "albot-course",
+  "private": true,
+  "description": "The albot library and the programs of the Learn course. Node.js 22.18+ runs them with no packages; the two dev packages only check the JSDoc types (npx tsc).",
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "devDependencies": {
+    "@types/node": "22.10.0",
+    "typescript": "5.6.3"
+  }
+}

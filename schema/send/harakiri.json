@@ -1,0 +1,78 @@
+{
+  "event": "harakiri",
+  "source": "node/server.js:12966-12981",
+  "request": {
+    "fields": [],
+    "note": "No payload. The handler reads no field.",
+    "confirm": {"code": ["node/server.js:12966-12981"], "note": "The handler never reads `data`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "player",
+      "when": "You were alive. There is no `game_response`.",
+      "summary": "Your state (`resend \"u+cid\"`) with `rip: true` (or the name of your gravestone cosmetic) and `hp: 0`.",
+      "example": {"id": "Merlin", "hp": 0, "rip": true, "moving": false, "abs": true, "cid": 419},
+      "example_trimmed": true,
+      "source": "node/server.js:12980; node/server_functions.js:439-449",
+      "confirm": {"code": ["node/server.js:12971-12974", "node/server.js:12980", "node/server.js:4550-4594", "node/server_functions.js:439-449", "node/server.js:915-916"], "note": "`rip` sets `hp: 0`, `rip: true`, `moving: false`, `abs: true`; `player_to_client` swaps `rip` for the gravestone cosmetic when there is one; `\"cid\"` bumps `cid`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "harakiri",
+    "rows": [
+      {"when": "No character, or you are dead already (`player.rip`).", "replies": [], "source": "node/server.js:12968-12970", "confirm": {"code": ["node/server.js:12968-12970"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "server_message",
+      "to": "everyone in the instance of the attacker",
+      "when": "Not on a generated map, and a different character hit you recently (`s.block.f`). That character gets the PvP kill and its rewards (`issue_player_award`).",
+      "type": "LocalizedText",
+      "example": {"color": "gray", "message": "Ranger defeated Wizard", "phrase": "server.server_message.defeated", "phrase_args": {"attacker": "Ranger", "player": "Wizard"}},
+      "source": "node/server.js:4504-4517",
+      "confirm": {"code": ["node/server.js:4499-4517", "node/server_functions.js:3540-3551", "languages/index.js:256-258", "languages/en/server.js:379"], "note": "`defeat_player` checks `generated_entry` first; `localization.message` merges `{color: \"gray\"}` with `message`, `phrase`, `phrase_args`"}
+    },
+    {
+      "event": "chat_log",
+      "to": "clients near the `pvp` NPC",
+      "when": "As for `server_message`, when you are on the `arena` map.",
+      "summary": "The same text with phrase `server.chat_log.defeated`, as a `LocalizedText` with `owner` (the name of the NPC) and `id: \"pvp\"`.",
+      "source": "node/server.js:4518-4527",
+      "confirm": {"code": ["node/server.js:4518-4529", "node/server_functions.js:3744-3779", "languages/index.js:256-258", "languages/en/server.js:78"]}
+    },
+    {
+      "event": "party_update",
+      "to": "party",
+      "when": "You are in a party: `rip` sends the new party state to each member, you too. On every call that gets past the checks (`rip` runs in `defeat_player` or right after it).",
+      "summary": "`{list, party}`: the names and the state of the party. See the `party_update` entry.",
+      "source": "node/server_functions.js:445-447; node/server.js:1215-1226",
+      "confirm": {"code": ["node/server.js:12971-12974", "node/server_functions.js:439-449", "node/server.js:1215-1226"]}
+    },
+    {
+      "event": "disappearing_text",
+      "to": "nearby",
+      "when": "After the death, every client whose view holds you (you included).",
+      "fields": [
+        {"name": "message", "type": "string", "optional": false, "description": "`\"SEPPUKU\"`."},
+        {"name": "phrase", "type": "\"server.floating.seppuku\"", "optional": false, "description": "The phrase key."},
+        {"name": "phrase_args", "type": "object", "optional": false, "description": "`{}`."},
+        {"name": "x", "type": "number", "optional": false, "description": "Your `x`."},
+        {"name": "y", "type": "number", "optional": false, "description": "Your `y` minus 30."},
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "You."},
+        {"name": "args", "type": "object", "optional": false, "description": "`{c: \"#6F76A6\", sz: \"huge\"}`: the color and the size."}
+      ],
+      "example": {"message": "SEPPUKU", "phrase": "server.floating.seppuku", "phrase_args": {}, "x": -120.5, "y": 380, "id": "Wizard", "args": {"c": "#6F76A6", "sz": "huge"}},
+      "source": "node/server.js:12975-12979; node/server_functions.js:3956-3991",
+      "confirm": {"code": ["node/server.js:12975-12979", "node/server_functions.js:3956-3992", "node/server_functions.js:3744-3779", "languages/index.js:256-258", "languages/en/server.js:102"], "note": "`xy: 1` without `nv` goes through `xy_emit`; `color` becomes `args.c`, `size` becomes `args.sz`"}
+    }
+  ],
+  "order": [
+    "PvP kill only: `server_message` to the instance of the attacker (and `chat_log` in the arena)",
+    "party only: `party_update` to each member, you too",
+    "`disappearing_text` `SEPPUKU` to clients nearby, you included",
+    "`player` to you"
+  ]
+}

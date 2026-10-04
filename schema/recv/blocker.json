@@ -1,0 +1,15 @@
+{
+  "event": "blocker",
+  "to": "you: only the socket that sent `blocker`",
+  "payload": {
+    "fields": [
+      {"name": "type", "type": "\"pvp\"", "optional": false, "description": "The blocker. Only `\"pvp\"` exists."},
+      {"name": "allow", "type": "1", "optional": true, "description": "The `arena` instance lets players in (`instances.arena.allow`). Absent otherwise."}
+    ],
+    "confirm": {"code": ["node/server.js:5590-5598"]}
+  },
+  "example": {"type": "pvp", "allow": 1},
+  "senders": [
+    {"what": "The `blocker` handler, when the request has `type: \"pvp\"`", "source": "node/server.js:5590-5598"}
+  ]
+}

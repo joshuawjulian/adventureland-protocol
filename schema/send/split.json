@@ -1,0 +1,45 @@
+{
+  "event": "split",
+  "source": "node/server.js:7997-8045",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"7\"` also works. Any other value reads an empty slot", "description": "The slot of the stack."},
+      {"name": "quantity", "type": "integer", "optional": true, "default": 1, "coerce": "`min(max(parseInt(quantity) || 0, 1), q, G.items[name].s)`: a string works, a fraction goes away", "description": "How many units to move to a new stack."}
+    ],
+    "others": "ignored",
+    "example": {"num": 7, "quantity": 50},
+    "confirm": {"code": ["node/server.js:7999", "node/server.js:8019-8020"], "note": "The handler reads `num` and `quantity`"}
+  },
+  "responses": [
+    {"name": "Success", "event": "game_response", "code": "data", "when": "All checks pass and `quantity` is less than the stack. The server removes `quantity` units from the stack and puts them in a new stack in the first empty slot.", "extends": "GameResponseSuccess", "fields": [{"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."}, {"name": "place", "type": "\"split\"", "optional": false, "description": "The request."}, {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}, {"name": "from", "type": "InventoryIndex", "optional": false, "description": "`num` from the request, with no conversion."}, {"name": "to", "type": "InventoryIndex", "optional": false, "description": "The slot of the new stack."}, {"name": "q", "type": "integer", "optional": false, "description": "The quantity after the server corrected it."}], "example": {"from": 7, "to": 12, "q": 50, "success": true, "response": "data", "place": "split"}, "source": "node/server.js:8044", "confirm": {"code": ["node/server.js:8026-8044", "node/server_functions.js:3421-3446"]}},
+    {"name": "Whole stack", "event": "game_response", "code": "data", "when": "`quantity` is the whole stack or more. Nothing changes, and the server sends no `player` update.", "extends": "GameResponseSuccess", "fields": [{"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."}, {"name": "place", "type": "\"split\"", "optional": false, "description": "The request."}, {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}, {"name": "from", "type": "InventoryIndex", "optional": false, "description": "`num` from the request, with no conversion."}, {"name": "to", "type": "InventoryIndex", "optional": false, "description": "The same as `from`."}, {"name": "q", "type": "integer", "optional": false, "description": "The quantity after the server corrected it."}], "example": {"from": 7, "to": 7, "q": 200, "success": true, "response": "data", "place": "split"}, "source": "node/server.js:8021-8024", "confirm": {"code": ["node/server.js:8019-8024", "node/server_functions.js:3421-3446"]}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "split",
+    "rows": [
+      {
+        "when": "No character. The handler reads `player.items` and does not check `player`, so it throws.",
+        "replies": [{"event": "game_error", "example": "ERROR!", "note": "the shared error step"}],
+        "source": "node/server.js:7998-7999",
+        "confirm": {"code": ["node/server.js:7998-7999", "node/server.js:4947-4966"]}
+      },
+      {"when": "The slot `num` is empty.", "code": "no_item", "source": "node/server.js:8000-8002", "confirm": {"code": ["node/server.js:8000-8002", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item does not stack (no `G.items[name].s`). A placeholder also fails here, so the `item_placeholder` check after it never fails.", "code": "invalid", "source": "node/server.js:8003-8005", "confirm": {"code": ["node/server.js:8003-8005", "node/server.js:8009-8011", "node/server_functions.js:3393-3419"]}},
+      {"when": "No empty inventory slot (`esize` is 0).", "code": "cant_space", "source": "node/server.js:8006-8008", "confirm": {"code": ["node/server.js:8006-8008", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the lock `l`.", "code": "item_locked", "source": "node/server.js:8012-8014", "confirm": {"code": ["node/server.js:8012-8014", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the flag `b`.", "code": "item_blocked", "source": "node/server.js:8015-8017", "confirm": {"code": ["node/server.js:8015-8017", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success (not for the whole stack), before the `game_response`.",
+      "summary": "Your state with `reopen: true` and the two stacks in `items`.",
+      "source": "node/server.js:8043",
+      "confirm": {"code": ["node/server.js:8043", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": ["`player` to you", "`game_response` `data` to you"]
+}

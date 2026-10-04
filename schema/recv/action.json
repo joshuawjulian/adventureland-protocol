@@ -1,0 +1,13 @@
+{
+  "event": "action",
+  "to": "clients and observers near the attacker (`xy_emit`), and the target in all cases. A reflected projectile goes to clients near the reflecting target, and to the original attacker in all cases",
+  "payload": {"extends": "Action", "confirm": {"code": ["node/server.js:3547-3603", "node/server.js:3733-3734", "node/server.js:3763-3809", "node/server_functions.js:3744-3791"], "note": "Every sender calls `commence_attack`, which builds the object; a reflection re-sends the same object (`info.action`) changed in place"}},
+  "example": {"attacker": "Wizard", "target": "48213", "type": "attack", "source": "attack", "x": 512.4, "y": -96, "eta": 241, "m": 0, "pid": "Xk3pQa", "projectile": "magic", "damage": 182},
+  "senders": [
+    {"what": "`commence_attack`: the `skill` handler. `attack` and `heal` call the `skill` handler.", "source": "node/server.js:3547-3603"},
+    {"what": "Monster attacks and monster skills (`fireball`, `frostball`, `zap`, `deepfreeze`) in `update_instance`.", "source": "node/server.js:14136-14199, 14437, 15181"},
+    {"what": "NPC guards and healers in `npc_loop`.", "source": "node/server.js:15549, 15648"},
+    {"what": "Cavalry NPCs, cave actors and the `rimeshatter` ability of a `rimedjinn`.", "source": "node/logic/cavalry.js:433, 485; node/logic/cave_of_many_dreams.js:1479, 1536; node/logic/monster_abilities.js:82"},
+    {"what": "A reflection in `complete_attack`: the target reflects a magical projectile. The server sends the same `action` object again with `attacker` and `target` swapped.", "source": "node/server.js:3763-3809"}
+  ]
+}

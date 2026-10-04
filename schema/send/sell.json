@@ -1,0 +1,61 @@
+{
+  "event": "sell",
+  "source": "node/server.js:8046-8097",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"12\"` also works. Any other value reads an empty slot", "description": "The slot of the item."},
+      {"name": "quantity", "type": "integer", "optional": true, "default": 1, "coerce": "`min(max(parseInt(quantity) || 0, 1), q || 1)`: a string works, a fraction goes away", "description": "How many units to sell."}
+    ],
+    "others": "ignored",
+    "example": {"num": 12, "quantity": 10},
+    "confirm": {"code": ["node/server.js:8048-8050"], "note": "The handler reads `num` and `quantity`"}
+  },
+  "responses": [
+    {"name": "Success", "event": "game_response", "code": "gold_received", "when": "All checks pass. The server removes the units and adds `calculate_item_value(item) * quantity` gold.", "extends": "GameResponseSuccess", "fields": [{"name": "response", "type": "\"gold_received\"", "optional": false, "description": "The code."}, {"name": "place", "type": "\"sell\"", "optional": false, "description": "The request."}, {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}, {"name": "gold", "type": "integer", "optional": false, "description": "The gold that you got."}, {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item sold, with `q` set to the quantity sold for a stack."}, {"name": "cevent", "type": "\"sell\"", "optional": false, "description": "Tells the official client to fire its `sell` code event."}], "example": {"gold": 120, "item": {"name": "hpot0", "q": 10}, "cevent": "sell", "success": true, "response": "gold_received", "place": "sell"}, "source": "node/server.js:8095", "confirm": {"code": ["node/server.js:8079-8085", "node/server.js:8095", "js/old_common_functions.js:783-821", "node/server_functions.js:3421-3446"], "note": "`calculate_item_value` rounds, so `gold` is an integer"}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "sell",
+    "rows": [
+      {
+        "when": "No character. The handler reads `player.items` before it checks `player`, and throws.",
+        "replies": [{"event": "game_error", "example": "ERROR!", "note": "the shared error step"}],
+        "source": "node/server.js:8047-8051",
+        "confirm": {"code": ["node/server.js:8047-8049", "node/server.js:4947-4966"]}
+      },
+      {"when": "The character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:8052-8054", "confirm": {"code": ["node/server.js:8052-8054", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot `num` is empty.", "code": "no_item", "source": "node/server.js:8055-8057", "confirm": {"code": ["node/server.js:8055-8057", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item is a placeholder: an upgrade or compound runs on the slot.", "code": "item_placeholder", "source": "node/server.js:8058-8060", "confirm": {"code": ["node/server.js:8058-8060", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the lock `l`.", "code": "item_locked", "source": "node/server.js:8061-8063", "confirm": {"code": ["node/server.js:8061-8063", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the flag `b`.", "code": "item_blocked", "source": "node/server.js:8064-8066", "confirm": {"code": ["node/server.js:8064-8066", "node/server_functions.js:3393-3419"]}},
+      {"when": "No merchant NPC of your map (`G.maps[map].merchants`) is nearer than `B.sell_dist` (400 px). A character with a `computer` uses the first merchant of `main`.", "code": "distance", "source": "node/server.js:8067-8077", "confirm": {"code": ["node/server.js:8067-8077", "node/server.js:220", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "ui",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds the NPC; usually that includes you.",
+      "fields": [
+        {"name": "type", "type": "\"-$\"", "optional": false, "description": "A sale to an NPC."},
+        {"name": "id", "type": "string", "optional": false, "description": "The id of the NPC."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The seller."},
+        {"name": "item", "type": "ItemInstance", "optional": false, "description": "The item sold, with the quantity sold."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` from the request, with no conversion."},
+        {"name": "event", "type": "\"sell\"", "optional": false, "description": "Always `\"sell\"`."}
+      ],
+      "example": {"type": "-$", "id": "fancypots", "name": "Wizard", "item": {"name": "hpot0", "q": 10}, "num": 12, "event": "sell"},
+      "source": "node/server.js:8086-8093",
+      "confirm": {"code": ["node/server.js:8078", "node/server.js:8082-8093", "js/old_common_functions.js:233", "node/server_functions.js:3744-3791"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true`. `items`, `esize` and `gold` show the sale.",
+      "source": "node/server.js:8094",
+      "confirm": {"code": ["node/server.js:8094", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": ["`ui` to clients nearby", "`player` to you", "`game_response` `gold_received` to you"]
+}

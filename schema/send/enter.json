@@ -1,0 +1,475 @@
+{
+  "event": "enter",
+  "source": "node/server.js:6058-6253",
+  "request": {
+    "fields": [
+      {"name": "place", "type": "\"crypt\" | \"winter_instance\" | \"spider_instance\" | \"tomb\" | \"dreams\" | \"duelland\" | \"dungeon0\" | \"cgallery\"", "optional": false, "coerce": "compared with `==` (`===` for `\"dreams\"`)", "description": "Where to go. Dungeons: `crypt`, `winter_instance`, `spider_instance`, `tomb`. `dreams`: the Cave of Many Dreams. `duelland`: watch a duel. `dungeon0` and `cgallery` are for GMs only. It selects the variant."}
+    ],
+    "others": "ignored",
+    "example": {"place": "crypt"},
+    "confirm": {"code": ["node/server.js:6077", "node/server.js:6083", "node/server.js:6087", "node/server.js:6102-6107", "node/server.js:6146", "node/server.js:6149"]}
+  },
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:6060-6062", "confirm": {"code": ["node/server.js:6059-6062"]}},
+      {"when": "The `gameplay` of the server is not `\"normal\"` (for example `HARDCORE`, `TEST`).", "code": "transport_failed", "source": "node/server.js:6063-6065", "confirm": {"code": ["node/server.js:6063-6065", "node/server_functions.js:3393-3419"]}},
+      {"when": "You cannot walk (`can_walk`), or you are in `jail`.", "code": "transport_failed", "source": "node/server.js:6066-6068", "confirm": {"code": ["node/server.js:6066-6068", "js/old_common_functions.js:755-771", "node/server_functions.js:3393-3419"]}},
+      {"when": "You have the `block` condition, or more than 5 monsters target you.", "code": "cant_escape", "source": "node/server.js:6069-6071", "confirm": {"code": ["node/server.js:6069-6071", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "variants": {
+    "key": "place",
+    "intro": "The handler runs the shared checks (the first **Failure** table) for every `place`, then branches on `place`. Every variant but `dreams` replies at once; `dreams` replies later from `enter_dreams` (node/logic/generated_maps.js:578).",
+    "list": [
+      {
+        "value": ["crypt", "winter_instance", "spider_instance", "tomb"],
+        "name": "Dungeon",
+        "when": "Enters a dungeon instance: a new one for one key, or one that exists by `name`.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "InstanceName", "optional": true, "coerce": "tested for truthiness, then a key of `instances`", "description": "An instance that exists, to join it without a key. The instance must be of this `place`. Absent (or falsy): the server makes a new instance and uses one key."}
+          ],
+          "example": {"place": "crypt"},
+          "confirm": {"code": ["node/server.js:6129-6131", "node/server.js:6138-6143"]}
+        },
+        "responses": [
+          {
+            "name": "Moved",
+            "event": "new_map",
+            "when": "All checks pass. A new dungeon instance has a random name of 24 characters, and the server uses one key. A `player` update follows, then a second one with `reopen` (the key is gone).",
+            "type": "NewMapData",
+            "example": {
+              "name": "crypt",
+              "in": "Xk3pQa9TbR2mWz7LcV1nYs4D",
+              "x": 0,
+              "y": 0,
+              "effect": 0,
+              "info": {},
+              "m": 16,
+              "entities": {
+                "players": [],
+                "monsters": [
+                  {"id": "51022", "type": "a1", "x": 0, "y": -420, "cid": 1, "s": {}}
+                ],
+                "type": "all",
+                "in": "Xk3pQa9TbR2mWz7LcV1nYs4D",
+                "map": "crypt"
+              }
+            },
+            "source": "node/server.js:6129-6145, 4744-4755", "confirm": {"code": ["node/server.js:6129-6145", "node/server.js:1971-1979", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"]}
+          },
+          {
+            "name": "Success",
+            "event": "game_response",
+            "code": "data",
+            "when": "After the move.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"success": true, "response": "data", "place": "enter"},
+            "source": "node/server.js:6252", "confirm": {"code": ["node/server.js:6145", "node/server.js:6252", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "You are farther than 120 px from the entrance: `cave` spawn 2 (`crypt`), `winterland` spawn 5, `gateway` spawn 3, `mansion` spawn 1 (`tomb`).", "code": "transport_cant_reach", "source": "node/server.js:6107-6128", "confirm": {"code": ["node/server.js:6108-6128", "node/server_functions.js:3393-3419"]}},
+            {"when": "With `name`: no instance with that name is of this `place`.", "code": "transport_cant_invalid", "source": "node/server.js:6129-6137", "confirm": {"code": ["node/server.js:6129-6137", "node/server_functions.js:3393-3419"]}},
+            {"when": "Without `name`: you have no key (`cryptkey`, `frozenkey`, `spiderkey`, `tombkey`).", "code": "transport_cant_item", "source": "node/server.js:6138-6141", "confirm": {"code": ["node/server.js:6138-6141", "node/server.js:1971-1979", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "After `new_map`, and once more with `reopen`.", "summary": "Your character on the new map.", "source": "node/server.js:4757, 6145", "confirm": {"code": ["node/server.js:4757", "node/server.js:6145", "node/server.js:4550-4594"]}}
+        ],
+        "order": [
+          "`disappear` to clients near you",
+          "`new_map` to you",
+          "`player` to you",
+          "`player` with `reopen` to you",
+          "`game_response` `data` to you"
+        ],
+        "source": "node/server.js:6102-6145"
+      },
+      {
+        "value": "duelland",
+        "name": "Duel",
+        "when": "Watches a duel: moves you into its instance as a spectator.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "InstanceName", "optional": false, "coerce": "a key of `instances`", "description": "The instance of the duel. Without it, or with a name that is not a `duelland` instance, the reply is `cant_enter`."}
+          ],
+          "example": {"place": "duelland", "name": "Qm7TzKp2Lw9RxV4bNc8H"}, "confirm": {"code": ["node/server.js:6087-6089"]}
+        },
+        "responses": [
+          {
+            "name": "Duel moved",
+            "event": "new_map",
+            "when": "The instance exists and is of the map `duelland`. A `player` update follows.",
+            "type": "NewMapData",
+            "example": {
+              "name": "duelland",
+              "in": "Qm7TzKp2Lw9RxV4bNc8H",
+              "x": 0,
+              "y": 0,
+              "effect": 0,
+              "info": {"seconds": 60, "active": false},
+              "m": 16,
+              "entities": {"players": [], "monsters": [], "type": "all", "in": "Qm7TzKp2Lw9RxV4bNc8H", "map": "duelland"}
+            },
+            "source": "node/server.js:6087-6089, 4744-4755", "confirm": {"code": ["node/server.js:6087-6089", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"]}
+          },
+          {
+            "name": "Duel success",
+            "event": "game_response",
+            "code": "data",
+            "when": "After the move and the `game_log`.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"success": true, "response": "data", "place": "enter"},
+            "source": "node/server.js:6252", "confirm": {"code": ["node/server.js:6090-6098", "node/server.js:6252", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "No instance `name` of the map `duelland`.", "code": "cant_enter", "source": "node/server.js:6087-6101", "confirm": {"code": ["node/server.js:6087-6088", "node/server.js:6099-6101", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "After `new_map`.", "summary": "Your character on the new map.", "source": "node/server.js:4757", "confirm": {"code": ["node/server.js:6089", "node/server.js:4757", "node/server.js:4550-4594"]}},
+          {
+            "event": "game_log",
+            "to": "everyone in the duel instance (you too)",
+            "when": "`duelland`, after the move.",
+            "type": "LocalizedText",
+            "example": {"color": "gray", "message": "MyMage is spectating the duel", "phrase": "server.game_log.is_spectating_the_duel", "phrase_args": {"player": "MyMage"}},
+            "source": "node/server.js:6090-6097", "confirm": {"code": ["node/server.js:6090-6098", "node/server_functions.js:3540-3550", "languages/index.js:256-258"], "note": "On a `hardcore` server `instance_emit` broadcasts to everyone, but `enter` stops there earlier (`transport_failed`)"}
+          }
+        ],
+        "order": [
+          "`disappear` to clients near you",
+          "`new_map` to you",
+          "`player` to you",
+          "`game_log` to the duel instance",
+          "`game_response` `data` to you"
+        ],
+        "source": "node/server.js:6087-6101"
+      },
+      {
+        "value": ["dungeon0", "cgallery"],
+        "name": "GM",
+        "when": "GMs only. Makes a solo instance of `dungeon0`, or of `cgallery` (a gallery with one NPC for each cosmetic). In `cgallery` already, you keep your position.",
+        "request": {"fields": [], "example": {"place": "cgallery"}, "confirm": {"code": ["node/server.js:6146", "node/server.js:6149-6155"]}},
+        "responses": [
+          {
+            "name": "GM moved",
+            "event": "new_map",
+            "when": "Your `role` is `\"gm\"`. A `player` update follows.",
+            "type": "NewMapData",
+            "example": {
+              "name": "cgallery",
+              "in": "Rb4WnX8kTq2LcP6vZs9MyD3J",
+              "x": 0,
+              "y": 0,
+              "effect": 0,
+              "info": {},
+              "m": 16,
+              "entities": {"players": [], "monsters": [], "type": "all", "in": "Rb4WnX8kTq2LcP6vZs9MyD3J", "map": "cgallery"}
+            },
+            "source": "node/server.js:6146-6155, 4744-4755", "confirm": {"code": ["node/server.js:6146-6155", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"]}
+          },
+          {
+            "name": "GM success",
+            "event": "game_response",
+            "code": "data",
+            "when": "After the move (and, for `cgallery`, after the NPCs).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+              {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"success": true, "response": "data", "place": "enter"},
+            "source": "node/server.js:6252", "confirm": {"code": ["node/server.js:6146-6155", "node/server.js:6252", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "Your `role` is not `\"gm\"`: the handler falls through to its last `else`.", "code": "transport_cant_reach", "source": "node/server.js:6146, 6149, 6249-6251", "confirm": {"code": ["node/server.js:6146", "node/server.js:6149", "node/server.js:6249-6251", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "After `new_map`.", "summary": "Your character on the new map.", "source": "node/server.js:4757", "confirm": {"code": ["node/server.js:6148", "node/server.js:6155", "node/server.js:4757", "node/server.js:4550-4594"]}}
+        ],
+        "order": [
+          "`disappear` to clients near you",
+          "`new_map` to you",
+          "`player` to you",
+          "`game_response` `data` to you"
+        ],
+        "source": "node/server.js:6146-6248"
+      },
+      {
+        "value": "dreams",
+        "name": "Dreams",
+        "when": "Opens a run of the Cave of Many Dreams for your party, or puts you back in your run after a disconnect. The handler returns at once; `enter_dreams` replies later.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "InstanceName", "optional": true, "coerce": "tested for truthiness", "description": "Must be absent. A truthy `name` fails with `cant_reenter`."}
+          ],
+          "example": {"place": "dreams"}, "confirm": {"code": ["node/server.js:6077-6080", "node/logic/generated_maps.js:580"]}
+        },
+        "responses": [
+          {
+            "name": "Dreams opened",
+            "event": "game_response",
+            "when": "All checks pass, later (the entry animation takes 1,800 ms, then database work). Your party is in the first floor of a new run, or you are back in your run after a disconnect (`resumed: true`). It comes after `new_map`.",
+            "fields": [
+              {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "run", "type": "string", "optional": false, "description": "The key of the run: 24 hexadecimal characters."},
+              {"name": "expires", "type": "integer", "optional": false, "description": "The end of the run, in ms since 1970 (24 minutes after the start)."},
+              {"name": "level", "type": "integer", "optional": false, "description": "The level of the run: the highest level in the party."},
+              {"name": "resumed", "type": "true", "optional": true, "description": "You came back to a run that you left by a disconnect."}
+            ],
+            "example": {"place": "enter", "success": true, "run": "5f0c2a9e8b7d6c5b4a3f2e1d", "expires": 1791115440000, "level": 62},
+            "source": "node/logic/generated_maps.js:578-586, 564, 346", "confirm": {"code": ["node/logic/generated_maps.js:578-582", "node/logic/generated_maps.js:564", "node/logic/generated_maps.js:346"]}
+          }
+        ],
+        "failures": {
+          "intro": "`enter_dreams` catches each error and sends `{place: \"enter\", failed: true, reason}` on `game_response`, with no `response` field. A failure can come at once or after the animation; after the animation starts, `ui` with `cancel: true` goes to clients nearby.",
+          "rows": [
+            {
+              "when": "You sent a truthy `name`.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"cant_reenter\"", "optional": false, "description": "Why the entry failed.", "example": "cant_reenter"}
+              ],
+              "source": "node/logic/generated_maps.js:580", "confirm": {"code": ["node/logic/generated_maps.js:580", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "Rejoin (you left a run by a disconnect): your run ended or closes, also when it changes during the animation. The admission checks below also apply, before and after the animation.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"cave_closed\"", "optional": false, "description": "Why the entry failed.", "example": "cave_closed"}
+              ],
+              "source": "node/logic/generated_maps.js:297, 310", "confirm": {"code": ["node/logic/generated_maps.js:295-297", "node/logic/generated_maps.js:310", "node/logic/generated_maps.js:454-456", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "Rejoin: a rejoin of yours is in progress.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"already_opening\"", "optional": false, "description": "Why the entry failed.", "example": "already_opening"}
+              ],
+              "source": "node/logic/generated_maps.js:298", "confirm": {"code": ["node/logic/generated_maps.js:298", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "Rejoin: the server finds no safe spot near your old position, or the move fails.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"transport_failed\"", "optional": false, "description": "Why the entry failed.", "example": "transport_failed"}
+              ],
+              "source": "node/logic/generated_maps.js:311-312, 334-335", "confirm": {"code": ["node/logic/generated_maps.js:311-312", "node/logic/generated_maps.js:334-335", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "Admission (it runs again before and after the animation, and once more before the run starts): `G.events.dreams.disabled` is true.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"cave_closed\"", "optional": false, "description": "Why the entry failed.", "example": "cave_closed"}
+              ],
+              "source": "node/logic/generated_maps.js:434-435", "confirm": {"code": ["node/logic/generated_maps.js:434-435", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "You are dead, not on `main`, or cannot walk.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"cant_enter\"", "optional": false, "description": "Why the entry failed.", "example": "cant_enter"}
+              ],
+              "source": "node/logic/generated_maps.js:436", "confirm": {"code": ["node/logic/generated_maps.js:436", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "More than 3 members of the party are on this server.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"party_too_large\"", "optional": false, "description": "Why the entry failed.", "example": "party_too_large"}
+              ],
+              "source": "node/logic/generated_maps.js:437", "confirm": {"code": ["node/logic/generated_maps.js:431-432", "node/logic/generated_maps.js:437", "node/logic/generated_maps.js:457-458", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "A member is dead, offline, not on `main`, cannot walk, has a monster target, is farther than 160 px from (816, 1200), or connected without `map_protocol=1`.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"bring_party_to_keeper\"", "optional": false, "description": "Why the entry failed.", "example": "bring_party_to_keeper"}
+              ],
+              "source": "node/logic/generated_maps.js:438-451", "confirm": {"code": ["node/logic/generated_maps.js:438-451", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "A member is in a run already.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"already_inside\"", "optional": false, "description": "Why the entry failed.", "example": "already_inside"}
+              ],
+              "source": "node/logic/generated_maps.js:452", "confirm": {"code": ["node/logic/generated_maps.js:452", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "Your character has an active run on another server.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"cave_other_server\"", "optional": false, "description": "Why the entry failed.", "example": "cave_other_server"}
+              ],
+              "source": "node/logic/generated_maps.js:459-461", "confirm": {"code": ["node/logic/generated_maps.js:459-461", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "An account of the party is opening a run already.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"already_opening\"", "optional": false, "description": "Why the entry failed.", "example": "already_opening"}
+              ],
+              "source": "node/logic/generated_maps.js:470", "confirm": {"code": ["node/logic/generated_maps.js:470", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "The server has 72 runs.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"zone_busy\"", "optional": false, "description": "Why the entry failed.", "example": "zone_busy"}
+              ],
+              "source": "node/logic/generated_maps.js:471", "confirm": {"code": ["node/logic/generated_maps.js:471", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "An account used its daily opening.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"daily_opening_used\"", "optional": false, "description": "Why the entry failed.", "example": "daily_opening_used"}
+              ],
+              "source": "node/logic/generated_maps.js:505-508", "confirm": {"code": ["node/logic/generated_maps.js:483", "node/logic/generated_maps.js:486-508", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "A member is entering a run already.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"character_already_entering\"", "optional": false, "description": "Why the entry failed.", "example": "character_already_entering"}
+              ],
+              "source": "node/logic/generated_maps.js:518-521", "confirm": {"code": ["node/logic/generated_maps.js:511-521", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "After the animation: a member logged out and in again, or the party changed (a member left or joined).",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"party_changed\"", "optional": false, "description": "Why the entry failed.", "example": "party_changed"}
+              ],
+              "source": "node/logic/generated_maps.js:530-537", "confirm": {"code": ["node/logic/generated_maps.js:530-537", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "The database reservations expired before the run started.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"admission_expired\"", "optional": false, "description": "Why the entry failed.", "example": "admission_expired"}
+              ],
+              "source": "node/logic/generated_maps.js:548-557", "confirm": {"code": ["node/logic/generated_maps.js:548-557", "node/logic/generated_maps.js:578-585"]}
+            },
+            {
+              "when": "Any other error (for example `invalid_floor` when the floor generation fails): `reason` is its message.",
+              "form": "object",
+              "extra": [
+                {"name": "place", "type": "\"enter\"", "optional": false, "description": "The request. The object has no `response` field."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "string", "optional": false, "description": "The message of the error.", "example": "invalid_floor"}
+              ],
+              "source": "node/logic/generated_maps.js:584-585", "confirm": {"code": ["node/logic/generated_maps.js:583-585", "node/logic/generated_maps.js:578-585"]}
+            }
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "At the start of the animation, for each member; then after each `new_map`.", "summary": "Your character on the new map.", "source": "node/logic/cave_of_many_dreams.js:13, node/server.js:4757", "confirm": {"code": ["node/logic/cave_of_many_dreams.js:5-14", "node/server.js:4757", "node/server.js:4550-4594"]}},
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "When the animation starts, and with `cancel: true` (only `{type, key, cancel}`) when the entry fails after it started.",
+            "fields": [
+              {"name": "type", "type": "\"cave_enter\"", "optional": false, "description": "The cave entry animation."},
+              {"name": "names", "type": "CharacterName[]", "optional": true, "description": "The members that enter. Absent for a cancel."},
+              {"name": "duration", "type": "Milliseconds", "optional": true, "description": "1,800. Absent for a cancel."},
+              {"name": "key", "type": "string", "optional": false, "description": "The key of the run."},
+              {"name": "cancel", "type": "true", "optional": true, "description": "The entry failed."}
+            ],
+            "example": {"type": "cave_enter", "names": ["MyMage", "MyPriest"], "duration": 1800, "key": "5f0c2a9e8b7d6c5b4a3f2e1d"},
+            "source": "node/logic/cave_of_many_dreams.js:16, node/logic/generated_maps.js:350, 567", "confirm": {"code": ["node/logic/cave_of_many_dreams.js:16", "node/logic/generated_maps.js:349-350", "node/logic/generated_maps.js:566-567", "node/server_functions.js:3744-3791"]}
+          },
+          {"event": "map_chunk", "to": "each member of the party", "when": "Before the `new_map` to the first floor. The floor map comes in pieces of 12,000 characters.", "summary": "`{run, index, count, text}`. See the `map_chunk` entry.", "source": "node/logic/generated_maps.js:178-221", "confirm": {"code": ["node/logic/generated_maps.js:178-221", "node/server.js:4648"]}},
+          {
+            "event": "new_map",
+            "to": "each member of the party",
+            "when": "Each member moves to the first floor, spawn 0, with `effect: 1`. A `player` update follows each.",
+            "type": "NewMapData",
+            "example": {
+              "name": "zone_5f0c2a9e8b7d6c5b4a3f2e1d_0",
+              "in": "zone_5f0c2a9e8b7d6c5b4a3f2e1d_0",
+              "x": 0,
+              "y": 0,
+              "effect": 1,
+              "info": {},
+              "m": 17,
+              "entities": {"players": [], "monsters": [], "type": "all", "in": "zone_5f0c2a9e8b7d6c5b4a3f2e1d_0", "map": "zone_5f0c2a9e8b7d6c5b4a3f2e1d_0"}
+            },
+            "source": "node/logic/generated_maps.js:562", "confirm": {"code": ["node/logic/generated_maps.js:562", "node/logic/generated_maps.js:222-225", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"]}
+          }
+        ],
+        "order": [
+          "`player` and `ui` `cave_enter`",
+          "1,800 ms later: `map_chunk` events, `new_map` and `player` for each member",
+          "`game_response` `{place, success, run, expires, level}` to you"
+        ],
+        "source": "node/server.js:6077-6080, node/logic/generated_maps.js:578-586"
+      },
+      {
+        "other": true,
+        "name": "Other",
+        "when": "Any other value. The `resort` branch is dead code (`data.place == \"resort\" && 0`).",
+        "request": {"fields": [], "example": {"place": "bank"}, "confirm": {"code": ["node/server.js:6083", "node/server.js:6249-6251"]}},
+        "failures": {
+          "rows": [
+            {"when": "Any other `place`.", "code": "transport_cant_reach", "source": "node/server.js:6083, 6249-6251", "confirm": {"code": ["node/server.js:6083", "node/server.js:6249-6251", "node/server_functions.js:3393-3419"]}}
+          ]
+        }
+      }
+    ]
+  }
+}

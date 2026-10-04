@@ -1,0 +1,35 @@
+{
+  "event": "players",
+  "to": "you only",
+  "payload": {"type": "PlayersEntry[] | object[]", "confirm": {"code": ["node/server.js:12919-12954", "node/server.js:12955-12965"], "note": "Two handlers send it: `players` (one of two entry forms, by `is_pvp`) and `pets` (the raw values of `player.p.pets`). A third `emit(\"players\")` with no payload is dead code (`if (0 && ...)`, node/server.js:4862-4866)."}},
+  "example": [
+    {"name": "Wizard", "map": "main", "age": 412, "level": 72, "type": "mage", "afk": 0, "party": "Wizard"},
+    {"name": "Arrow", "map": "main", "age": 398, "level": 70, "type": "ranger", "afk": 1, "party": "Wizard"},
+    {"name": "Stall", "map": "main", "age": 30, "level": 51, "type": "merchant", "afk": 1, "party": ""}
+  ],
+  "variants": [
+    {
+      "name": "Player list",
+      "type": "PlayersEntry[]",
+      "when": "On a server that is not PvP. It leaves out characters in PvP areas (`is_in_pvp`).",
+      "reply_to": ["players"],
+      "example": [{"name": "Wizard", "map": "main", "age": 412, "level": 72, "type": "mage", "afk": 0, "party": "Wizard"}],
+      "source": "node/server.js:12941-12951",
+      "confirm": {"code": ["node/server.js:12919-12928", "node/server.js:12941-12953"]}
+    },
+    {
+      "name": "PvP server",
+      "type": "PlayersEntry[]",
+      "when": "On a PvP server. It has every character, but hides `name`, `map` and the party name, and adds `kills`.",
+      "reply_to": ["players"],
+      "example": [{"name": "Hidden", "map": "Unknown", "age": 412, "level": 72, "type": "mage", "afk": 0, "party": "Hidden", "kills": 3}],
+      "source": "node/server.js:12929-12940",
+      "confirm": {"code": ["node/server.js:12919-12940", "node/server.js:12953", "node/server.js:11790", "node/server.js:3014-3016"], "note": "`kills` is set to 0 at login, so it is always present here."}
+    },
+    {"name": "Pets", "type": "object[]", "when": "The values of `player.p.pets`. No code in `node/` writes `p.pets`, so the list is empty, except for old saved data.", "reply_to": ["pets"], "example": [], "source": "node/server.js:12955-12965", "confirm": {"code": ["node/server.js:12955-12965"], "note": "The items are whatever old saved data has in `player.p.pets` (`object`): no code in `node/` writes it, so the list is `[]` for any character created now."}}
+  ],
+  "senders": [
+    {"what": "The `players` handler: every character on this server, you too.", "source": "node/server.js:12919-12954"},
+    {"what": "The `pets` handler.", "source": "node/server.js:12955-12965"}
+  ]
+}

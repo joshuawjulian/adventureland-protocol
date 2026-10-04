@@ -1,0 +1,113 @@
+{
+  "event": "game_response",
+  "to": "you, in almost all cases (see Notes)",
+  "payload": {
+    "type": "string | GameResponseFailure | GameResponseSuccess | GameResponseOther",
+    "confirm": {"code": ["node/server_functions.js:3385-3446", "node/server.js:7153", "node/server.js:10990-10997"]}
+  },
+  "variants": [
+    {
+      "name": "Bare string",
+      "type": "string",
+      "when": "Older handlers: `socket.emit(\"game_response\", \"code\")`. The string is the code. Several handlers send an object instead when the request has `request_id`.",
+      "example": "upgrade_no_item",
+      "source": "node/server.js:7153",
+      "confirm": {"code": ["node/server.js:7153"]}
+    },
+    {
+      "name": "Failure",
+      "type": "GameResponseFailure",
+      "when": "`fail_response(code, place, data)`: a request failed. `place` defaults to the event name of the request.",
+      "example": {"response": "buy_cost", "place": "buy", "failed": true},
+      "source": "node/server_functions.js:3393-3419",
+      "confirm": {"code": ["node/server_functions.js:3393-3419", "node/server.js:4886"]}
+    },
+    {
+      "name": "Success",
+      "type": "GameResponseSuccess",
+      "when": "`success_response(code, place, data)`: a request succeeded. With an object as the first argument, `response` is `\"data\"`.",
+      "example": {"cost": 2000, "num": 4, "name": "hpot0", "q": 100, "cevent": "buy", "success": true, "response": "buy_success", "place": "buy"},
+      "source": "node/server_functions.js:3421-3446",
+      "confirm": {"code": ["node/server_functions.js:3421-3446", "node/server.js:4886"]}
+    },
+    {
+      "name": "Other object",
+      "type": "GameResponseOther",
+      "when": "`socket.emit` or the `game_response` helper with an object: `response` and the fields of the code only. No `place`, `failed` or `success` unless the call site adds them. Hitchhiker codes (inside `player`) have this form.",
+      "example": {"response": "attack_failed", "id": "Ranger"},
+      "source": "node/server_functions.js:3385-3391",
+      "confirm": {"code": ["node/server_functions.js:3385-3391", "node/server.js:3214", "node/server.js:14903"]}
+    },
+    {
+      "name": "Skill result",
+      "type": "GameResponseOther",
+      "when": "`skill`, `attack` and `heal`: the result object of the skill with `response: \"data\"` and `place` (the skill name). A failure has `failed: true` and `reason`. A success from `commence_attack` is the `Action` and has no `success` field.",
+      "example": {"response": "data", "place": "attack", "failed": true, "reason": "no_mp", "id": "48213"},
+      "source": "node/server.js:10990-10997",
+      "confirm": {"code": ["node/server.js:9775", "node/server.js:10102-10108", "node/server.js:10990-10997", "node/server.js:3339"]}
+    },
+    {
+      "name": "Condition",
+      "type": "GameResponseCondition",
+      "has": ["name", "duration", "cevent"],
+      "when": "`add_condition` gave you a condition. Always a hitchhiker in the next `player`, and often not a reply to a request: a skill of another character, a monster, or the server itself. During the anniversary event, each eligible character online when a round's host is picked gets `anniversary_visit` with `duration: 300000` (5 min), with no request. Some conditions are set without `add_condition` (for example `penalty_cd`) and do not send this code.",
+      "example": {"response": "condition", "name": "anniversary_visit", "cevent": true, "duration": 300000},
+      "source": "node/server_functions.js:3236-3362",
+      "confirm": {"code": ["node/server_functions.js:3244-3245", "node/server_functions.js:3334-3350", "node/logic/anniversary_event.js:146-156", "node/server_functions.js:2267-2276"], "note": "Live: `anniversary_visit` arrived unsolicited in `player.hitchhikers` on three characters at once"}
+    },
+    {
+      "name": "Condition ended",
+      "type": "GameResponseConditionEnded",
+      "has": ["name"],
+      "when": "A condition of yours ran out (its `ms` reached 0) in the timer loop of the instance. Sent at once, not as a hitchhiker, and never as a reply to a request. A `player` update follows. Only for a condition in `G.conditions`, but also for one that came without a `condition` code, such as `penalty_cd` (added by teleports, magiport, equips and some item operations).",
+      "example": {"response": "ex_condition", "name": "penalty_cd"},
+      "source": "node/server.js:14724-14726",
+      "confirm": {"code": ["node/server.js:14651-14652", "node/server.js:14691-14692", "node/server.js:14724-14732", "node/server.js:4739-4743"], "note": "Live: `penalty_cd` ended unsolicited after login"}
+    }
+  ],
+  "types": {
+    "GameResponseCondition": {
+      "summary": "The `game_response` `condition`: a condition was put on you.",
+      "description": "Built by `add_condition` (node/server_functions.js:3236-3361) and pushed to `hitchhikers`, so it arrives inside the next `player`. Your `player.s[name]` has the same condition.",
+      "fields": [
+        {"name": "response", "type": "\"condition\"", "optional": false, "description": "The code."},
+        {"name": "name", "type": "string", "optional": false, "description": "The condition: a key of `G.conditions`."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Always `true`: the official client fires the code event `condition`."},
+        {"name": "duration", "type": "Milliseconds", "optional": false, "description": "The time of the condition, the same as `player.s[name].ms`: `duration` or `ms` of the call, else `G.conditions[name].duration`, else 1000. Never less than the time that the condition already had. Resistances can make it shorter, with a fraction."},
+        {"name": "from", "type": "string", "optional": true, "description": "Who gave the condition (`args.from.name` or `args.f`). Absent when the call site gives no source."}
+      ],
+      "example": {"response": "condition", "name": "anniversary_visit", "cevent": true, "duration": 300000},
+      "confirm": {"code": ["node/server_functions.js:3244-3245", "node/server_functions.js:3330-3350"]}
+    },
+    "GameResponseConditionEnded": {
+      "summary": "The `game_response` `ex_condition`: a condition of yours ended.",
+      "fields": [
+        {"name": "response", "type": "\"ex_condition\"", "optional": false, "description": "The code."},
+        {"name": "name", "type": "string", "optional": false, "description": "The condition: a key of `G.conditions`."}
+      ],
+      "example": {"response": "ex_condition", "name": "penalty_cd"},
+      "confirm": {"code": ["node/server.js:14724-14726"]}
+    },
+    "GameResponseOther": {
+      "summary": "A `game_response` object that is not from `fail_response` or `success_response`.",
+      "fields": [
+        {"name": "response", "type": "string", "optional": false, "description": "The code."},
+        {"name": "place", "type": "string", "optional": true, "description": "The request, when the call site sets it."},
+        {"name": "failed", "type": "true", "optional": true, "description": "When the call site sets it."},
+        {"name": "success", "type": "boolean", "optional": true, "description": "When the call site sets it."},
+        {"name": "reason", "type": "string", "optional": true, "description": "More detail."},
+        {"name": "cevent", "type": "boolean | string", "optional": true, "description": "Asks the official client to fire a code event. `true` means the code is the event name."},
+        {"name": "stale", "type": "true", "optional": true, "description": "Hitchhiker results of a timer that ran while you were offline."}
+      ],
+      "open": true,
+      "example": {"response": "attack_failed", "id": "Ranger"},
+      "confirm": {"code": ["node/server_functions.js:3385-3391", "node/server.js:3214", "node/server.js:3224", "node/server.js:7150", "node/server_functions.js:3244", "node/server.js:9775", "node/server.js:14903"], "note": "An open catch-all: some call site sets each listed field; others add their own"}
+    }
+  },
+  "senders": [
+    {"what": "`fail_response`, `success_response` and `game_response` helpers: the socket of the handler that runs now (`current_socket`).", "source": "node/server_functions.js:3385-3446"},
+    {"what": "The result of `skill`, `attack` and `heal`.", "source": "node/server.js:10990-10997"},
+    {"what": "A cave pause: most requests get `{response: \"data\", failed: true, reason: \"cave_paused\"}` (or `\"cave_entering\"`), with `place` and `request_id`.", "source": "node/logic/instance_pause.js:108"},
+    {"what": "Hitchhikers: some results wait in `player.hitchhikers` and arrive inside the next `player`.", "source": "node/server.js:4579-4581"}
+  ]
+}

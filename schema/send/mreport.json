@@ -1,0 +1,33 @@
+{
+  "event": "mreport",
+  "source": "node/server.js:11171-11182",
+  "request": {
+    "fields": [
+      {"name": "x", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(x) || 0`, so a string such as `\"100\"` works and a value that is not a number is 0", "description": "The x of the point."},
+      {"name": "y", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(y) || 0`", "description": "The y of the point."}
+    ],
+    "others": "ignored",
+    "example": {"x": 100, "y": 200}, "confirm": {"code": ["node/server.js:11178-11179"], "note": "The handler reads only `x` and `y`"}
+  },
+  "responses": [
+    {
+      "name": "Distance",
+      "event": "game_log",
+      "when": "You have a character. The payload is a bare string, not a `LocalizedText`.",
+      "type": "string",
+      "summary": "The distance in px from your position on the server to the point, as text: `\"\" + simple_distance(...)`. It has all the digits of the number, for example `\"223.60679774997897\"`. The map is not compared.",
+      "example": "223.60679774997897",
+      "source": "node/server.js:11181", "confirm": {"code": ["node/server.js:11181", "js/old_common_functions.js:1197-1202"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "mreport",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:11173-11175", "confirm": {"code": ["node/server.js:11172-11175"]}}
+    ]
+  },
+  "order": [
+    "`game_log` (a bare string) to you"
+  ]
+}

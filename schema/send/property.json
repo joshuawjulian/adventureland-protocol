@@ -1,0 +1,62 @@
+{
+  "event": "property",
+  "source": "node/server.js:5548-5574",
+  "request": {
+    "fields": [
+      {"name": "typing", "type": "boolean", "optional": true, "coerce": "tested as true or false", "description": "Selects the path. If truthy, the server gives you the `typing` condition for 4,000 ms and ignores `afk`. If falsy or absent, the server reads `afk`."}
+    ],
+    "others": "ignored",
+    "example": {"typing": true},
+    "confirm": {"code": ["node/server.js:5553", "node/server.js:5562-5564"]}
+  },
+  "responses": [],
+  "failures": {
+    "event": "game_response",
+    "intro": "No check sends a reply.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5550-5552", "confirm": {"code": ["node/server.js:5549-5552"]}}
+    ]
+  },
+  "variants": {
+    "key": "typing",
+    "list": [
+      {
+        "value": true,
+        "name": "Typing",
+        "when": "`typing` is truthy. The server sets `s.typing` to `{ms: 4000}`. The call costs nothing when `s.typing` was absent or had less than 3,000 ms left.",
+        "request": {
+          "fields": [],
+          "example": {"typing": true},
+          "confirm": {"code": ["node/server.js:5553-5558"]}
+        },
+        "responses": [
+          {"name": "Typing", "event": "player", "when": "Always. There is no `game_response`.", "summary": "Your character (`u+cid+nc`: the server does not recalculate your stats) with the new `s.typing`.", "example": {"id": "Merlin", "s": {"typing": {"ms": 4000}}, "cid": 419}, "example_trimmed": true, "source": "node/server.js:5553-5558", "confirm": {"code": ["node/server.js:5553-5558", "node/server.js:4550-4594"]}}
+        ],
+        "order": ["`player` to you"]
+      },
+      {
+        "name": "AFK",
+        "match": "`typing` is falsy or absent",
+        "when": "The server sets or clears `player.afk` from `afk`.",
+        "request": {
+          "fields": [
+            {"name": "typing", "type": "false", "optional": true, "coerce": "tested as true or false", "description": "Falsy or absent."},
+            {"name": "afk", "type": "boolean", "optional": true, "coerce": "compared with `=== true` and `=== false`: other values (`1`, `\"true\"`) do nothing", "description": "`true` sets `player.afk`. `false` clears it, but only if `player.afk` had a value before."}
+          ],
+          "example": {"afk": true}, "confirm": {"code": ["node/server.js:5559-5568"]}
+        },
+        "responses": [
+          {"name": "AFK change", "event": "player", "when": "`player.afk` changed. There is no `game_response`.", "summary": "Your character (`u+cid+nc`: the server does not recalculate your stats) with the new `afk`.", "example": {"id": "Merlin", "afk": true, "cid": 419}, "example_trimmed": true, "source": "node/server.js:5570-5572", "confirm": {"code": ["node/server.js:5569-5572", "node/server.js:4550-4594"]}}
+        ],
+        "failures": {
+          "rows": [
+            {"when": "`player.afk` is `\"bot\"` or `\"code\"`. The server keeps that value.", "replies": [], "source": "node/server.js:5561", "confirm": {"code": ["node/server.js:5560-5561", "node/server.js:5569"]}},
+            {"when": "`afk` did not change `player.afk` (the same value, not a boolean, or `false` when `player.afk` was never set).", "replies": [], "source": "node/server.js:5562-5573", "confirm": {"code": ["node/server.js:5560-5573"]}}
+          ]
+        },
+        "order": ["`player` to you"],
+        "source": "node/server.js:5559-5573"
+      }
+    ]
+  }
+}

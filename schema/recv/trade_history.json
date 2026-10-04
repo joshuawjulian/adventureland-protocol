@@ -1,0 +1,12 @@
+{
+  "event": "trade_history",
+  "to": "you: only the socket that sent the request",
+  "payload": {
+    "type": "TradeHistoryEntry[]",
+    "confirm": {"code": ["node/server.js:9177-9184", "node/server_functions.js:342-363", "node/server.js:8892-8894", "node/server.js:8999-9007", "node/server.js:9139-9140", "node/server.js:16124", "node/server.js:16201", "node/server_functions.js:4234-4261"]}
+  },
+  "example": [["sell", "Ranger", {"name": "hpot1", "q": 200, "price": 45}, 9000], ["buy", "Merchant", {"name": "blade", "level": 7, "price": 2500000, "rid": "mK3pd"}, 2500000], ["swap", "Priest", {"name": "ringsj", "level": 2}, 0, {"name": "wbook0", "level": 0}], ["giveaway", "Rogue", {"name": "hpbelt", "level": 0, "gf": "Merchant"}, null]],
+  "senders": [
+    {"what": "The `trade_history` handler: `player.p.trade_history`, at most 40 entries, oldest first. `[]` when the character has no trade.", "source": "node/server.js:9177-9184"}
+  ]
+}

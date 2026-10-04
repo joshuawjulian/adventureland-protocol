@@ -1,0 +1,95 @@
+{
+  "event": "trade_sell",
+  "source": "node/server.js:8822-8953",
+  "request": {
+    "fields": [
+      {"name": "id", "type": "CharacterName", "optional": false, "coerce": "a key of `id_to_id`, so a number works as its string", "description": "The buyer: the character whose stand has the buy order."},
+      {"name": "slot", "type": "TradeSlotName", "optional": false, "coerce": "strict `===` against `\"trade1\"` to `\"trade48\"` (`in_arr`)", "description": "The trade slot of the buyer that holds the buy order."},
+      {"name": "rid", "type": "string", "optional": true, "coerce": "compared with `!=` to the `rid` of the listing. A falsy value (absent, `\"\"`, `0`) skips the check", "description": "The `rid` that you expect on the listing. If it is different, the request fails. This stops a sale to a listing that changed."},
+      {"name": "q", "type": "integer", "optional": true, "default": 1, "coerce": "`max(1, parseInt(q || 1) || 1)`", "description": "The quantity to sell."}
+    ],
+    "others": "ignored",
+    "example": {"id": "MerchantBob", "slot": "trade3", "rid": "AbCd", "q": 5}, "confirm": {"code": ["node/server.js:8825", "node/server.js:8829", "node/server.js:8833", "node/server.js:8848-8849", "js/old_common_functions.js:52-53"], "note": "The handler reads only `id`, `slot`, `rid` and `q`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. You get the gold less your tax, and the buyer gets the item.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"trade_sell\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "trade_sell"},
+      "source": "node/server.js:8952", "confirm": {"code": ["node/server.js:8952", "node/server_functions.js:3421-3446"], "note": "`success_response({})` adds `success`, `response: \"data\"` and `place`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "trade_sell",
+    "rows": [
+      {"when": "No character, or you are in the bank (`player.user` is set).", "code": "cant_in_bank", "source": "node/server.js:8830-8832", "confirm": {"code": ["node/server.js:8830-8832", "node/server_functions.js:3393-3419"], "note": "The second check at node/server.js:8839-8841 cannot fire"}},
+      {"when": "`slot` is not one of `\"trade1\"` to `\"trade48\"`.", "code": "invalid", "source": "node/server.js:8833-8835", "confirm": {"code": ["node/server.js:8833-8835", "js/old_common_functions.js:52-53", "node/server_functions.js:3393-3419"]}},
+      {"when": "No character has the name `id`, or it is an NPC, or it is invisible (condition `invis` or `ethereal`).", "code": "buyer_gone", "source": "node/server.js:8836-8838", "confirm": {"code": ["node/server.js:8825", "node/server.js:8836-8838", "node/server_functions.js:469-474", "node/server_functions.js:3393-3419"]}},
+      {"when": "The buyer is more than `B.dist` (400 px) from you, edge to edge of the two hitboxes. A buyer on another map or in another instance is always too far.", "code": "distance", "source": "node/server.js:8842-8844", "confirm": {"code": ["node/server.js:8842-8844", "node/server.js:219", "js/old_common_functions.js:707-711", "node/server_functions.js:3393-3419"]}},
+      {"when": "The buyer is you.", "code": "hmm", "source": "node/server.js:8845-8847", "confirm": {"code": ["node/server.js:8845-8847", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot of the buyer is empty, or `rid` is set and is not the `rid` of the listing.", "code": "item_gone", "source": "node/server.js:8848-8851", "confirm": {"code": ["node/server.js:8848-8851", "node/server_functions.js:3393-3419"]}},
+      {"when": "The listing is a placeholder.", "code": "item_placeholder", "source": "node/server.js:8852-8854", "confirm": {"code": ["node/server.js:8852-8854", "node/server_functions.js:3393-3419"]}},
+      {"when": "The listing is not a buy order (no `b`), or it is a trade offer (`want`). On a server with `B.rbugs` (the `TEST` server, node/server.js:392), a listing without `b` passes.", "code": "sneaky", "source": "node/server.js:8855-8857", "confirm": {"code": ["node/server.js:8855-8857", "node/server.js:280", "node/server.js:392", "node/server_functions.js:3393-3419"]}},
+      {"when": "The buy order wants fewer than `q` units.", "code": "dont_have_enough", "source": "node/server.js:8858-8860", "confirm": {"code": ["node/server.js:8858-8860", "node/server_functions.js:3393-3419"]}},
+      {"when": "`price * q` is more than the gold of the buyer.", "code": "buyer_gold", "source": "node/server.js:8861-8863", "confirm": {"code": ["node/server.js:8861-8863", "node/server_functions.js:3393-3419"]}},
+      {"when": "No slot of your inventory holds an item with the same `name` and `level`, at least `q` units, and no lock (`l`). The server uses the first such slot.", "code": "no_item", "source": "node/server.js:8864-8878", "confirm": {"code": ["node/server.js:8864-8878", "node/server_functions.js:3393-3419"]}},
+      {"when": "That item is account-bound (`acl`), and the buyer is on another account.", "code": "item_locked", "source": "node/server.js:8880-8882", "confirm": {"code": ["node/server.js:8880-8882", "node/server_functions.js:3393-3419"]}},
+      {"when": "That item has `b` (for example, it is your open stand) or `v` (it came from PvP).", "code": "item_blocked", "source": "node/server.js:8883-8885", "confirm": {"code": ["node/server.js:8883-8885", "node/server_functions.js:3393-3419"]}},
+      {"when": "The inventory of the buyer has no space for the item.", "code": "trade_bspace", "source": "node/server.js:8886-8889", "confirm": {"code": ["node/server.js:8886-8889", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "name": "You",
+      "event": "game_log",
+      "to": "you",
+      "when": "Success, first: the tax. Then a second `game_log` with the gold that you got (`server.game_log.received_gold`, `{amount}`).",
+      "type": "LocalizedText",
+      "example": {"message": "Sales tax 250 gold [5%]", "phrase": "server.game_log.sales_tax_gold", "phrase_args": {"amount": "250", "value": "5"}},
+      "source": "node/server.js:8922-8934", "confirm": {"code": ["node/server.js:8922-8934", "languages/index.js:256-258"]}
+    },
+    {
+      "name": "Buyer",
+      "event": "game_log",
+      "to": "the buyer",
+      "when": "Success, after your two `game_log`.",
+      "type": "LocalizedText",
+      "example": {"message": "Spent 5,000 gold", "phrase": "server.game_log.spent_gold", "phrase_args": {"amount": "5,000"}},
+      "source": "node/server.js:8935-8938", "confirm": {"code": ["node/server.js:8935-8938", "languages/index.js:256-258"]}
+    },
+    {
+      "event": "ui",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds the buyer.",
+      "fields": [
+        {"name": "type", "type": "\"+$$\"", "optional": false, "description": "A trade."},
+        {"name": "seller", "type": "CharacterName", "optional": false, "description": "You."},
+        {"name": "buyer", "type": "CharacterName", "optional": false, "description": "The buyer."},
+        {"name": "item", "type": "TradeSlotItem", "optional": false, "description": "Your item, with `q` set to the quantity sold and `price` set to the unit price of the buy order."},
+        {"name": "slot", "type": "TradeSlotName", "optional": false, "description": "The trade slot of the buy order."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The inventory slot of the buyer that got the item."},
+        {"name": "snum", "type": "InventoryIndex", "optional": false, "description": "Your inventory slot that the item came from."}
+      ],
+      "example": {"type": "+$$", "seller": "Wizard", "buyer": "MerchantBob", "item": {"name": "hpot0", "q": 5, "price": 1000}, "slot": "trade3", "num": 7, "snum": 2},
+      "source": "node/server.js:8940-8948", "confirm": {"code": ["node/server.js:8940-8948", "node/server_functions.js:4234-4258", "node/server_functions.js:3744-3779"], "note": "`xy_emit` centers on the buyer; `item` is `cache_item(actual, true, {q, price})`"}
+    },
+    {"name": "You", "event": "player", "to": "you", "when": "Success, before the `game_response`.", "summary": "Your state with `reopen: true`: less of the item in `items`, more `gold`.", "source": "node/server.js:8950", "confirm": {"code": ["node/server.js:8950", "node/server.js:4550-4594"]}},
+    {"name": "Buyer", "event": "player", "to": "the buyer", "when": "Success, after your `player`.", "summary": "The state of the buyer with `reopen: true`: the item in `items`, less `gold`, the buy order changed in `slots`. Clients nearby see the change in the next `entities` (`u`).", "source": "node/server.js:8951", "confirm": {"code": ["node/server.js:8951", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "`game_log` (tax), then `game_log` (gold received) to you",
+    "`game_log` (gold spent) to the buyer",
+    "`ui` `+$$` to clients near the buyer",
+    "`player` to you, then `player` to the buyer",
+    "`game_response` `data` to you"
+  ]
+}

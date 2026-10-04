@@ -1,0 +1,66 @@
+{
+  "event": "equip_batch",
+  "source": "node/server.js:7569-7642",
+  "request": {
+    "type": "EquipBatchEntry[]",
+    "example": [{"num": 0, "slot": "mainhand"}, {"num": 3, "slot": "ring1"}],
+    "note": "The server uses the first 15 entries and ignores the rest. An entry that is a number or a string reads as `{}` and gets `\"no_item\"`. A `null` entry throws.",
+    "confirm": {"code": ["node/server.js:7575-7581", "node/server.js:7605", "js/old_common_functions.js:1750-1758"], "note": "Of each entry the handler reads `num` and `slot`. Setting `.num` on a number or string entry does nothing (no strict mode), so `num` reads `undefined` and the slot is empty"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The payload is an array. The server equips the entries in order and stops at the first entry that fails. It sends this reply also when an entry failed: the code of that entry is the last element of `slots`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"equip_batch\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "slots", "type": "(EquipBatchResult | \"invalid\" | \"no_item\" | \"item_blocked\" | \"item_placeholder\" | \"cant_equip\")[]", "optional": false, "description": "One element for each entry that the server read: a result for each equipped entry, then the code of the first failed entry (if any). `invalid`: `num` is past the end of the inventory. `no_item`: the slot is empty. `item_blocked`: the item has the flag `b`. `item_placeholder`: an upgrade or compound runs on the slot. `cant_equip`: `can_equip_item` refuses the item for the slot."}
+      ],
+      "example": {"slots": [{"num": 0, "slot": "mainhand"}, "cant_equip"], "success": true, "response": "data", "place": "equip_batch"},
+      "source": "node/server.js:7638",
+      "confirm": {"code": ["node/server.js:7577", "node/server.js:7582-7631", "node/server.js:7638", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "equip_batch",
+    "intro": "A failure of one entry is not in this table: it is the last element of `slots` in the success reply.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:7571-7573", "confirm": {"code": ["node/server.js:7571-7573"]}},
+      {"when": "The payload is not an array. The server stopped your channeled actions (`c`) already.", "code": "invalid", "source": "node/server.js:7574-7575, 7639-7641", "confirm": {"code": ["node/server.js:7574-7575", "node/server.js:7639-7641", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "An entry is `null`, or the item in its slot has a name that is not in `G.items`. The handler throws. The entries before it stay equipped, and the server sends no `player` update.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "the shared error step"}
+        ],
+        "source": "node/server.js:7580-7581, 7599-7600",
+        "confirm": {"code": ["node/server.js:7580-7581", "node/server.js:7599-7600", "node/server.js:4947-4966"], "note": "`null.num` or `undefined.iname` throws before `resend`"}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "game_log",
+      "to": "you",
+      "when": "An entry gets `cant_equip`, its slot is `weapon`, `mainhand` or `tool`, you hold an offhand item, and the item is a two-handed weapon for your class.",
+      "type": "LocalizedText",
+      "example": {
+        "message": "Unequip your offhand item to use this two-handed weapon.",
+        "phrase": "server.game_log.unequip_your_offhand_item_to_use_this_two_handed_weapon",
+        "phrase_args": {}
+      },
+      "source": "node/server.js:7608-7616",
+      "confirm": {"code": ["node/server.js:7607-7616", "languages/index.js:256-258"]}
+    },
+    {"event": "player", "to": "you", "when": "Before the `game_response`.", "summary": "Your state with `reopen: true`, the new `slots` and `items`, the recalculated stats, and the `penalty_cd` condition in `s`.", "source": "node/server.js:7637", "confirm": {"code": ["node/server.js:7632-7637", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "`game_log` to you, only for a two-handed weapon that your offhand item blocks",
+    "`player` to you",
+    "`game_response` `data` with `slots` to you"
+  ]
+}

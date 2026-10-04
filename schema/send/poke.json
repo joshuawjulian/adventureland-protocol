@@ -1,0 +1,39 @@
+{
+  "event": "poke",
+  "source": "node/server.js:9554-9572",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "any", "optional": true, "coerce": "none: copied into the `poke` event as it is", "description": "The player that you poke. The server does not check it. It can be any value, or absent."}
+    ],
+    "others": "ignored",
+    "example": {"name": "Ranger"}, "confirm": {"code": ["node/server.js:9571"], "note": "The handler reads only `name`, and only to copy it"}
+  },
+  "responses": [],
+  "failures": {
+    "event": "game_log",
+    "intro": "This handler sends no `game_response`. A success sends only the `poke` event.",
+    "rows": [
+      {"when": "No character, or you do not wear `poker` in `gloves`.", "replies": [], "source": "node/server.js:9557-9559", "confirm": {"code": ["node/server.js:9555-9559"]}},
+      {"when": "You poked 50 times already (`player.pokes`).", "replies": [
+        {"event": "game_log", "example": {"message": "You are out of pokes!", "phrase": "server.game_log.you_are_out_of_pokes", "phrase_args": {}}}
+      ], "source": "node/server.js:9560-9562", "confirm": {"code": ["node/server.js:9560-9562", "languages/index.js:256-258", "languages/en/server.js:312"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "poke",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds you, you included.",
+      "fields": [
+        {"name": "name", "type": "any", "optional": true, "description": "The `name` from the request, unchanged. Absent when the request has no `name` (JSON drops `undefined`)."},
+        {"name": "level", "type": "1 | 2 | 3 | 4", "optional": false, "description": "From the upgrade level of the gloves: 1 below +8, 2 at +8, 3 at +9, 4 at +10 or more."},
+        {"name": "who", "type": "CharacterName", "optional": false, "description": "You: the player who poked."}
+      ],
+      "example": {"name": "Ranger", "level": 1, "who": "Wizard"},
+      "source": "node/server.js:9564-9571", "confirm": {"code": ["node/server.js:9556", "node/server.js:9564-9571", "node/server_functions.js:3744-3779"]}
+    }
+  ],
+  "order": [
+    "`poke` to clients nearby (you included)"
+  ]
+}

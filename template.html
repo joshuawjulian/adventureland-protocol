@@ -1,0 +1,1041 @@
+<title>__TITLE__</title>
+<meta name="description" content="Write an Adventure Land MMO client from scratch: a course from zero (HTTP, WebSockets, Socket.IO by hand, a complete bot), a guide to the game, and a reference for every socket event, response code, G table and S key. Examples in JavaScript, TypeScript, Python, Go, C#, Rust and Java.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a sticky search bar over two panes, an index on the left and the reader on the right.
+   On a phone the panes stack and the reader takes over, with a back button to the index. */
+:root {
+  --bg: #f4f6f2;
+  --panel: #ffffff;
+  --sunk: #ebeee8;
+  --ink: #1b221e;
+  --ink-soft: #3a4540;
+  --muted: #5f6b64;
+  --rule: #d9dfd8;
+  --accent: #2b7556;
+  --accent-ink: #ffffff;
+  --mark: #fde68a;
+  --send: #2b7556;
+  --recv: #9a6412;
+  --code: #a83a50;
+  --g: #6347b2;
+  --s: #2d68a6;
+  --guide: #56626b;
+  --learn: #b04a2a;
+  --game: #7a5a12;
+  --hl-kw: #8a3fb0; --hl-str: #2b7556; --hl-num: #a8551c; --hl-com: #7a857e; --hl-fn: #2d68a6; --hl-type: #9a6412;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --index-w: 360px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101412; --panel: #171c19; --sunk: #1d2420; --ink: #e2e8e3; --ink-soft: #c3ccc6;
+    --muted: #8f9c94; --rule: #2a332e; --accent: #6cc59a; --accent-ink: #0d1a14; --mark: #6b5414;
+    --send: #6cc59a; --recv: #e0ad52; --code: #ec8fa1; --g: #ab96ef; --s: #7fb3ea; --guide: #a9b5bd;
+    --learn: #ee9a7c; --game: #d9b25e;
+    --hl-kw: #c79bf0; --hl-str: #8fd3ad; --hl-num: #f0a875; --hl-com: #7f8c85; --hl-fn: #8fbff0; --hl-type: #e8c27a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101412; --panel: #171c19; --sunk: #1d2420; --ink: #e2e8e3; --ink-soft: #c3ccc6;
+  --muted: #8f9c94; --rule: #2a332e; --accent: #6cc59a; --accent-ink: #0d1a14; --mark: #6b5414;
+  --send: #6cc59a; --recv: #e0ad52; --code: #ec8fa1; --g: #ab96ef; --s: #7fb3ea; --guide: #a9b5bd;
+   --learn: #ee9a7c; --game: #d9b25e;
+  --hl-kw: #c79bf0; --hl-str: #8fd3ad; --hl-num: #f0a875; --hl-com: #7f8c85; --hl-fn: #8fbff0; --hl-type: #e8c27a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 var(--body);
+  display: flex;
+  flex-direction: column;
+}
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Top bar */
+.top {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px 18px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--rule);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand h1 {
+  margin: 0;
+  font: 700 19px/1.1 var(--display);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.brand .wire {
+  font: 500 11px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.search {
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  background: var(--sunk);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0 10px;
+}
+.search:focus-within { border-color: var(--accent); }
+.search svg { flex: none; color: var(--muted); }
+#q {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 15px var(--body);
+  padding: 9px 0;
+  outline: none;
+}
+kbd {
+  font: 500 11px var(--mono);
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  background: var(--panel);
+}
+.theme-btn {
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink-soft);
+  border-radius: 8px;
+  font: 500 12px var(--body);
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 3px 11px;
+  font: 500 12.5px var(--body);
+  cursor: pointer;
+}
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--k, var(--muted)); }
+.chip b { font: 500 11px var(--mono); color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--k, var(--accent)); background: var(--sunk); color: var(--ink); }
+
+/* Panes */
+.panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--index-w) minmax(0, 1fr);
+}
+.index {
+  border-right: 1px solid var(--rule);
+  overflow-y: auto;
+  background: var(--panel);
+  min-height: 0;
+}
+.reader { overflow-y: auto; min-height: 0; min-width: 0; }
+
+/* Index list */
+.status { font: 12px var(--body); color: var(--muted); padding: 10px 16px 4px; }
+.group-h {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel);
+  padding: 12px 16px 6px;
+  font: 600 11px var(--body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.group-h span:last-child { font-family: var(--mono); letter-spacing: 0; }
+ul.list { list-style: none; margin: 0; padding: 4px 0; }
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  padding: 7px 16px 7px 13px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.row:hover { background: var(--sunk); }
+.row[aria-current="true"] { background: var(--sunk); border-left-color: var(--k); }
+.row .tag {
+  grid-row: span 2;
+  align-self: start;
+  margin-top: 3px;
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--k);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 4px;
+  min-width: 38px;
+  text-align: center;
+}
+.row .name {
+  font: 500 13.5px var(--mono);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.row .name.prose { font: 500 14px var(--body); }
+.row .name small { font: 11px var(--mono); color: var(--muted); margin-left: 6px; }
+.row .sum {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
+.more { padding: 10px 16px 18px; font-size: 12.5px; color: var(--muted); }
+
+/* Reader */
+.doc {
+  max-width: 860px;
+  padding: 28px 32px 64px;
+}
+.btn.back { display: none; } /* .btn sets display, so this needs the extra class to win */
+.filters[hidden] { display: none; }
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font: 500 12px var(--body);
+  color: var(--muted);
+}
+.kind-pill {
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--k);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.doc h2.title {
+  margin: 10px 0 4px;
+  font: 700 clamp(24px, 3.4vw, 34px)/1.15 var(--display);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.doc h2.title.mono { font-family: var(--mono); font-weight: 600; letter-spacing: -0.02em; }
+.lede { margin: 0 0 18px; color: var(--ink-soft); font-size: 16px; max-width: 68ch; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 22px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink-soft);
+  border-radius: 7px;
+  padding: 6px 11px;
+  font: 500 12.5px var(--body);
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn:hover { border-color: var(--accent); color: var(--ink); }
+.btn code { font: 12px var(--mono); }
+
+/* Prose stays at a readable measure; code examples and tables may use the full column. */
+.md { font-size: 15px; }
+.md > :is(p, ul, ol, blockquote, h2, h3, h4, h5, h6) { max-width: 72ch; }
+.md p, .md li { color: var(--ink-soft); }
+.md strong { color: var(--ink); font-weight: 600; }
+.md h2, .md h3, .md h4 {
+  font-family: var(--display);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin: 28px 0 8px;
+  text-wrap: balance;
+}
+.md h2 { font-size: 22px; }
+.md h3 { font-size: 18px; }
+.md h4 { font-size: 15.5px; }
+.md code {
+  font: 0.88em var(--mono);
+  background: var(--sunk);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0 4px;
+  overflow-wrap: anywhere;
+}
+.md pre {
+  background: var(--sunk);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.md pre code { background: none; border: 0; padding: 0; overflow-wrap: normal; font-size: 13px; }
+.md a.xref { text-decoration: none; }
+.md a.xref code { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--rule)); }
+.md a.xref:hover code { background: var(--panel); }
+.md a.src { font: 0.88em var(--mono); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.md blockquote {
+  margin: 16px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--recv);
+  border-radius: 0 8px 8px 0;
+  background: var(--panel);
+}
+.md blockquote p { margin: 4px 0; }
+.table-wrap { overflow-x: auto; max-width: 100%; margin: 12px 0 18px; border: 1px solid var(--rule); border-radius: 8px; }
+.md table { border-collapse: collapse; font-size: 13.5px; width: 100%; }
+.md th, .md td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
+.md th { font: 600 11px var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--sunk); white-space: nowrap; }
+.md tr:last-child td { border-bottom: 0; }
+.md td:first-child code { white-space: nowrap; }
+/* Type names and code links in schema tables must not wrap mid-word ("ItemN/ame"). */
+.md td:nth-child(2) code, .md td:last-child a code { white-space: nowrap; }
+
+/* Start page */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 4px 0 26px;
+}
+.stat {
+  text-align: left;
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--k);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.stat:hover { background: var(--sunk); }
+.stat b { display: block; font: 700 24px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12.5px; color: var(--muted); }
+
+.foot {
+  max-width: 860px;
+  margin: 0 32px 40px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Page switcher (Learn / Game guide / API reference) and the code-language picker. */
+.pages { display: flex; gap: 2px; background: var(--sunk); border: 1px solid var(--rule); border-radius: 8px; padding: 2px; }
+.pages a {
+  font: 500 13px var(--body);
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.pages a:hover { color: var(--ink); }
+.pages a[aria-current="page"] { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px var(--rule); }
+.lang-pick { display: flex; align-items: center; gap: 6px; font: 500 12px var(--body); color: var(--muted); }
+.lang-pick select {
+  font: 500 12.5px var(--body);
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+/* A run of fenced blocks in the course's languages becomes one tabbed example. */
+.codetabs { margin: 14px 0 20px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sunk); max-width: 100%; }
+.codetabs .tabbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--rule);
+  padding: 4px 4px 0;
+}
+.codetabs .tab {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 500 12.5px var(--body);
+  padding: 6px 10px 7px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.codetabs .tab:hover { color: var(--ink); }
+.codetabs .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.codetabs .copy { margin-left: auto; flex: none; font: 500 12px var(--body); border: 0; background: none; color: var(--muted); cursor: pointer; padding: 6px 8px; }
+.codetabs .copy:hover { color: var(--accent); }
+.codetabs pre { margin: 0; border: 0; border-radius: 0 0 8px 8px; }
+.codetabs .note { font: 12px var(--body); color: var(--muted); padding: 8px 14px 0; }
+.md pre { position: relative; }
+
+/* highlight.js token colours, themed with the page. */
+.hljs-keyword, .hljs-built_in, .hljs-literal, .hljs-meta .hljs-keyword { color: var(--hl-kw); }
+.hljs-string, .hljs-regexp, .hljs-template-string, .hljs-char { color: var(--hl-str); }
+.hljs-number { color: var(--hl-num); }
+.hljs-comment, .hljs-doctag, .hljs-meta { color: var(--hl-com); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-property { color: var(--hl-fn); }
+.hljs-type, .hljs-title.class_, .hljs-attr, .hljs-params .hljs-type { color: var(--hl-type); }
+
+/* Previous / next chapter, on the teaching pages. */
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 36px 0 0; max-width: 72ch; }
+.pager a {
+  display: block;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--panel);
+  font: 600 14px var(--display);
+}
+.pager a:hover { border-color: var(--accent); }
+.pager a span { display: block; font: 500 11.5px var(--body); color: var(--muted); margin-bottom: 2px; }
+.pager .next { text-align: right; grid-column: 2; }
+
+.empty { padding: 24px 16px; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 1360px) {
+  .brand .wire { display: none; }
+}
+@media (max-width: 860px) {
+  .panes { grid-template-columns: minmax(0, 1fr); }
+  .index { border-right: 0; }
+  body.reading .index { display: none; }
+  body:not(.reading) .reader { display: none; }
+  .btn.back { display: inline-flex; margin-bottom: 14px; }
+  .doc { padding: 20px 16px 48px; }
+  .foot { margin: 0 16px 32px; }
+  .brand .wire { display: none; }
+  .pages { order: 3; flex: 1 1 100%; }
+  .pages a { flex: 1; text-align: center; padding: 6px 4px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .row, .chip, .btn, .stat { transition: background-color 0.12s, border-color 0.12s; }
+}
+</style>
+
+<header class="top">
+  <div class="brand">
+    <h1>Adventure Land</h1>
+    <span class="wire">client ⇄ server, from scratch</span>
+  </div>
+  <nav class="pages" id="pages" aria-label="Pages"></nav>
+  <label class="search" for="q">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input id="q" type="search" placeholder="Search…" autocomplete="off" spellcheck="false" aria-label="Search this page">
+    <kbd>/</kbd>
+  </label>
+  <label class="lang-pick">Code <select id="lang" aria-label="Language for code examples"></select></label>
+  <button class="theme-btn" id="theme" type="button" aria-label="Switch colour theme">Theme: auto</button>
+</header>
+<nav class="filters" id="filters" aria-label="Filter by kind"></nav>
+<div class="panes">
+  <aside class="index" id="index" aria-label="Index"></aside>
+  <main class="reader" id="reader" tabindex="-1"></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+const DATA = __DATA__;
+
+/* Kinds of entry, in index order. `tag` is the short label beside each row. */
+const ALL_KINDS = [
+  { id: "learn", label: "Learn", tag: "LEARN", color: "var(--learn)", long: "Learn" },
+  { id: "game", label: "Game guide", tag: "GAME", color: "var(--game)", long: "Game guide" },
+  { id: "guide", label: "Guide", tag: "GUIDE", color: "var(--guide)", long: "Guide" },
+  { id: "send", label: "Send", tag: "SEND", color: "var(--send)", long: "Events you send (client → server)" },
+  { id: "recv", label: "Receive", tag: "RECV", color: "var(--recv)", long: "Events you receive (server → client)" },
+  { id: "code", label: "Response codes", tag: "CODE", color: "var(--code)", long: "game_response codes" },
+  { id: "g", label: "Game data (G)", tag: "G", color: "var(--g)", long: "Game data (G)" },
+  { id: "s", label: "Server events (S)", tag: "S", color: "var(--s)", long: "Server events (S)" },
+];
+const KIND = Object.fromEntries(ALL_KINDS.map((k) => [k.id, k]));
+const items = DATA.items;
+const PAGE = DATA.page;
+// Only the kinds this page holds get filter chips and start-page tiles.
+const KINDS = ALL_KINDS.filter((k) => items.some((i) => i.kind === k.id));
+const HOME = items.some((i) => i.id === "start") ? "start" : items[0].id;
+const byId = new Map(items.map((i) => [i.id, i]));
+
+/* Search text per entry, built once. */
+const plain = (md) =>
+  md.replace(/`/g, "").replace(/\*\*/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").toLowerCase();
+for (const i of items) {
+  i._name = i.name.toLowerCase();
+  i._sum = (i.summary || "").toLowerCase();
+  i._body = plain(i.md);
+}
+
+/* Names that cross-link: `code` spans matching an entry's name become links to it. */
+const byName = new Map();
+const linkable = [
+  ...items,
+  ...Object.entries(DATA.links).map(([id, [file, kind, name]]) => ({ id, kind, name, file })),
+];
+for (const i of linkable) {
+  if (i.kind === "guide" || i.kind === "learn" || i.kind === "game") continue;
+  const list = byName.get(i.name) ?? [];
+  list.push(i);
+  byName.set(i.name, list);
+}
+/* Where an entry lives: "#id" on this page, "file#id" on another. */
+const hrefOf = (id) => (byId.has(id) ? `#${id}` : DATA.links[id] ? `${DATA.links[id][0]}#${id}` : null);
+const KIND_PREF = ["send", "recv", "code", "g", "s"];
+function resolveName(name, fromKind) {
+  const list = byName.get(name);
+  if (!list) return undefined;
+  return list.find((i) => i.kind === fromKind) ?? KIND_PREF.map((k) => list.find((i) => i.kind === k)).find(Boolean);
+}
+
+/* State */
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+let kindFilter = store.get(`alapi.kind.${PAGE.id}`) || "all";
+if (!KINDS.some((k) => k.id === kindFilter)) kindFilter = "all"; // a kind this page doesn't have
+let query = "";
+let current = null;
+let shown = []; // the rows currently listed, for keyboard navigation
+
+/* Page switcher. Relative links, so the pages work from any folder or host. */
+document.getElementById("pages").innerHTML = DATA.pages
+  .map((p) => `<a href="${p.file}"${p.id === PAGE.id ? ' aria-current="page"' : ""}>${p.title}</a>`)
+  .join("");
+
+/* Theme toggle: auto → light → dark. */
+const themeBtn = document.getElementById("theme");
+function applyTheme(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+  themeBtn.textContent = `Theme: ${t}`;
+}
+let theme = store.get("alapi.theme") || "auto";
+applyTheme(theme);
+themeBtn.addEventListener("click", () => {
+  theme = { auto: "light", light: "dark", dark: "auto" }[theme];
+  store.set("alapi.theme", theme);
+  applyTheme(theme);
+});
+
+/* Filters */
+const filtersEl = document.getElementById("filters");
+function renderFilters() {
+  const counts = Object.fromEntries(KINDS.map((k) => [k.id, items.filter((i) => i.kind === k.id).length]));
+  const chip = (id, label, color, n) =>
+    `<button type="button" class="chip" data-kind="${id}" aria-pressed="${kindFilter === id}" style="--k:${color}">` +
+    `${color ? "<i></i>" : ""}${label} <b>${n}</b></button>`;
+  filtersEl.hidden = KINDS.length < 2;
+  filtersEl.innerHTML =
+    chip("all", "All", "", items.length) + KINDS.map((k) => chip(k.id, k.label, k.color, counts[k.id])).join("");
+}
+filtersEl.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-kind]");
+  if (!b) return;
+  kindFilter = b.dataset.kind;
+  store.set(`alapi.kind.${PAGE.id}`, kindFilter);
+  renderFilters();
+  renderIndex();
+});
+
+/* Search: every word must match somewhere; the name counts most, then the summary, then the body. */
+function score(i, words, q) {
+  let s = 0;
+  if (i._name === q) s += 1000;
+  else if (i._name.startsWith(q)) s += 400;
+  else if (i._name.includes(q)) s += 250;
+  for (const w of words) {
+    if (i._name.includes(w)) s += 60;
+    else if (i._sum.includes(w)) s += 25;
+    else if (i._body.includes(w)) s += 6;
+    else return 0;
+  }
+  if (i.kind === "send" || i.kind === "recv") s += 2; // events edge out codes on ties
+  return s;
+}
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function highlight(text, words) {
+  let out = esc(text);
+  for (const w of words) {
+    if (w.length < 2) continue;
+    out = out.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})(?![^<]*>)`, "gi"), "<mark>$1</mark>");
+  }
+  return out;
+}
+
+/* A short excerpt around the first match in the body, for results matched only there. */
+function snippet(i, words) {
+  const w = words.find((w) => i._body.includes(w) && !i._name.includes(w) && !i._sum.includes(w));
+  if (!w) return i.summary || "";
+  const text = plain(i.md).replace(/\s+/g, " ");
+  const at = text.indexOf(w);
+  const start = Math.max(0, at - 50);
+  return (start ? "…" : "") + text.slice(start, at + 90) + "…";
+}
+
+const indexEl = document.getElementById("index");
+const LIMIT = 250;
+
+function row(i, words) {
+  const k = KIND[i.kind];
+  const badge = i.badge ? `<small>${i.badge}</small>` : "";
+  const sum = words.length ? snippet(i, words) : i.summary || "";
+  return (
+    `<li><a class="row" href="#${i.id}" data-id="${i.id}" style="--k:${k.color}"${i.id === current?.id ? ' aria-current="true"' : ""}>` +
+    `<span class="tag">${i.num ? String(i.num).padStart(2, "0") : k.tag}</span>` +
+    `<span class="name${i.num ? " prose" : ""}">${highlight(i.name, words)}${badge}</span>` +
+    `<span class="sum">${highlight(sum, words)}</span></a></li>`
+  );
+}
+
+function renderIndex() {
+  const q = query.trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  let pool = kindFilter === "all" ? items : items.filter((i) => i.kind === kindFilter);
+  let html = "";
+  if (words.length) {
+    const ranked = pool
+      .map((i) => [score(i, words, q), i])
+      .filter(([s]) => s > 0)
+      .sort((a, b) => b[0] - a[0] || a[1].name.localeCompare(b[1].name))
+      .map(([, i]) => i);
+    shown = ranked.slice(0, LIMIT);
+    html += `<div class="status" role="status">${ranked.length} match${ranked.length === 1 ? "" : "es"} for “${esc(query.trim())}”</div>`;
+    html += shown.length
+      ? `<ul class="list">${shown.map((i) => row(i, words)).join("")}</ul>`
+      : `<div class="empty">Nothing matches. Try fewer words, or a field name like <code>num</code> or a code like <code>too_far</code>.</div>`;
+    if (ranked.length > LIMIT) html += `<div class="more">Showing the best ${LIMIT}. Add a word to narrow it down.</div>`;
+  } else {
+    shown = [];
+    const kinds = kindFilter === "all" ? KINDS : [KIND[kindFilter]];
+    for (const k of kinds) {
+      const ofKind = pool.filter((i) => i.kind === k.id);
+      const groups = [...new Set(ofKind.map((i) => i.group))];
+      for (const g of groups) {
+        const inGroup = ofKind.filter((i) => i.group === g);
+        const title = kinds.length > 1 && g !== k.label ? `${k.label} · ${g}` : g;
+        html += `<div class="group-h" style="--k:${k.color}"><span>${esc(title)}</span><span>${inGroup.length}</span></div>`;
+        html += `<ul class="list">${inGroup.map((i) => row(i, [])).join("")}</ul>`;
+        shown.push(...inGroup);
+      }
+    }
+  }
+  indexEl.innerHTML = html;
+}
+
+/* Reader */
+const readerEl = document.getElementById("reader");
+/* Source citations: `node/server.js:123`, `api.js:88-92`, `sf:12` become links to that line at
+   the pinned commit (DATA.source, from versions.json). Three repos:
+     bare        the live game, kaansoral/adventureland_mongodb (the source of truth)
+     common:     its shared engine, kaansoral/common_engine
+     legacy:     the old App Engine version, frozen; only for historical notes
+   A bare name links only if it has a folder (node/x.js), is a short alias below, or is one of
+   the live repo's top-level files; that keeps `Game.js:12` (some other project) from becoming a
+   wrong link. Hard-coded from the live repo's layout on 2026-10-04. */
+const REPOS = { "": DATA.source.live, common: DATA.source.common, legacy: DATA.source.legacy };
+const ALIAS = {
+  "": { "server.js": "node/server.js", "server_functions.js": "node/server_functions.js", sf: "node/server_functions.js",
+        "common_functions.js": "js/old_common_functions.js", "game.js": "js/game.js" },
+  common: {},
+  legacy: { "server.js": "node/server.js", "server_functions.js": "node/server_functions.js", sf: "node/server_functions.js",
+            "common_functions.js": "js/common_functions.js", "game.js": "js/game.js", "api.py": "api.py", "main.py": "main.py" },
+};
+const ROOT_FILES = new Set([
+  "admin_bots.js", "admin_dashboard.js", "adventure_functions.js", "api.js", "crons.js", "filters.js", "main.js", "mainframe.js", "mcp_api.js", "models.js", "seo_paths.js", "steam_news.js", "steam_signin.js", "steam_signup.js", "update_notes.js", "version.js", "web_assets.js"
+]);
+const SRC_RE = /\b(?:(common|legacy):)?((?:[\w.-]+\/)*[\w.-]+\.(?:js|py|html)|sf):(\d+)(?:\s*[-–]\s*(\d+))?/g;
+function srcHref(prefix, file, a, b) {
+  const repo = REPOS[prefix || ""];
+  const path = ALIAS[prefix || ""][file] ?? (file.includes("/") || (prefix && prefix !== "legacy") || ROOT_FILES.has(file) ? file : null);
+  if (!repo || !path || (prefix === "legacy" && !path.includes("/") && !/\.py$/.test(path))) return null;
+  return `${repo.repo}/blob/${repo.commit}/${path}#L${a}${b ? `-L${b}` : ""}`;
+}
+
+/* After Markdown is rendered: wrap tables so they scroll, link source refs, cross-link names. */
+function enhance(root, fromKind, selfId) {
+  for (const t of root.querySelectorAll("table")) {
+    const wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    t.replaceWith(wrap);
+    wrap.append(t);
+  }
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const texts = [];
+  while (walker.nextNode()) {
+    const n = walker.currentNode;
+    if (!n.parentElement.closest("a, pre") && SRC_RE.test(n.nodeValue)) texts.push(n);
+    SRC_RE.lastIndex = 0;
+  }
+  for (const n of texts) {
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    n.nodeValue.replace(SRC_RE, (m, prefix, file, a, b, at) => {
+      frag.append(n.nodeValue.slice(last, at));
+      const href = srcHref(prefix, file, a, b);
+      if (href) {
+        const link = document.createElement("a");
+        link.className = "src";
+        link.href = href;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = m;
+        frag.append(link);
+      } else frag.append(m);
+      last = at + m.length;
+      return m;
+    });
+    frag.append(n.nodeValue.slice(last));
+    n.replaceWith(frag);
+  }
+  for (const a of root.querySelectorAll('a[href^="#"]')) {
+    const href = hrefOf(decodeURIComponent(a.getAttribute("href").slice(1)));
+    if (href) a.setAttribute("href", href);
+  }
+  for (const c of root.querySelectorAll("code")) {
+    if (c.closest("a, pre")) continue;
+    const name = c.textContent.trim();
+    if (!/^[a-z0-9_:]+$/i.test(name)) continue;
+    const target = resolveName(name, fromKind);
+    if (!target || target.id === selfId) continue;
+    const a = document.createElement("a");
+    a.className = "xref";
+    a.href = hrefOf(target.id);
+    a.title = `${KIND[target.kind].long}: ${target.name}`;
+    c.replaceWith(a);
+    a.append(c);
+  }
+  codeTabs(root);
+}
+
+/* Code examples. A run of adjacent fenced blocks tagged with the course's languages becomes
+   one tabbed example showing the reader's language; any other fenced block just gets
+   highlighted. The choice lives in localStorage ("alapi.lang"), shared by all three pages. */
+const LANGS = [
+  { id: "js", label: "JavaScript", hl: "javascript" },
+  { id: "ts", label: "TypeScript", hl: "typescript" },
+  { id: "python", label: "Python", hl: "python" },
+  { id: "go", label: "Go", hl: "go" },
+  { id: "csharp", label: "C#", hl: "csharp" },
+  { id: "rust", label: "Rust", hl: "rust" },
+  { id: "java", label: "Java", hl: "java" },
+];
+const LANG = Object.fromEntries(LANGS.map((l) => [l.id, l]));
+// Aliases writers might use in a fence; they're normalised to the ids above.
+const LANG_ALIAS = { javascript: "js", typescript: "ts", py: "python", "c#": "csharp", cs: "csharp", golang: "go", rs: "rust" };
+let lang = LANG[store.get("alapi.lang")] ? store.get("alapi.lang") : "js";
+
+const fenceLang = (pre) => {
+  const m = pre.querySelector("code")?.className.match(/language-(\S+)/);
+  if (!m) return null;
+  const id = LANG_ALIAS[m[1].toLowerCase()] ?? m[1].toLowerCase();
+  return LANG[id] ? id : null;
+};
+
+function hl(pre, langId) {
+  const code = pre.querySelector("code");
+  if (!window.hljs || !code || code.dataset.hl) return;
+  const m = code.className.match(/language-(\S+)/);
+  const name = LANG[langId]?.hl ?? (m && hljs.getLanguage(m[1]) ? m[1] : null);
+  if (!name) return;
+  code.innerHTML = hljs.highlight(code.textContent, { language: name, ignoreIllegals: true }).value;
+  code.dataset.hl = "1";
+}
+
+function codeTabs(root) {
+  const pres = [...root.querySelectorAll("pre")];
+  const seen = new Set();
+  for (const pre of pres) {
+    if (seen.has(pre)) continue;
+    if (!fenceLang(pre)) { hl(pre); continue; }
+    // Collect this block and the fenced siblings straight after it.
+    const run = [pre];
+    let n = pre.nextElementSibling;
+    while (n && n.tagName === "PRE" && fenceLang(n) && !run.some((p) => fenceLang(p) === fenceLang(n))) {
+      run.push(n);
+      n = n.nextElementSibling;
+    }
+    run.forEach((p) => seen.add(p));
+    // A lone block (a Node test server, a one-off snippet) is just code, not a choice.
+    if (run.length === 1) { hl(pre, fenceLang(pre)); continue; }
+    const box = document.createElement("div");
+    box.className = "codetabs";
+    const bar = document.createElement("div");
+    bar.className = "tabbar";
+    bar.setAttribute("role", "tablist");
+    box.append(bar);
+    pre.before(box);
+    for (const p of run) {
+      const id = fenceLang(p);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tab";
+      b.setAttribute("role", "tab");
+      b.dataset.lang = id;
+      b.textContent = LANG[id].label;
+      bar.append(b);
+      p.dataset.lang = id;
+      hl(p, id);
+      box.append(p);
+    }
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "copy";
+    copy.textContent = "Copy";
+    bar.append(copy);
+    const note = document.createElement("div");
+    note.className = "note";
+    box.insertBefore(note, bar.nextSibling);
+  }
+  applyLang(root);
+}
+
+/* Show each tab group in the chosen language, or its first block plus a note if it has none. */
+function applyLang(root = readerEl) {
+  for (const box of root.querySelectorAll(".codetabs")) {
+    const have = [...box.querySelectorAll("pre")].map((p) => p.dataset.lang);
+    const pick = have.includes(lang) ? lang : have[0];
+    for (const p of box.querySelectorAll("pre")) p.hidden = p.dataset.lang !== pick;
+    for (const b of box.querySelectorAll(".tab")) b.setAttribute("aria-selected", String(b.dataset.lang === pick));
+    const note = box.querySelector(".note");
+    note.hidden = pick === lang || have.length < 2;
+    note.textContent = `No ${LANG[lang].label} version of this one; showing ${LANG[pick].label}.`;
+  }
+}
+
+function setLang(id, anchor) {
+  if (!LANG[id]) return;
+  lang = id;
+  store.set("alapi.lang", id);
+  langEl.value = id;
+  // Switching changes block heights above the clicked example; keep it under the pointer.
+  const before = anchor?.getBoundingClientRect().top;
+  applyLang();
+  if (anchor) readerEl.scrollTop += anchor.getBoundingClientRect().top - before;
+}
+
+const langEl = document.getElementById("lang");
+langEl.innerHTML = LANGS.map((l) => `<option value="${l.id}">${l.label}</option>`).join("");
+langEl.value = lang;
+langEl.addEventListener("change", () => setLang(langEl.value));
+
+function startPage() {
+  const counts = KINDS.map((k) => ({ k, n: items.filter((i) => i.kind === k.id).length }));
+  return (
+    `<div class="stats">` +
+    counts.map(({ k, n }) => `<button type="button" class="stat" data-filter="${k.id}" style="--k:${k.color}"><b>${n}</b><span>${k.long}</span></button>`).join("") +
+    `</div>`
+  );
+}
+
+function footer() {
+  const short = DATA.source.live.commit.slice(0, 7);
+  return (
+    `<footer class="foot">An unofficial reference for <a href="https://adventure.land">Adventure Land</a>, ` +
+    `written from the game's open-source code (<a href="${DATA.source.live.repo}">kaansoral/adventureland_mongodb</a>, commit ` +
+    `<a href="${DATA.source.live.repo}/tree/${DATA.source.live.commit}"><code>${short}</code></a>). ` +
+    `Adventure Land and its code belong to their author.</footer>`
+  );
+}
+
+/* Previous / next links, for reading the course and the guide front to back. */
+function pager(i) {
+  if (!i.num) return "";
+  const at = items.indexOf(i);
+  const link = (j, cls, label) =>
+    j ? `<a class="${cls}" href="#${j.id}"><span>${label}</span>${esc(j.num)}. ${esc(j.name)}</a>` : "";
+  return `<nav class="pager" aria-label="Chapters">${link(items[at - 1], "prev", "← Previous")}${link(items[at + 1], "next", "Next →")}</nav>`;
+}
+
+function show(id, { focus = false } = {}) {
+  const i = byId.get(id) ?? byId.get(HOME);
+  current = i;
+  const k = KIND[i.kind];
+  const isCode = !["guide", "learn", "game"].includes(i.kind) && !/\s/.test(i.name);
+  const actions = [];
+  if (i.emit) actions.push(`<button type="button" class="btn" data-copy="${esc(i.emit)}">Copy <code>${esc(i.emit.length > 46 ? i.emit.slice(0, 44) + "…" : i.emit)}</code></button>`);
+  if (isCode) actions.push(`<button type="button" class="btn" data-copy-name="${esc(i.name)}">Copy name</button>`);
+  readerEl.innerHTML =
+    `<article class="doc">` +
+    `<button type="button" class="btn back" data-back>← Index</button>` +
+    `<div class="crumbs" style="--k:${k.color}"><span class="kind-pill">${k.tag}</span><span>${esc(k.long)}</span>${i.group && i.group !== k.label ? `<span>›</span><span>${esc(i.group)}</span>` : ""}</div>` +
+    `<h2 class="title${isCode ? " mono" : ""}">${esc(i.name)}</h2>` +
+    // The summary is the entry's first sentence; show it as the lede only when the body
+    // does not already start with it (most entries do, so it would read twice).
+    (i.summary && i.id !== "start" && !i.num && !plain(i.md).trimStart().startsWith(i.summary.toLowerCase().slice(0, 40)) ? `<p class="lede">${esc(i.summary)}</p>` : "") +
+    (actions.length ? `<div class="actions">${actions.join("")}</div>` : "") +
+    (i.id === "start" ? startPage() : "") +
+    `<div class="md" id="md"></div>${pager(i)}</article>` +
+    footer();
+  const md = document.getElementById("md");
+  md.innerHTML = window.marked ? marked.parse(i.md) : `<pre>${esc(i.md)}</pre>`;
+  enhance(md, i.kind, i.id);
+  readerEl.scrollTop = 0;
+  document.body.classList.toggle("reading", i.id !== HOME || location.hash === `#${HOME}`);
+  for (const r of indexEl.querySelectorAll(".row")) {
+    if (r.dataset.id === i.id) r.setAttribute("aria-current", "true");
+    else r.removeAttribute("aria-current");
+  }
+  const active = indexEl.querySelector(`.row[data-id="${CSS.escape(i.id)}"]`);
+  active?.scrollIntoView({ block: "nearest" });
+  document.title = i.id === HOME ? PAGE.doc_title : `${i.name} · ${PAGE.doc_title}`;
+  if (focus) readerEl.focus({ preventScroll: true });
+}
+
+readerEl.addEventListener("click", async (e) => {
+  const tab = e.target.closest(".codetabs .tab");
+  if (tab) {
+    setLang(tab.dataset.lang, tab.closest(".codetabs"));
+    return;
+  }
+  const copyCode = e.target.closest(".codetabs .copy");
+  if (copyCode) {
+    const pre = [...copyCode.closest(".codetabs").querySelectorAll("pre")].find((p) => !p.hidden);
+    try {
+      await navigator.clipboard.writeText(pre.textContent);
+      copyCode.textContent = "Copied";
+    } catch {
+      copyCode.textContent = "Select and copy";
+    }
+    setTimeout(() => (copyCode.textContent = "Copy"), 1400);
+    return;
+  }
+  const copy = e.target.closest("[data-copy], [data-copy-name]");
+  if (copy) {
+    const text = copy.dataset.copy ?? copy.dataset.copyName;
+    const label = copy.innerHTML;
+    try {
+      await navigator.clipboard.writeText(text);
+      copy.textContent = "Copied";
+    } catch {
+      copy.textContent = text; // clipboard refused: show the text so it can be selected
+    }
+    setTimeout(() => (copy.innerHTML = label), 1400);
+    return;
+  }
+  if (e.target.closest("[data-back]")) {
+    document.body.classList.remove("reading");
+    return;
+  }
+  const stat = e.target.closest("[data-filter]");
+  if (stat) {
+    kindFilter = stat.dataset.filter;
+    store.set(`alapi.kind.${PAGE.id}`, kindFilter);
+    renderFilters();
+    renderIndex();
+    document.body.classList.remove("reading");
+    indexEl.scrollTop = 0;
+  }
+});
+
+/* Navigation: the hash is the entry id, so every entry has a link. */
+function route() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  show(byId.has(id) ? id : HOME);
+}
+window.addEventListener("hashchange", route);
+indexEl.addEventListener("click", (e) => {
+  const r = e.target.closest(".row");
+  if (r && location.hash === `#${r.dataset.id}`) {
+    e.preventDefault();
+    show(r.dataset.id); // same entry: re-open it (on a phone, from the index)
+    document.body.classList.add("reading");
+  }
+});
+
+/* Search input, debounced lightly. */
+const qEl = document.getElementById("q");
+let t;
+qEl.addEventListener("input", () => {
+  clearTimeout(t);
+  t = setTimeout(() => {
+    query = qEl.value;
+    renderIndex();
+    indexEl.scrollTop = 0;
+    document.body.classList.remove("reading");
+  }, 60);
+});
+
+/* Keyboard: "/" to search, arrows to move through results, Enter to open, Esc to clear. */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== qEl) {
+    e.preventDefault();
+    qEl.focus();
+    qEl.select();
+    return;
+  }
+  if (document.activeElement !== qEl) return;
+  if (e.key === "Escape") {
+    qEl.value = "";
+    query = "";
+    renderIndex();
+  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    if (!shown.length) return;
+    const at = shown.findIndex((i) => i.id === current?.id);
+    const next = e.key === "ArrowDown" ? Math.min(shown.length - 1, at + 1) : Math.max(0, at - 1);
+    location.hash = shown[next].id;
+  } else if (e.key === "Enter" && shown.length) {
+    const target = shown.find((i) => i.id === current?.id) ?? shown[0];
+    if (location.hash !== `#${target.id}`) location.hash = target.id;
+    document.body.classList.add("reading");
+    readerEl.focus({ preventScroll: true });
+  }
+});
+
+renderFilters();
+renderIndex();
+route();
+</script>

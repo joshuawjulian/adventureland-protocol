@@ -1,0 +1,78 @@
+{
+  "event": "render",
+  "source": "node/server.js:13167-13197",
+  "request": {
+    "fields": [
+      {"name": "pass", "type": "string", "optional": false, "coerce": "compared with `!=` to `keys.ACCESS_MASTER`", "description": "The admin secret of the server."},
+      {"name": "code", "type": "string", "optional": false, "coerce": "none: passed to `eval`", "description": "JavaScript that the server runs with `eval`. It can set the local variables `output`, `json_output`, `window` and `after`, and it can read `player` (your character, or `undefined`)."}
+    ],
+    "others": "ignored",
+    "example": {"pass": "<ACCESS_MASTER>", "code": "output = Object.keys(players).length"},
+    "confirm": {"code": ["node/server.js:13168-13179"], "note": "The handler reads `pass` and `code`; what `code` reads is up to it"}
+  },
+  "responses": [
+    {
+      "name": "Window",
+      "event": "simple_eval",
+      "when": "`code` set `window` (truthy). The official client copies `window` into its globals, then runs `after`.",
+      "fields": [
+        {"name": "window", "type": "any", "optional": false, "description": "The value of `window`."},
+        {"name": "after", "type": "string", "optional": false, "description": "The value of `after` (default `\"\"`)."},
+        {"name": "code", "type": "string", "optional": false, "description": "`\"for(var id in data.window) window[id]=data.window[id]; eval(data.after);\"`."}
+      ],
+      "example": {"window": {"debug_data": [1, 2]}, "after": "", "code": "for(var id in data.window) window[id]=data.window[id]; eval(data.after);"},
+      "source": "node/server.js:13181-13186",
+      "confirm": {"code": ["node/server.js:13172-13175", "node/server.js:13181-13186"]}
+    },
+    {
+      "name": "JSON",
+      "event": "simple_eval",
+      "when": "No `window`, and `code` set `json_output` to anything but `undefined`.",
+      "fields": [
+        {"name": "output", "type": "any", "optional": false, "description": "The value of `output` (default `\"\"`)."},
+        {"name": "json_output", "type": "any", "optional": false, "description": "The value of `json_output`."},
+        {"name": "code", "type": "\"show_json(data.json_output)\"", "optional": false, "description": "The code for the client."}
+      ],
+      "example": {"output": "", "json_output": {"players": 42}, "code": "show_json(data.json_output)"},
+      "source": "node/server.js:13187-13188",
+      "confirm": {"code": ["node/server.js:13172-13175", "node/server.js:13187-13188"]}
+    },
+    {
+      "name": "Text",
+      "event": "simple_eval",
+      "when": "No `window` and no `json_output`. When `code` throws, `output` is `\"Exception: \"` plus the error.",
+      "fields": [
+        {"name": "output", "type": "any", "optional": false, "description": "The value of `output` (default `\"\"`)."},
+        {"name": "code", "type": "string", "optional": false, "description": "`'show_modal(\"<pre>\"+data.output+\"</pre>\")'`."}
+      ],
+      "example": {"output": 42, "code": "show_modal(\"<pre>\"+data.output+\"</pre>\")"},
+      "source": "node/server.js:13176-13180, 13189-13195",
+      "confirm": {"code": ["node/server.js:13172-13180", "node/server.js:13189-13195"], "note": "`json_output` is `undefined` here, so the encoder leaves it out (JSON, and node/msgpack_parser.js:53-56)"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "render",
+    "intro": "Admin only.",
+    "rows": [
+      {"when": "`pass` is wrong.", "replies": [], "source": "node/server.js:13168-13170", "confirm": {"code": ["node/server.js:13168-13170"]}},
+      {"when": "The socket has no character. The `simple_eval` reply goes out first; then `resend(player, ...)` throws.", "replies": [
+        {"event": "game_error", "example": "ERROR!", "note": "after `simple_eval`; the wrapper error, +16 call cost"}
+      ], "source": "node/server.js:13196", "confirm": {"code": ["node/server.js:13171", "node/server.js:13196", "node/server.js:4550-4553", "node/logic/market_patron_runtime.js:37-41", "node/server.js:4947-4966"], "note": "`resend(undefined)` throws in `market_patron_observe` or at `player.halt`"}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "After `simple_eval`, when the socket has a character (`resend \"reopen+u+cid\"`).",
+      "summary": "Your state, with any change that `code` made.",
+      "source": "node/server.js:13196",
+      "confirm": {"code": ["node/server.js:13196", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`simple_eval` to you (one of the three forms)",
+    "`player` with `reopen: true` to you"
+  ]
+}

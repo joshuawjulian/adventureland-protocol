@@ -1,0 +1,18 @@
+{
+  "event": "limitdcreport",
+  "to": "the socket that went above its call-cost limit only",
+  "payload": {
+    "fields": [
+      {"name": "calls", "type": "CallLogEntry[]", "optional": false, "description": "`socket.calls`: the calls of the last 4 s, oldest first, with the call that went above the limit."},
+      {"name": "climit", "type": "integer", "optional": false, "description": "The limit that the socket went above. After a normal call: 200 with a character, 50 without one (node/server.js:4905). After a handler error: always 200."},
+      {"name": "total", "type": "integer", "optional": false, "description": "`socket.total_calls`: the number of events that this socket sent since it connected."},
+      {"name": "method", "type": "string", "optional": true, "description": "Only after a handler error: the event name, up to 200 characters. A handler error adds a cost of 16 (node/server.js:4950)."}
+    ],
+    "confirm": {"code": ["node/server.js:4887-4906", "node/server.js:4938-4943", "node/server.js:4947-4961", "node/server_functions.js:5336-5363"]}
+  },
+  "example": {"calls": [["2026-10-04T12:00:00.120Z", "move", 96], ["2026-10-04T12:00:01.250Z", "attack", 105]], "climit": 200, "total": 5210},
+  "senders": [
+    {"what": "The wrapper of every handler, when the call cost goes above the limit before the handler runs. `disconnect_reason` `\"limitdc\"` follows, then the disconnect.", "source": "node/server.js:4939-4943"},
+    {"what": "The same wrapper, when a handler throws an error and the cost goes above 200. This form has `method`.", "source": "node/server.js:4947-4961"}
+  ]
+}

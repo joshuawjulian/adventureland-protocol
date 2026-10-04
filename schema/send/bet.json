@@ -1,0 +1,834 @@
+{
+  "event": "bet",
+  "source": "node/server.js:12712-12866",
+  "request": {
+    "fields": [
+      {"name": "type", "type": "\"dice\" | \"wheel\" | \"slots\" | \"roulette\"", "optional": false, "coerce": "compared with `==` to each string", "description": "The game. It selects the variant. Any other value (or none) still runs the shared checks, with `place: \"dice\"`. Then the handler ends with no reply. `\"roulette\"` works only on dev servers."},
+      {"name": "request_id", "type": "any", "optional": true, "coerce": "tested for truthiness: `0`, `\"\"` and `false` count as absent", "description": "With it, each failure (except the roulette ones) is an object, and the final result of dice, wheel and slots arrives as a `game_response` with this value. Without it, those failures are bare strings (or nothing, for the first two checks), and only slots sends a final `game_response` (a bare string)."}
+    ],
+    "others": "ignored, except the fields of the variant",
+    "example": {"type": "slots", "request_id": "b1"},
+    "confirm": {"code": ["node/server.js:12713-12714", "node/server.js:12734", "node/server.js:12737", "node/server.js:12790", "node/server.js:12863"], "note": "The handler reads `request_id` and `type`; each variant reads its own fields"}
+  },
+  "variants": {
+    "key": "type",
+    "intro": "An unknown `type` runs the shared checks, then ends with no reply.",
+    "list": [
+      {
+        "value": "dice",
+        "when": "The dice table: bet that the roll (0 to 99.99) lands above or below `num`. The round rolls every 40 s or so.",
+        "place": "dice",
+        "request": {
+          "fields": [
+            {"name": "num", "type": "number", "optional": true, "coerce": "`min(99.99, max(parseFloat(num) || 0, 0.01))`: a numeric string works; a missing or non-numeric value becomes 0.01", "description": "The target number. The server keeps all its decimals; `game_log` shows it with 2."},
+            {"name": "dir", "type": "\"up\" | \"down\"", "optional": true, "default": "down", "coerce": "compared with `== \"up\"`; any other value means `\"down\"`", "description": "`\"up\"` wins when the roll is at or above `num`. `\"down\"` wins when the roll is at or below `num`."},
+            {"name": "gold", "type": "integer", "optional": true, "coerce": "`max(10000, min(parseInt(gold) || 0, 100000000000))`. A numeric string works; decimals are cut off", "description": "The stake, 10,000 to 100,000,000,000. A missing or invalid value becomes 10,000.", "example": 100000}
+          ],
+          "example": {"type": "dice", "num": 50, "dir": "up", "gold": 100000, "request_id": "b1"},
+          "confirm": {"code": ["node/server.js:12792-12801"]}
+        },
+        "responses": [
+          {
+            "name": "Dice accepted",
+            "event": "game_log",
+            "when": "All checks pass. Two `game_log` events: this one (`server.game_log.num`), then `server.game_log.bet_gold` with `{amount}` (\"Bet: 100,000 gold\", color `\"gray\"`). There is no `game_response` now.",
+            "type": "LocalizedText",
+            "example": {"color": "white", "message": "Num: 50.00 UP", "phrase": "server.game_log.num", "phrase_args": {"value": "50.00", "value2": "UP"}},
+            "source": "node/server.js:12824-12835",
+            "confirm": {"code": ["node/server.js:12824-12835", "languages/index.js:256-258"]}
+          },
+          {
+            "name": "Dice won",
+            "event": "game_log",
+            "when": "At the end of the round, when the roll is on your side of `num`. Two `game_log` events: this one with the gross win, then `server.game_log.house_edge_gold` with `{amount: edge}` (\"House edge: 2,000 gold\", color `\"gray\"`).",
+            "type": "LocalizedText",
+            "example": {"color": "gold", "message": "Won: 200,000 gold [63.12]", "phrase": "server.game_log.won_gold", "phrase_args": {"amount": "200,000", "num": "63.12"}},
+            "source": "node/server_functions.js:1467-1486",
+            "confirm": {"code": ["node/server_functions.js:1460-1486", "languages/index.js:256-258"]}
+          },
+          {
+            "name": "Dice lost",
+            "event": "game_log",
+            "when": "At the end of the round, when the roll is not on your side.",
+            "type": "LocalizedText",
+            "example": {"color": "gray", "message": "Lost: 100,000 gold [41.07]", "phrase": "server.game_log.lost_gold_2", "phrase_args": {"amount": "100,000", "num": "41.07"}},
+            "source": "node/server_functions.js:1512-1520",
+            "confirm": {"code": ["node/server_functions.js:1512-1520", "languages/index.js:256-258"]}
+          },
+          {
+            "name": "Dice result",
+            "event": "game_response",
+            "code": "data",
+            "when": "At the end of the round, after the `game_log`. It has no `failed` field for a loss: `success` is `true` and `won` is `false`.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+                {"name": "place", "type": "\"dice\"", "optional": false, "description": "The game."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the bet."},
+                {"name": "won", "type": "boolean", "optional": false, "description": "The result."},
+                {"name": "roll", "type": "number", "optional": false, "description": "The roll, 0 to 99.99."},
+                {"name": "num", "type": "number", "optional": false, "description": "Your `num` after the clamp."},
+                {"name": "direction", "type": "\"up\" | \"down\"", "optional": false, "description": "Your `dir`."},
+                {"name": "wager", "type": "integer", "optional": false, "description": "The stake."},
+                {"name": "payout", "type": "integer", "optional": false, "description": "The gold added to you: `win - edge`, or 0 for a loss."},
+                {"name": "net", "type": "integer", "optional": false, "description": "`win - wager - edge`, or `-wager` for a loss."},
+                {"name": "edge", "type": "integer", "optional": false, "description": "The house cut of the win: `ceil((gold * odds - gold) * house_edge() / 100)`. Also set for a loss."}
+              ],
+              "example": {"response": "data", "place": "dice", "request_id": "b1", "success": true, "won": true, "roll": 63.12, "num": 50, "direction": "up", "wager": 100000, "payout": 198000, "net": 98000, "edge": 2000}
+            },
+            "without_request_id": {"none": true},
+            "source": "node/server_functions.js:1496-1544",
+            "confirm": {"code": ["node/server_functions.js:1496-1511", "node/server_functions.js:1529-1544", "node/server.js:12850"], "note": "A raw `socket.emit`, not `success_response`; sent only when the bet stored a truthy `request_id`"}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The round rolls now (`tavern.dice.state` is `\"roll\"`).",
+              "code": "tavern_too_late",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/server.js:12807-12809",
+              "confirm": {"code": ["node/server.js:12807-12809", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The round does not take bets (the state is `\"lock\"` or `\"suspense\"`).",
+              "code": "tavern_not_yet",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/server.js:12810-12812",
+              "confirm": {"code": ["node/server.js:12810-12812", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The stake (after the clamp) is more than your gold.",
+              "code": "gold_not_enough",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/server.js:12813-12815",
+              "confirm": {"code": ["node/server.js:12813-12815", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The possible net win (`win - edge - gold`) is more than 40% of `S.gold - house_debt()`.",
+              "code": "tavern_gold_not_enough",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/server.js:12816-12818",
+              "confirm": {"code": ["node/server.js:12816-12818", "node/server_functions.js:1364-1382", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "You have an open bet already (`player.bets` is not empty).",
+              "code": "tavern_dice_exist",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/server.js:12819-12821",
+              "confirm": {"code": ["node/server.js:12819-12821", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "tavern",
+            "to": "everyone in the `tavern` instance, you included",
+            "when": "The server took the bet.",
+            "fields": [
+              {"name": "event", "type": "\"bet\"", "optional": false, "description": "A new bet."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "type", "type": "\"dice\"", "optional": false, "description": "The game."},
+              {"name": "num", "type": "number", "optional": false, "description": "Your `num` after the clamp."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The stake."},
+              {"name": "dir", "type": "\"up\" | \"down\"", "optional": false, "description": "Your `dir`."}
+            ],
+            "example": {"event": "bet", "name": "Wizard", "type": "dice", "num": 50, "gold": 100000, "dir": "up"},
+            "source": "node/server.js:12853-12860",
+            "confirm": {"code": ["node/server.js:12853-12860", "node/server_functions.js:3540-3551"]}
+          },
+          {"name": "stake", "event": "player", "to": "you", "when": "The server took the bet (`resend \"reopen+nc\"`).", "summary": "Your state with the stake taken from `gold`.", "source": "node/server.js:12861", "confirm": {"code": ["node/server.js:12838", "node/server.js:12861", "node/server.js:4550-4594"]}},
+          {"event": "dice", "to": "everyone in the `tavern` instance", "when": "The dice round, for every bet: `{state: \"roll\"}` after 30 s of bets, `{state: \"lock\", num, text, key}` 10 s later, and `{state: \"bets\", hex, algorithm}` when the next round opens.", "summary": "See the receive entry.", "source": "node/server_functions.js:1409-1414, 1453-1458, 1587", "confirm": {"code": ["node/server_functions.js:1409-1414", "node/server_functions.js:1417-1420", "node/server_functions.js:1453-1458", "node/server_functions.js:1587", "node/server_functions.js:3540-3551"]}},
+          {
+            "event": "tavern",
+            "to": "everyone in the `tavern` instance (not you when you left it)",
+            "when": "1.6 s after the `lock`, for each bet, after your `game_log`. `instance_emit` only.",
+            "fields": [
+              {"name": "event", "type": "\"won\" | \"lost\"", "optional": false, "description": "The result."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "The player."},
+              {"name": "type", "type": "\"dice\"", "optional": false, "description": "The game."},
+              {"name": "num", "type": "number", "optional": false, "description": "The `num` of the bet."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "`\"won\"`: the gross win `win`. `\"lost\"`: the stake."},
+              {"name": "dir", "type": "\"up\" | \"down\"", "optional": false, "description": "The `dir` of the bet."},
+              {"name": "net", "type": "integer", "optional": true, "description": "`\"won\"` only: `win - gold - edge`."}
+            ],
+            "example": {"event": "won", "name": "Wizard", "type": "dice", "num": 50, "gold": 200000, "dir": "up", "net": 98000},
+            "source": "node/server_functions.js:1487-1495, 1521-1528",
+            "confirm": {"code": ["node/server_functions.js:1487-1495", "node/server_functions.js:1521-1528", "node/server_functions.js:3540-3551"]}
+          },
+          {"name": "settle", "event": "player", "to": "you", "when": "The bet settles, last. `resend \"reopen\"` when the bet raised your XP to the next level (a merchant gets `edge * 7.2` XP for a win), else `\"reopen+nc\"`.", "summary": "Your state with the payout in `gold` (the gold moved at the `lock`, 1.6 s earlier).", "source": "node/server_functions.js:1546-1550", "confirm": {"code": ["node/server_functions.js:1437-1441", "node/server_functions.js:1546-1550", "node/server.js:4550-4594"]}}
+        ],
+        "order": {
+          "Now": ["two `game_log` to you", "`tavern` `{event: \"bet\"}` to the tavern", "`player` to you"],
+          "At the end of the round (about 40 s)": [
+            "`game_log` to you (two for a win)",
+            "`tavern` `won` or `lost` to the tavern",
+            "with `request_id`: `game_response` `data` (**Dice result**) to you",
+            "`player` to you"
+          ]
+        },
+        "source": "node/server.js:12790-12862; node/server_functions.js:1399-1592"
+      },
+      {
+        "value": "wheel",
+        "when": "Fortune's Wheel: an even-money bet on a side (`sun` or `moon`). The server decides the slice at once; the spin settles after 4 s.",
+        "place": "wheel",
+        "request": {
+          "fields": [
+            {"name": "side", "type": "\"sun\" | \"moon\"", "optional": false, "coerce": "`\"\" + (side || \"\")`, then it must be in `G.games.wheel.sides`", "description": "The side that you bet on. A missing or other value fails with `wheel_side`."},
+            {"name": "gold", "type": "integer", "optional": true, "coerce": "`max(G.games.wheel.min, min(parseInt(gold) || 0, 100000000000))`: the minimum is 10,000. A numeric string works; decimals are cut off", "description": "The stake, 10,000 to 100,000,000,000. A missing or invalid value becomes 10,000.", "example": 100000}
+          ],
+          "example": {"type": "wheel", "side": "sun", "gold": 100000, "request_id": "b1"},
+          "confirm": {"code": ["node/logic/tavern_wheel.js:12-17"]}
+        },
+        "responses": [
+          {
+            "name": "Wheel accepted",
+            "event": "game_log",
+            "when": "All checks pass. The server picks the slice now (`crypto.randomInt` over the 14 slices of `G.games.wheel.slices`, 7 per side) and takes the stake. `phrase_args.side` is an object: the phrase of the side.",
+            "type": "LocalizedText",
+            "example": {
+              "color": "white",
+              "message": "Wheel: SUN for 100,000 gold",
+              "phrase": "server.game_log.wheel_bet",
+              "phrase_args": {
+                "side": {"phrase": "interface.wheel.sun"},
+                "amount": "100,000"
+              }
+            },
+            "source": "node/logic/tavern_wheel.js:23-47",
+            "confirm": {"code": ["node/logic/tavern_wheel.js:40-47", "node/logic/tavern_wheel.js:7-9", "languages/index.js:256-258"]}
+          },
+          {
+            "name": "Wheel stopped",
+            "event": "game_log",
+            "when": "4,000 ms later (`player.q.wheel`). `server.game_log.wheel_won` with the net win, or `server.game_log.wheel_lost` with the stake. `side` is the side of the slice.",
+            "type": "LocalizedText",
+            "example": {
+              "color": "gold",
+              "message": "The wheel stopped on SUN. Won 98,000 gold",
+              "phrase": "server.game_log.wheel_won",
+              "phrase_args": {
+                "side": {"phrase": "interface.wheel.sun"},
+                "amount": "98,000"
+              }
+            },
+            "source": "node/logic/tavern_wheel.js:65-72; node/server.js:14965-14967",
+            "confirm": {"code": ["node/logic/tavern_wheel.js:64-72", "node/logic/tavern_wheel.js:7-9", "node/server.js:14813-14814", "node/server.js:14965-14967", "languages/index.js:256-258"], "note": "A spin that settles on a disconnect (`tavern_wheel_disconnect`, `quiet`) sends nothing"}
+          },
+          {
+            "name": "Wheel result",
+            "event": "game_response",
+            "code": "data",
+            "when": "After the `tavern` result.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+                {"name": "place", "type": "\"wheel\"", "optional": false, "description": "The game."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`, also for a loss."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the bet."},
+                {"name": "won", "type": "boolean", "optional": false, "description": "The slice is on your side."},
+                {"name": "side", "type": "\"sun\" | \"moon\"", "optional": false, "description": "Your side."},
+                {"name": "result", "type": "\"sun\" | \"moon\"", "optional": false, "description": "The side of the slice."},
+                {"name": "slice", "type": "string", "optional": false, "description": "The name of the slice, for example `\"gold\"` (`G.games.wheel.slices[index][0]`)."},
+                {"name": "wager", "type": "integer", "optional": false, "description": "The stake."},
+                {"name": "payout", "type": "integer", "optional": false, "description": "`2 * wager - cut` for a win, 0 for a loss. `cut` is `ceil(wager * edge / 100)`."},
+                {"name": "net", "type": "integer", "optional": false, "description": "`wager - cut` for a win, `-wager` for a loss."},
+                {"name": "edge", "type": "number", "optional": false, "description": "`house_edge()` when the bet started: 0.5, 1, 1.5 or 2 (percent)."}
+              ],
+              "example": {"response": "data", "place": "wheel", "request_id": "b1", "success": true, "won": true, "side": "sun", "result": "sun", "slice": "gold", "wager": 100000, "payout": 198000, "net": 98000, "edge": 2}
+            },
+            "without_request_id": {"none": true},
+            "source": "node/logic/tavern_wheel.js:85-99",
+            "confirm": {"code": ["node/logic/tavern_wheel.js:85-99", "node/logic/tavern_wheel.js:27-39"], "note": "A raw `socket.emit`, not `success_response`"}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "`tavern_closing()` again: the same check as the shared row, so it does not fail here.",
+              "code": "tavern_closing",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_wheel.js:14",
+              "confirm": {"code": ["node/logic/tavern_wheel.js:14", "node/logic/tavern.js:6-8", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "`side` is not `\"sun\"` or `\"moon\"`.",
+              "code": "wheel_side",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_wheel.js:15",
+              "confirm": {"code": ["node/logic/tavern_wheel.js:15", "node/logic/tavern_wheel.js:13", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "Your last spin did not settle yet (`player.q.wheel`).",
+              "code": "wheel_spinning",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_wheel.js:16",
+              "confirm": {"code": ["node/logic/tavern_wheel.js:16", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The stake (after the clamp) is more than your gold.",
+              "code": "gold_not_enough",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_wheel.js:21",
+              "confirm": {"code": ["node/logic/tavern_wheel.js:21", "node/logic/tavern_wheel.js:17", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The net win (`gold - ceil(gold * edge / 100)`) is more than 40% of `S.gold - house_debt()`.",
+              "code": "tavern_gold_not_enough",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_wheel.js:22",
+              "confirm": {"code": ["node/logic/tavern_wheel.js:22", "node/logic/tavern_wheel.js:18-20", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {"name": "stake", "event": "player", "to": "you", "when": "The server took the stake (`resend \"u+cid+reopen+nc\"`).", "summary": "Your state with the stake taken from `gold`. `q.wheel` holds the decided result already (`won`, `result`, `slice`, `index`) and `request_id`. `q` also goes to other clients in `entities`.", "source": "node/logic/tavern_wheel.js:27-49", "confirm": {"code": ["node/logic/tavern_wheel.js:25-39", "node/logic/tavern_wheel.js:49", "node/server.js:4550-4594"]}},
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "The server took the stake. Every client whose view holds you.",
+            "fields": [
+              {"name": "type", "type": "\"wheel\"", "optional": false, "description": "The animation."},
+              {"name": "player", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "side", "type": "\"sun\" | \"moon\"", "optional": false, "description": "Your side."},
+              {"name": "index", "type": "integer", "optional": false, "description": "The slice that the wheel stops on, 0 to 13: the result is visible now."},
+              {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The spin time: `G.games.wheel.spin` (4,000)."}
+            ],
+            "example": {"type": "wheel", "player": "Wizard", "side": "sun", "index": 7, "ms": 4000},
+            "source": "node/logic/tavern_wheel.js:48",
+            "confirm": {"code": ["node/logic/tavern_wheel.js:48", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "tavern",
+            "to": "everyone in the `tavern` instance; also you, when you are not in it",
+            "when": "The spin settles (`tavern_result`), after your `game_log`.",
+            "fields": [
+              {"name": "event", "type": "\"won\" | \"lost\"", "optional": false, "description": "The result."},
+              {"name": "type", "type": "\"wheel\"", "optional": false, "description": "The game."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "The player."},
+              {"name": "side", "type": "\"sun\" | \"moon\"", "optional": false, "description": "The side of the bet."},
+              {"name": "result", "type": "\"sun\" | \"moon\"", "optional": false, "description": "The side of the slice."},
+              {"name": "slice", "type": "string", "optional": false, "description": "The name of the slice."},
+              {"name": "index", "type": "integer", "optional": false, "description": "The index of the slice."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The stake."},
+              {"name": "net", "type": "integer", "optional": false, "description": "The net win, or `-gold`."},
+              {"name": "payout", "type": "integer", "optional": false, "description": "The gold paid, or 0."}
+            ],
+            "example": {"event": "won", "type": "wheel", "name": "Wizard", "side": "sun", "result": "sun", "slice": "gold", "index": 7, "gold": 100000, "net": 98000, "payout": 198000},
+            "source": "node/logic/tavern_wheel.js:73-84; node/logic/tavern.js:11-14",
+            "confirm": {"code": ["node/logic/tavern_wheel.js:73-84", "node/logic/tavern.js:11-14", "node/server_functions.js:3540-3551"]}
+          },
+          {"name": "settle", "event": "player", "to": "you", "when": "The spin settles, last (`resend \"reopen+nc\"`).", "summary": "Your state with the payout in `gold`, and without `q.wheel` or `q.slots`.", "source": "node/logic/tavern_wheel.js:100", "confirm": {"code": ["node/logic/tavern_wheel.js:53-57", "node/logic/tavern_wheel.js:100", "node/server.js:14813-14814", "node/server.js:4550-4594"]}}
+        ],
+        "order": {
+          "Now": ["`game_log` to you", "`ui` to clients nearby", "`player` to you"],
+          "After 4 s": [
+            "`game_log` to you",
+            "`tavern` result",
+            "with `request_id`: `game_response` `data` (**Wheel result**) to you",
+            "`player` to you"
+          ]
+        },
+        "source": "node/server.js:12734-12736; node/logic/tavern_wheel.js:11-100"
+      },
+      {
+        "value": "slots",
+        "when": "The slot machine: one pull costs `G.games.slots.gold` (1,000,000). The server draws the prize at once; the pull settles after 3.6 s. It ignores `gold`.",
+        "place": "slots",
+        "request": {
+          "example": {"type": "slots", "request_id": "b1"},
+          "confirm": {"code": ["node/server.js:12863-12865", "node/logic/tavern_slots.js:32-34"], "note": "`tavern_slots_bet` reads no field of `data`"}
+        },
+        "responses": [
+          {
+            "name": "Slots stake",
+            "event": "game_response",
+            "code": "gold_use",
+            "when": "All checks pass. Sent with or without `request_id`, and it does not carry it. The server draws the prize now: a weighted draw out of `G.games.slots.draws` (30,000).",
+            "fields": [
+              {"name": "response", "type": "\"gold_use\"", "optional": false, "description": "The code."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The cost of the pull: `G.games.slots.gold` (1,000,000)."},
+              {"name": "game", "type": "\"slots\"", "optional": false, "description": "The game."}
+            ],
+            "example": {"response": "gold_use", "gold": 1000000, "game": "slots"},
+            "source": "node/logic/tavern_slots.js:66",
+            "confirm": {"code": ["node/logic/tavern_slots.js:33-34", "node/logic/tavern_slots.js:66"]}
+          },
+          {
+            "name": "Slots received",
+            "event": "game_log",
+            "when": "3,600 ms later (`player.q.slots`), only for a win: the payout.",
+            "type": "LocalizedText",
+            "example": {"color": "gold", "message": "Received 1,196,000 gold", "phrase": "server.game_log.received_gold", "phrase_args": {"amount": "1,196,000"}},
+            "source": "node/logic/tavern_slots.js:79-87; node/server.js:14968-14970",
+            "confirm": {"code": ["node/logic/tavern_slots.js:78-87", "node/server.js:14813-14814", "node/server.js:14968-14970", "languages/index.js:256-258"], "note": "A pull that settles on a disconnect (`quiet`) sends nothing"}
+          },
+          {
+            "name": "Slots won",
+            "event": "game_response",
+            "code": "slots_success",
+            "when": "After the `tavern` result, for a win. Without `request_id` it is the bare string.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {"name": "response", "type": "\"slots_success\"", "optional": false, "description": "The code."},
+                {"name": "place", "type": "\"slots\"", "optional": false, "description": "The game."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the pull."},
+                {"name": "won", "type": "true", "optional": false, "description": "Always `true` here."},
+                {"name": "cost", "type": "integer", "optional": false, "description": "The stake: 1,000,000."},
+                {"name": "payout", "type": "integer", "optional": false, "description": "`prize - cut`."},
+                {"name": "net", "type": "integer", "optional": false, "description": "`payout - cost`. It is negative when the prize is less than the cost."},
+                {"name": "symbols", "type": "ItemName[]", "optional": false, "description": "The 3 symbols on the payline, for example `[\"ale\", \"ale\", \"ale\"]`."},
+                {"name": "prize", "type": "integer", "optional": false, "description": "The gross prize, from `G.games.slots.prizes`."},
+                {"name": "edge", "type": "number", "optional": false, "description": "`house_edge()` at the pull, in percent."},
+                {"name": "cut", "type": "integer", "optional": false, "description": "`ceil(max(0, prize - cost) * edge / 100)`."}
+              ],
+              "example": {"response": "slots_success", "place": "slots", "request_id": "b1", "success": true, "won": true, "cost": 1000000, "payout": 1196000, "net": 196000, "symbols": ["ale", "ale", "ale"], "prize": 1200000, "edge": 2, "cut": 4000}
+            },
+            "without_request_id": {"type": "\"slots_success\"", "example": "slots_success"},
+            "source": "node/logic/tavern_slots.js:109-123, 124",
+            "confirm": {"code": ["node/logic/tavern_slots.js:109-124", "node/logic/tavern_slots.js:54-65"], "note": "A raw `socket.emit`, not `success_response`"}
+          },
+          {
+            "name": "Slots lost",
+            "event": "game_response",
+            "code": "slots_fail",
+            "when": "After the `tavern` result, for a miss. It is not a failure: `success` is `true`. Without `request_id` it is the bare string.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {"name": "response", "type": "\"slots_fail\"", "optional": false, "description": "The code."},
+                {"name": "place", "type": "\"slots\"", "optional": false, "description": "The game."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the pull."},
+                {"name": "won", "type": "false", "optional": false, "description": "Always `false` here."},
+                {"name": "cost", "type": "integer", "optional": false, "description": "The stake: 1,000,000."},
+                {"name": "payout", "type": "0", "optional": false, "description": "Always 0."},
+                {"name": "net", "type": "integer", "optional": false, "description": "`-cost`."},
+                {"name": "symbols", "type": "ItemName[]", "optional": false, "description": "The 3 symbols. They are never all the same."},
+                {"name": "prize", "type": "0", "optional": false, "description": "Always 0."},
+                {"name": "edge", "type": "number", "optional": false, "description": "`house_edge()` at the pull, in percent."},
+                {"name": "cut", "type": "0", "optional": false, "description": "Always 0."}
+              ],
+              "example": {"response": "slots_fail", "place": "slots", "request_id": "b1", "success": true, "won": false, "cost": 1000000, "payout": 0, "net": -1000000, "symbols": ["ale", "wine", "gem0"], "prize": 0, "edge": 2, "cut": 0}
+            },
+            "without_request_id": {"type": "\"slots_fail\"", "example": "slots_fail"},
+            "source": "node/logic/tavern_slots.js:109-123, 124",
+            "confirm": {"code": ["node/logic/tavern_slots.js:109-124", "node/logic/tavern_slots.js:48-65"], "note": "For a miss `prize` is null, so `gross`, `cut` and `payout` are 0"}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "`tavern_closing()` again: the same check as the shared row, so it does not fail here.",
+              "code": "tavern_closing",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_slots.js:35",
+              "confirm": {"code": ["node/logic/tavern_slots.js:35", "node/logic/tavern.js:6-8", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "Your last pull did not settle yet (`player.q.slots`).",
+              "code": "slots_spinning",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_slots.js:36",
+              "confirm": {"code": ["node/logic/tavern_slots.js:36", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "You have less than `G.games.slots.gold` (1,000,000).",
+              "code": "gold_not_enough",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_slots.js:37",
+              "confirm": {"code": ["node/logic/tavern_slots.js:37", "node/logic/tavern_slots.js:33-34", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            },
+            {
+              "when": "The largest prize, minus the cost and the house cut, is more than `S.gold - house_debt()`.",
+              "code": "tavern_gold_not_enough",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+                ]
+              },
+              "without_request_id": {"form": "bare"},
+              "source": "node/logic/tavern_slots.js:38-47",
+              "confirm": {"code": ["node/logic/tavern_slots.js:38-47", "node/server_functions.js:1364-1382", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {"name": "stake", "event": "player", "to": "you", "when": "The server took the stake (`resend \"u+cid+reopen+nc\"`).", "summary": "Your state with the stake taken from `gold`. `q.slots` holds the decided result already (`prize`, `payout`, `stops`, `symbols`) and `request_id`. `q` also goes to other clients in `entities`.", "source": "node/logic/tavern_slots.js:54-68", "confirm": {"code": ["node/logic/tavern_slots.js:52-65", "node/logic/tavern_slots.js:68", "node/server.js:4550-4594"]}},
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "The server took the stake. Every client whose view holds you.",
+            "fields": [
+              {"name": "type", "type": "\"slots\"", "optional": false, "description": "The animation."},
+              {"name": "player", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "stops", "type": "integer[]", "optional": false, "description": "The stop index on each of the 3 reels of `G.games.slots.reels`: the result is visible now."},
+              {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The spin time: `G.games.slots.spin` (3,600)."}
+            ],
+            "example": {"type": "slots", "player": "Wizard", "stops": [0, 1, 0], "ms": 3600},
+            "source": "node/logic/tavern_slots.js:67",
+            "confirm": {"code": ["node/logic/tavern_slots.js:19-30", "node/logic/tavern_slots.js:67", "node/server_functions.js:3744-3779"]}
+          },
+          {
+            "event": "server_message",
+            "to": "everyone",
+            "when": "A prize of 100,000,000 or more (`goldingot`, `glitch`), after your `game_log`.",
+            "type": "LocalizedText",
+            "example": {
+              "color": "gold",
+              "message": "Wizard received 98,020,000 gold",
+              "phrase": "server.server_message.received_gold",
+              "phrase_args": {"player": "Wizard", "amount": "98,020,000"}
+            },
+            "source": "node/logic/tavern_slots.js:88-96",
+            "confirm": {"code": ["node/logic/tavern_slots.js:88-96", "node/server_functions.js:3495-3497", "languages/index.js:256-258"]}
+          },
+          {
+            "event": "tavern",
+            "to": "everyone in the `tavern` instance; also you, when you are not in it",
+            "when": "The pull settles (`tavern_result`).",
+            "fields": [
+              {"name": "event", "type": "\"won\" | \"lost\"", "optional": false, "description": "The result."},
+              {"name": "type", "type": "\"slots\"", "optional": false, "description": "The game."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "The player."},
+              {"name": "stops", "type": "integer[]", "optional": false, "description": "The stop on each reel."},
+              {"name": "symbols", "type": "ItemName[]", "optional": false, "description": "The 3 symbols."},
+              {"name": "prize", "type": "integer", "optional": false, "description": "The gross prize, or 0."},
+              {"name": "payout", "type": "integer", "optional": false, "description": "`prize - cut`, or 0."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The cost: 1,000,000."},
+              {"name": "net", "type": "integer", "optional": false, "description": "`payout - gold`."}
+            ],
+            "example": {"event": "won", "type": "slots", "name": "Wizard", "stops": [0, 1, 0], "symbols": ["ale", "ale", "ale"], "prize": 1200000, "payout": 1196000, "gold": 1000000, "net": 196000},
+            "source": "node/logic/tavern_slots.js:98-108",
+            "confirm": {"code": ["node/logic/tavern_slots.js:98-108", "node/logic/tavern.js:11-14", "node/server_functions.js:3540-3551"]}
+          },
+          {"name": "settle", "event": "player", "to": "you", "when": "The pull settles, last (`resend \"reopen+nc\"`).", "summary": "Your state with the payout in `gold`, and without `q.wheel` or `q.slots`.", "source": "node/logic/tavern_slots.js:125", "confirm": {"code": ["node/logic/tavern_slots.js:72-75", "node/logic/tavern_slots.js:125", "node/server.js:14813-14814", "node/server.js:4550-4594"]}}
+        ],
+        "order": {
+          "Now": ["`game_response` `gold_use` to you", "`ui` to clients nearby", "`player` to you"],
+          "After 3.6 s": [
+            "`game_log` to you (a win only)",
+            "`server_message` to everyone (a big prize only)",
+            "`tavern` result",
+            "`game_response` `slots_success` or `slots_fail` to you (an object with `request_id`, else a bare string)",
+            "`player` to you"
+          ]
+        },
+        "source": "node/server.js:12864-12866; node/logic/tavern_slots.js:32-125"
+      },
+      {
+        "value": "roulette",
+        "when": "The old roulette (dev servers only). Its failures do not use `bet_failure`: they send nothing or a `game_log`, also with `request_id`. A roulette bet never settles (see the notes).",
+        "request": {
+          "fields": [
+            {"name": "odds", "type": "string", "optional": true, "default": "black", "coerce": "`\"\" + odds`; it must be a key of `tavern.roulette.odds`", "description": "The bet: a key of `tavern.roulette.odds`. An unknown key gets no reply."},
+            {"name": "gold", "type": "integer", "optional": true, "coerce": "`max(1, parseInt(gold) || 1)`. A numeric string works; decimals are cut off", "description": "The stake, 1 or more. A missing or invalid value becomes 1.", "example": 1000}
+          ],
+          "example": {"type": "roulette", "odds": "black", "gold": 1000},
+          "confirm": {"code": ["node/server.js:12741-12746"]}
+        },
+        "responses": [
+          {
+            "name": "Roulette accepted",
+            "event": "game_log",
+            "when": "All checks pass. Two `game_log` events: this one, then `server.game_log.gold` with `{amount}` (color `\"gray\"`).",
+            "type": "LocalizedText",
+            "example": {"color": "white", "message": "Bet accepted on black", "phrase": "server.game_log.bet_accepted_on", "phrase_args": {"odds": "black"}},
+            "source": "node/server.js:12762-12769",
+            "confirm": {"code": ["node/server.js:12762-12769", "languages/index.js:256-258"]}
+          },
+          {
+            "name": "Roulette bet",
+            "event": "tavern",
+            "when": "After the two `game_log` events: the bet object, to you only.",
+            "fields": [
+              {"name": "id", "type": "string", "optional": false, "description": "A random 10-character id of the bet."},
+              {"name": "type", "type": "\"roulette\"", "optional": false, "description": "The game."},
+              {"name": "odds", "type": "string", "optional": false, "description": "Your `odds`."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The stake."},
+              {"name": "pid", "type": "string", "optional": false, "description": "The socket id of your connection."},
+              {"name": "state", "type": "\"bet\"", "optional": false, "description": "The bet is open."}
+            ],
+            "example": {"id": "kq2LmZx81a", "type": "roulette", "odds": "black", "gold": 1000, "pid": "Xh2k9_aQ3bZ1AAAB", "state": "bet"},
+            "source": "node/server.js:12771-12787",
+            "confirm": {"code": ["node/server.js:12771-12780", "node/server.js:12787"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "Not a dev server.", "replies": [], "source": "node/server.js:12738-12740", "confirm": {"code": ["node/server.js:12738-12740"]}},
+            {"when": "`odds` is not a key of `tavern.roulette.odds`.", "replies": [], "source": "node/server.js:12746-12748", "confirm": {"code": ["node/server.js:12746-12748"]}},
+            {
+              "when": "The table does not take bets now.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "Not taking bets yet!", "phrase": "server.game_log.not_taking_bets_yet", "phrase_args": {}}
+                }
+              ],
+              "source": "node/server.js:12749-12752",
+              "confirm": {"code": ["node/server.js:12749-12752", "languages/index.js:256-258"]}
+            },
+            {
+              "when": "You have 5 or more open bets.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "You already have 5 active bets", "phrase": "server.game_log.you_already_have_5_active_bets", "phrase_args": {}}
+                }
+              ],
+              "source": "node/server.js:12753-12756",
+              "confirm": {"code": ["node/server.js:12753-12756", "languages/index.js:256-258"]}
+            },
+            {
+              "when": "The stake is more than your gold.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "Not enough gold", "phrase": "server.game_log.not_enough_gold", "phrase_args": {}}
+                }
+              ],
+              "source": "node/server.js:12757-12760",
+              "confirm": {"code": ["node/server.js:12757-12760", "languages/index.js:256-258"]}
+            }
+          ]
+        },
+        "also": [
+          {"name": "stake", "event": "player", "to": "you", "when": "The server took the bet (`resend \"reopen+nc\"`).", "summary": "Your state with the stake taken from `gold`.", "source": "node/server.js:12788", "confirm": {"code": ["node/server.js:12772", "node/server.js:12788", "node/server.js:4550-4594"]}},
+          {
+            "event": "bet",
+            "to": "the Socket.IO room `\"roulette\"`; no code joins a socket to that room",
+            "when": "The server took the bet.",
+            "no_entry": true,
+            "fields": [
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."},
+              {"name": "type", "type": "\"roulette\"", "optional": false, "description": "The game."},
+              {"name": "odds", "type": "string", "optional": false, "description": "Your `odds`."},
+              {"name": "gold", "type": "integer", "optional": false, "description": "The stake."}
+            ],
+            "example": {"name": "Wizard", "type": "roulette", "odds": "black", "gold": 1000},
+            "source": "node/server.js:12782-12786",
+            "confirm": {"code": ["node/server.js:12782-12786"], "note": "No `.join(\"roulette\")` exists in node/, so the room is empty"}
+          }
+        ],
+        "order": [
+          "two `game_log` to you",
+          "`bet` to the room `\"roulette\"` (nobody)",
+          "`tavern` with the bet object to you",
+          "`player` to you"
+        ],
+        "source": "node/server.js:12737-12789"
+      }
+    ]
+  },
+  "responses": [
+    {
+      "name": "Refund",
+      "event": "game_response",
+      "code": "tavern_closing",
+      "when": "A restart starts (`tavern_close`) before your wager settled. One reply per wager: an open dice bet, a wheel spin or a slots pull. Without `request_id` you get only the `game_log` of the refund. An open roulette bet is in `player.bets` too, so the dice refund returns it, with `place: \"dice\"`; it never has `request_id`.",
+      "with_request_id": {
+        "extends": "GameResponseFailure",
+        "fields": [
+          {"name": "response", "type": "\"tavern_closing\"", "optional": false, "description": "The code."},
+          {"name": "place", "type": "\"dice\" | \"wheel\" | \"slots\"", "optional": false, "description": "The game."},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the wager."},
+          {"name": "reason", "type": "\"tavern_closing\"", "optional": false, "description": "Why."},
+          {"name": "refund", "type": "integer", "optional": false, "description": "The stake that the server returned to your gold."}
+        ],
+        "example": {"response": "tavern_closing", "place": "wheel", "request_id": "b1", "failed": true, "reason": "tavern_closing", "refund": 100000}
+      },
+      "without_request_id": {"none": true},
+      "source": "node/logic/tavern.js:17-32",
+      "confirm": {"code": ["node/logic/tavern.js:17-27", "node/logic/tavern.js:34-40", "node/logic/tavern.js:51-57", "node/logic/tavern.js:69-77", "node/logic/tavern.js:84-112"], "note": "A raw `socket.emit`, not `fail_response`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "dice",
+    "intro": "Every failure except the roulette ones goes through `bet_failure` (node/server.js:12715-12718): with `request_id` it is an object, without it the bare code string. The first two rows send nothing without `request_id`. `place` is `\"wheel\"` for `type: \"wheel\"`, `\"slots\"` for `type: \"slots\"`, and `\"dice\"` for every other `type`.",
+    "rows": [
+      {
+        "when": "The server has no `tavern` instance.",
+        "code": "tavern_unavailable",
+        "with_request_id": {
+          "form": "failure",
+          "extra": [
+            {"name": "place", "type": "\"dice\" | \"wheel\" | \"slots\"", "optional": false, "description": "From `type`: `\"wheel\"`, `\"slots\"`, or `\"dice\"` for every other `type` (roulette too).", "example": "dice"},
+            {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+          ]
+        },
+        "without_request_id": {"none": true},
+        "source": "node/server.js:12719-12722",
+        "confirm": {"code": ["node/server.js:12719-12722", "node/server.js:12714", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "No character, or you are in the bank (`player.user`), or you are not on the `tavern` map. Dev servers skip the map check.",
+        "code": "not_in_tavern",
+        "with_request_id": {
+          "form": "failure",
+          "extra": [
+            {"name": "place", "type": "\"dice\" | \"wheel\" | \"slots\"", "optional": false, "description": "From `type`: `\"wheel\"`, `\"slots\"`, or `\"dice\"` for every other `type` (roulette too).", "example": "dice"},
+            {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+          ]
+        },
+        "without_request_id": {"none": true},
+        "source": "node/server.js:12723-12727",
+        "confirm": {"code": ["node/server.js:12723-12727", "node/server.js:12714", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You have the `xshotted` condition.",
+        "code": "bet_xshot",
+        "with_request_id": {
+          "form": "failure",
+          "extra": [
+            {"name": "place", "type": "\"dice\" | \"wheel\" | \"slots\"", "optional": false, "description": "From `type`: `\"wheel\"`, `\"slots\"`, or `\"dice\"` for every other `type` (roulette too).", "example": "dice"},
+            {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:12728-12730",
+        "confirm": {"code": ["node/server.js:12728-12730", "node/server.js:12714", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "`tavern_closing()`: the tavern closed for a restart, or `server.shutdown` is set, or the server is not live yet.",
+        "code": "tavern_closing",
+        "with_request_id": {
+          "form": "failure",
+          "extra": [
+            {"name": "place", "type": "\"dice\" | \"wheel\" | \"slots\"", "optional": false, "description": "From `type`: `\"wheel\"`, `\"slots\"`, or `\"dice\"` for every other `type` (roulette too).", "example": "dice"},
+            {"name": "request_id", "type": "any", "optional": false, "description": "Your `request_id`.", "example": "b1"}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:12731-12733; node/logic/tavern.js:6-8",
+        "confirm": {"code": ["node/server.js:12731-12733", "node/logic/tavern.js:6-8", "node/server.js:12714", "node/server.js:12715-12718", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "game_log",
+      "to": "you",
+      "when": "A restart returns a wager (`tavern_close`): one per wager, after the `tavern_closing` reply (if any).",
+      "type": "LocalizedText",
+      "example": {
+        "color": "gold",
+        "message": "100,000 gold returned: the restart interrupted your wager",
+        "phrase": "server.game_log.tavern_refund",
+        "phrase_args": {"amount": "100,000"}
+      },
+      "source": "node/logic/tavern.js:28-31",
+      "confirm": {"code": ["node/logic/tavern.js:17-18", "node/logic/tavern.js:28-31", "node/logic/tavern.js:84-112", "languages/index.js:256-258"]}
+    },
+    {
+      "event": "tavern",
+      "to": "everyone in the `tavern` instance; for wheel and slots also you, when you are not in it",
+      "when": "A restart returns a wager. wheel: `{event: \"refund\", type: \"wheel\", name, index, gold}`. slots: `{event: \"refund\", type: \"slots\", name, symbols, gold}`. dice: one event for all your bets, `{event: \"refund\", type: \"dice\", name, gold}` with the total, to the instance only.",
+      "summary": "A refund notice.",
+      "example": {"event": "refund", "type": "wheel", "name": "Wizard", "index": 7, "gold": 100000},
+      "source": "node/logic/tavern.js:41-47, 58-64, 78",
+      "confirm": {"code": ["node/logic/tavern.js:41-47", "node/logic/tavern.js:58-64", "node/logic/tavern.js:78", "node/logic/tavern.js:11-14", "node/server_functions.js:3540-3551"]}
+    },
+    {
+      "event": "game_log",
+      "to": "everyone in the `tavern` instance; on a hardcore server, everyone (`instance_emit` broadcasts every event but `tavern` and `dice` there)",
+      "when": "A restart closes the tavern, after all refunds. Before it, each player that got gold back gets a `player` update (`resend \"reopen+nc\"`).",
+      "type": "LocalizedText",
+      "example": {
+        "color": "#E6B16B",
+        "message": "The Tavern closes its games for the restart. Unfinished wagers are returned",
+        "phrase": "server.game_log.tavern_closed",
+        "phrase_args": {}
+      },
+      "source": "node/logic/tavern.js:111-116",
+      "confirm": {"code": ["node/logic/tavern.js:111-117", "node/server_functions.js:3540-3551", "node/server_functions.js:3495-3496", "languages/index.js:256-258"]}
+    }
+  ]
+}

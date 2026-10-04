@@ -1,0 +1,9 @@
+{
+  "event": "track",
+  "to": "you: only the socket that used the skill",
+  "payload": {"type": "TrackEntry[]", "confirm": {"code": ["node/server.js:10576-10606", "node/server_functions.js:469-474"]}},
+  "example": [{"sound": "pm", "dist": 212.4}, {"sound": "rr", "dist": 388.9, "invis": true}, {"sound": "wmp", "dist": 1240.2}],
+  "senders": [
+    {"what": "The `skill` handler with `name: \"track\"`: every character in your instance except you and NPCs, within range, sorted by `dist` (nearest first). The server also sends `ui` `{type: \"track\", name}` to clients nearby.", "source": "node/server.js:10576-10606"}
+  ]
+}

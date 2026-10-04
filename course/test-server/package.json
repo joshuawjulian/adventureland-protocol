@@ -1,0 +1,19 @@
+{
+  "name": "al-course-test-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A fake Adventure Land game (HTTP API, two Socket.IO game servers, a WebSocket echo) for the course programs. It is not the game.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "trim-g": "node trim-g.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "socket.io": "4.8.1",
+    "ws": "8.18.0"
+  }
+}

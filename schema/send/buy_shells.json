@@ -1,0 +1,20 @@
+{
+  "event": "buy_shells",
+  "source": "node/server.js:8098-8143",
+  "request": {
+    "fields": [],
+    "note": "The handler reads no field. Its first line sends the reply and returns. The dead code after it read `gold` (1,000,000 or more) to buy shells with gold.",
+    "confirm": {"code": ["node/server.js:8098-8099"], "note": "The handler returns on its first line"}
+  },
+  "responses": [
+    {
+      "name": "Refusal",
+      "event": "game_log",
+      "when": "Always, also without a character. Nothing changes.",
+      "type": "LocalizedText",
+      "example": {"message": "No longer possible", "phrase": "server.game_log.no_longer_possible", "phrase_args": {}},
+      "source": "node/server.js:8099",
+      "confirm": {"code": ["node/server.js:8099", "languages/index.js:256-258", "languages/en/server.js:240"]}
+    }
+  ]
+}

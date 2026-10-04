@@ -1,0 +1,212 @@
+{
+  "event": "sbuy",
+  "source": "node/server.js:8326-8408",
+  "request": {
+    "fields": [
+      {"name": "rid", "type": "string", "optional": false, "coerce": "compared with `==`", "description": "The listing id of the item: `rid` of a `ResaleItem` from `secondhands` or `lostandfound`."},
+      {"name": "f", "type": "boolean", "optional": true, "description": "Any truthy value: buy from Lost and Found (`woffice`), not from Ponty."},
+      {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. Each failure becomes a `GameResponseFailure` with `request_id` and `rid`, a success sends a `data` reply, and Lost and Found checks your donation."}
+    ],
+    "others": "ignored",
+    "example": {"rid": "Zt9Kp"},
+    "confirm": {"code": ["node/server.js:8336-8344", "node/server.js:8346", "node/server.js:8349", "node/server.js:8366"], "note": "The handler reads `rid`, `f` and `request_id`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. The server takes the gold, adds the item with `src: \"scnd\"` (Ponty) or `\"lost\"` (Lost and Found) and removes the listing. `place` is the list, not `sbuy`. Only with `request_id`: without it, no `game_response` comes; the new `secondhands` (or `lostandfound`) list is the sign of success.",
+      "with_request_id": {
+        "extends": "GameResponseSuccess",
+        "fields": [
+          {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+          {"name": "place", "type": "\"secondhands\" | \"lostandfound\"", "optional": false, "description": "The list: `\"lostandfound\"` with `f`."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+          {"name": "rid", "type": "string", "optional": false, "description": "`rid` from the request."},
+          {"name": "item", "type": "ResaleItem", "optional": false, "description": "The item that you bought."},
+          {"name": "cost", "type": "integer", "optional": false, "description": "The gold paid: `calculate_item_value(item) * mult * (q || 1)`. `mult` is 2 at Ponty (3 for a `cash` item) and 4 at Lost and Found."}
+        ],
+        "example": {
+          "request_id": "r1",
+          "rid": "Zt9Kp",
+          "item": {"name": "ringsj", "level": 2, "rid": "Zt9Kp"},
+          "cost": 317312,
+          "success": true,
+          "response": "data",
+          "place": "secondhands"
+        }
+      },
+      "without_request_id": {"none": true},
+      "source": "node/server.js:8394-8401",
+      "confirm": {"code": ["node/server.js:8367-8370", "node/server.js:8394-8400", "node/server_functions.js:4234-4247", "node/server_functions.js:4203", "node/server_functions.js:3421-3446"], "note": "`success_response` is inside `if (data.request_id)` (node/server.js:8394); a live purchase without `request_id` got `game_log`, `player`, `secondhands` and `ui` but no `game_response`"}
+    },
+    {
+      "name": "New list",
+      "event": "secondhands",
+      "when": "Success: the list without the item, without `f` (Ponty). It comes with and without `request_id`.",
+      "type": "ResaleItem[]",
+      "summary": "The same form as the reply of the `secondhands` request.",
+      "example": [{"name": "wbook0", "rid": "aB3xQ"}],
+      "source": "node/server.js:8391",
+      "confirm": {"code": ["node/server.js:8331", "node/server.js:8384-8385", "node/server.js:8391"]}
+    },
+    {
+      "name": "New list (Lost and Found)",
+      "event": "lostandfound",
+      "when": "Success with `f`: the Lost and Found list without the item. It comes with and without `request_id`.",
+      "type": "ResaleItem[]",
+      "summary": "The same form as the `lostandfound` list (the reply without `request_id`).",
+      "example": [{"name": "staff", "level": 6, "rid": "Qe2Lm"}],
+      "source": "node/server.js:8391",
+      "confirm": {"code": ["node/server.js:8336-8341", "node/server.js:8384-8385", "node/server.js:8391"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "secondhands",
+    "intro": "With `f`, a failure with `request_id` has `place: \"lostandfound\"`, not `\"secondhands\"`. Without `request_id`, most failures are a bare string or another event.",
+    "rows": [
+      {
+        "when": "No character, or the character is in the bank.",
+        "code": "cant_in_bank",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "rid", "type": "string", "optional": true, "description": "`rid` from the request. Absent when the request has none.", "example": "Zt9Kp"}
+          ]
+        },
+        "without_request_id": {"form": "plain", "note": "no `place` and no `failed`"},
+        "source": "node/server.js:8345-8347",
+        "confirm": {"code": ["node/server.js:8345-8348", "node/server_functions.js:3385-3391", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "`f` and `request_id`, and you did not donate 1,000,000 gold or more since you logged in (`player.donation`, see `donate`). Without `request_id`, the server skips this check.",
+        "code": "lostandfound_donate",
+        "place": "lostandfound",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+          {"name": "rid", "type": "string", "optional": true, "description": "`rid` from the request. Absent when the request has none.", "example": "Zt9Kp"},
+          {"name": "reason", "type": "\"donation_required\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:8349-8355",
+        "confirm": {"code": ["node/server.js:8349-8355", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "`f`, and you have the condition `hopsickness`.",
+        "code": "cant_when_sick",
+        "with_request_id": {
+          "place": "lostandfound",
+          "extra": [
+            {"name": "goblin", "type": "true", "optional": false, "description": "Always `true`."},
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "rid", "type": "string", "optional": true, "description": "`rid` from the request. Absent when the request has none.", "example": "Zt9Kp"}
+          ]
+        },
+        "without_request_id": {
+          "place": "sbuy",
+          "extra": [
+            {"name": "goblin", "type": "true", "optional": false, "description": "Always `true`."}
+          ],
+          "note": "`place` is the request here, not the list"
+        },
+        "source": "node/server.js:8356-8359",
+        "confirm": {"code": ["node/server.js:8356-8360", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You are more than 500 px from the NPC (Ponty on `main`, or `lostandfound` on `woffice`).",
+        "code": "distance",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "rid", "type": "string", "optional": true, "description": "`rid` from the request. Absent when the request has none.", "example": "Zt9Kp"}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:8361-8364",
+        "confirm": {"code": ["node/server.js:8361-8364", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The item does not fit in the inventory.",
+        "code": "no_space",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "rid", "type": "string", "optional": true, "description": "`rid` from the request. Absent when the request has none.", "example": "Zt9Kp"}
+          ]
+        },
+        "without_request_id": {
+          "event": "disappearing_text",
+          "example": {"message": "NO SPACE", "phrase": "server.floating.no_space", "phrase_args": {}, "x": 120, "y": -60, "id": "Wizard", "args": {}},
+          "note": "to you only"
+        },
+        "source": "node/server.js:8372-8375",
+        "confirm": {"code": ["node/server.js:8372-8375", "node/server_functions.js:3956-3996", "languages/index.js:256-258", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "Your gold is less than the cost.",
+        "code": "buy_cost",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "rid", "type": "string", "optional": true, "description": "`rid` from the request. Absent when the request has none.", "example": "Zt9Kp"},
+            {"name": "cost", "type": "integer", "optional": false, "description": "The gold that the item costs.", "example": 317312}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:8376-8380",
+        "confirm": {"code": ["node/server.js:8376-8380", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "No listing has that `rid`.",
+        "code": "item_gone",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "rid", "type": "string", "optional": true, "description": "`rid` from the request. Absent when the request has none.", "example": "Zt9Kp"}
+          ]
+        },
+        "without_request_id": {
+          "event": "game_log",
+          "example": {"message": "Item gone", "phrase": "server.game_log.item_gone", "phrase_args": {}}
+        },
+        "source": "node/server.js:8404-8407",
+        "confirm": {"code": ["node/server.js:8404-8407", "languages/index.js:256-258", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "game_log",
+      "to": "you",
+      "when": "Success, first.",
+      "type": "LocalizedText",
+      "example": {"message": "Spent 317,312 gold", "phrase": "server.game_log.spent_gold", "phrase_args": {"amount": "317,312"}},
+      "source": "node/server.js:8386-8389",
+      "confirm": {"code": ["node/server.js:8386-8389", "languages/index.js:256-258"]}
+    },
+    {"event": "player", "to": "you", "when": "Success, after `game_log`.", "summary": "Your state with `reopen: true`, less `gold` and the item in `items`.", "source": "node/server.js:8390", "confirm": {"code": ["node/server.js:8390", "node/server.js:4550-4594"]}},
+    {
+      "event": "ui",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds the NPC.",
+      "fields": [
+        {"name": "type", "type": "\"+$p\" | \"+$f\"", "optional": false, "description": "`+$p`: from Ponty. `+$f`: from Lost and Found."},
+        {"name": "id", "type": "string", "optional": false, "description": "The id of the NPC."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The buyer."},
+        {"name": "item", "type": "ResaleItem", "optional": false, "description": "The item."}
+      ],
+      "example": {"type": "+$p", "id": "secondhands", "name": "Wizard", "item": {"name": "ringsj", "level": 2, "rid": "Zt9Kp"}},
+      "source": "node/server.js:8393",
+      "confirm": {"code": ["node/server.js:8393", "node/server_functions.js:4234-4247", "node/server_functions.js:3744-3791"]}
+    }
+  ],
+  "order": [
+    "`game_log` to you",
+    "`player` to you",
+    "`secondhands` (or `lostandfound`) with the new list to you",
+    "`ui` to clients near the NPC",
+    "`game_response` `data` to you, only with `request_id`"
+  ]
+}

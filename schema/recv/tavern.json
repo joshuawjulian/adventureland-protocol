@@ -1,0 +1,201 @@
+{
+  "event": "tavern",
+  "to": "every character in the tavern instance (`instance_emit`), for bets, results and refunds. A slots or wheel result and refund also goes to its owner after the owner left the tavern. `info` and the roulette form go only to you",
+  "payload": {"type": "TavernInfo | TavernDiceBet | TavernDiceWon | TavernDiceLost | TavernSlots | TavernWheel | TavernRefund | TavernRoulette", "confirm": {"code": ["node/server.js:12867-12874", "node/server.js:12787", "node/server.js:12853-12860", "node/server_functions.js:1487-1495", "node/server_functions.js:1521-1528", "node/logic/tavern.js:11-14", "node/logic/tavern.js:41-47", "node/logic/tavern.js:58-64", "node/logic/tavern.js:78", "node/logic/tavern_slots.js:98-108", "node/logic/tavern_wheel.js:73-84"]}},
+  "variants": [
+    {
+      "name": "Info",
+      "type": "TavernInfo",
+      "when": "The reply to `tavern` with `event: \"info\"` and no `request_id`. With `request_id`, the same fields come in `game_response` `data`.",
+      "reply_to": ["tavern"],
+      "example": {"event": "info", "edge": 1.5, "max": 612000000},
+      "source": "node/server.js:12868-12873",
+      "confirm": {"code": ["node/server.js:12867-12874"]}
+    },
+    {
+      "name": "Dice bet",
+      "type": "TavernDiceBet",
+      "when": "A character placed a dice bet.",
+      "reply_to": ["bet"],
+      "example": {"event": "bet", "name": "Warrior", "type": "dice", "num": 49.5, "gold": 1000000, "dir": "down"},
+      "source": "node/server.js:12853-12860",
+      "confirm": {"code": ["node/server.js:12790-12809", "node/server.js:12853-12860", "node/server_functions.js:3540-3551"]}
+    },
+    {
+      "name": "Dice won",
+      "type": "TavernDiceWon",
+      "when": "The dice round ended and the bet won. `gold` is the gross win (`bet.win`), not the stake.",
+      "example": {"event": "won", "name": "Warrior", "type": "dice", "num": 49.5, "gold": 2020000, "dir": "down", "net": 1004700},
+      "source": "node/server_functions.js:1487-1495",
+      "confirm": {"code": ["node/server_functions.js:1471-1495", "node/server_functions.js:3540-3551"]}
+    },
+    {
+      "name": "Dice lost",
+      "type": "TavernDiceLost",
+      "when": "The dice round ended and the bet lost. `gold` is the stake. There is no `net`.",
+      "example": {"event": "lost", "name": "Warrior", "type": "dice", "num": 49.5, "gold": 1000000, "dir": "down"},
+      "source": "node/server_functions.js:1521-1528",
+      "confirm": {"code": ["node/server_functions.js:1521-1528", "node/server_functions.js:3540-3551"]}
+    },
+    {
+      "name": "Slots",
+      "type": "TavernSlots",
+      "when": "The slots timer (`q.slots`) ended. `event` is `\"won\"` or `\"lost\"`. Not sent when a disconnect settles the spin.",
+      "example": {"event": "won", "type": "slots", "name": "Warrior", "stops": [4, 3, 9], "symbols": ["whiskey", "whiskey", "whiskey"], "prize": 3000000, "payout": 2960000, "gold": 1000000, "net": 1960000},
+      "source": "node/logic/tavern_slots.js:98-108",
+      "confirm": {"code": ["node/logic/tavern_slots.js:54-65", "node/logic/tavern_slots.js:71-78", "node/logic/tavern_slots.js:98-108", "node/logic/tavern.js:11-14", "node/server.js:14968-14970"]}
+    },
+    {
+      "name": "Wheel",
+      "type": "TavernWheel",
+      "when": "The wheel timer (`q.wheel`) ended. `event` is `\"won\"` or `\"lost\"`. Not sent when a disconnect settles the spin.",
+      "example": {"event": "lost", "type": "wheel", "name": "Warrior", "side": "sun", "result": "moon", "slice": "teal", "index": 2, "gold": 50000, "net": -50000, "payout": 0},
+      "source": "node/logic/tavern_wheel.js:73-84",
+      "confirm": {"code": ["node/logic/tavern_wheel.js:27-39", "node/logic/tavern_wheel.js:52-64", "node/logic/tavern_wheel.js:73-84", "node/logic/tavern.js:11-14", "node/server.js:14965-14967"]}
+    },
+    {
+      "name": "Refund",
+      "type": "TavernRefund",
+      "when": "The shutdown of the server started (`tavern_close`), and the tavern returned an open wager. Wheel: `index`. Slots: `symbols`. Dice: neither, and `gold` is the total of all dice bets of the character.",
+      "example": {"event": "refund", "type": "slots", "name": "Warrior", "symbols": ["ale", "gem0", "wine"], "gold": 1000000},
+      "source": "node/logic/tavern.js:41-47, 58-64, 78",
+      "confirm": {"code": ["node/logic/tavern.js:34-80", "node/logic/tavern.js:84-112", "node/logic/tavern.js:11-14"]}
+    },
+    {
+      "name": "Roulette bet",
+      "type": "TavernRoulette",
+      "when": "Dev servers only: the reply to a `bet` with `type: \"roulette\"`. The payload is the bet object itself, with no `event`.",
+      "reply_to": ["bet"],
+      "example": {"id": "x7Qm2LpZ0a", "type": "roulette", "odds": "black", "gold": 1000, "pid": "Kj3n0aZx9QfP1wErAAAB", "state": "bet"},
+      "source": "node/server.js:12774-12787",
+      "confirm": {"code": ["node/server.js:12737-12787"]}
+    }
+  ],
+  "types": {
+    "TavernInfo": {
+      "summary": "The house edge and the largest win that the tavern can pay now.",
+      "fields": [
+        {"name": "event", "type": "\"info\"", "optional": false, "description": "Always `\"info\"`."},
+        {"name": "edge", "type": "number", "optional": false, "description": "The house edge in percent: `0.5`, `1`, `1.5` or `2`. It is lower when the server has more gold (`house_edge`, node/server_functions.js:1384-1396)."},
+        {"name": "max", "type": "integer", "optional": false, "description": "40% of the free gold of the server: `parseInt((S.gold - house_debt()) * 0.4)`. A dice bet whose net win is larger fails with `tavern_gold_not_enough`."},
+        {"name": "game", "type": "any", "optional": true, "description": "The `game` value of the request, unchanged. Absent when the request had none or a falsy one (`if (data.game)`, node/server.js:12870)."}
+      ],
+      "example": {"event": "info", "edge": 1.5, "max": 612000000},
+      "source": "node/server.js:12869-12872",
+      "confirm": {"code": ["node/server.js:12869-12872", "node/server_functions.js:1384-1396"]}
+    },
+    "TavernDiceBet": {
+      "summary": "A dice bet that a character placed.",
+      "fields": [
+        {"name": "event", "type": "\"bet\"", "optional": false, "description": "Always `\"bet\"`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that bet."},
+        {"name": "type", "type": "\"dice\"", "optional": false, "description": "Always `\"dice\"`."},
+        {"name": "num", "type": "number", "optional": false, "description": "The target number, 0.01 to 99.99."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The stake, 10,000 to 100,000,000,000."},
+        {"name": "dir", "type": "\"up\" | \"down\"", "optional": false, "description": "`\"down\"` wins when the roll is at most `num`. `\"up\"` wins when the roll is at least `num`."}
+      ],
+      "example": {"event": "bet", "name": "Warrior", "type": "dice", "num": 49.5, "gold": 1000000, "dir": "down"},
+      "source": "node/server.js:12853-12860",
+      "confirm": {"code": ["node/server.js:12790-12796", "node/server.js:12853-12860"]}
+    },
+    "TavernDiceWon": {
+      "summary": "A dice bet that won.",
+      "fields": [
+        {"name": "event", "type": "\"won\"", "optional": false, "description": "Always `\"won\"`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that bet."},
+        {"name": "type", "type": "\"dice\"", "optional": false, "description": "Always `\"dice\"`."},
+        {"name": "num", "type": "number", "optional": false, "description": "The target number of the bet."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gross win: `parseInt(stake * odds)`. It includes the stake and the house edge."},
+        {"name": "dir", "type": "\"up\" | \"down\"", "optional": false, "description": "The direction of the bet."},
+        {"name": "net", "type": "integer", "optional": false, "description": "The profit: `gold - stake - edge`."}
+      ],
+      "example": {"event": "won", "name": "Warrior", "type": "dice", "num": 49.5, "gold": 2020000, "dir": "down", "net": 1004700},
+      "source": "node/server_functions.js:1487-1495",
+      "confirm": {"code": ["node/server.js:12790-12805", "node/server.js:12835-12848", "node/server_functions.js:1487-1495"]}
+    },
+    "TavernDiceLost": {
+      "summary": "A dice bet that lost.",
+      "fields": [
+        {"name": "event", "type": "\"lost\"", "optional": false, "description": "Always `\"lost\"`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that bet."},
+        {"name": "type", "type": "\"dice\"", "optional": false, "description": "Always `\"dice\"`."},
+        {"name": "num", "type": "number", "optional": false, "description": "The target number of the bet."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The stake that the character lost."},
+        {"name": "dir", "type": "\"up\" | \"down\"", "optional": false, "description": "The direction of the bet."}
+      ],
+      "example": {"event": "lost", "name": "Warrior", "type": "dice", "num": 49.5, "gold": 1000000, "dir": "down"},
+      "source": "node/server_functions.js:1521-1528",
+      "confirm": {"code": ["node/server_functions.js:1521-1528"]}
+    },
+    "TavernSlots": {
+      "summary": "The result of one slots spin.",
+      "fields": [
+        {"name": "event", "type": "\"won\" | \"lost\"", "optional": false, "description": "`\"won\"` when the spin drew a prize."},
+        {"name": "type", "type": "\"slots\"", "optional": false, "description": "Always `\"slots\"`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that played."},
+        {"name": "stops", "type": "integer[]", "optional": false, "description": "One stop per reel: an index into `G.games.slots.reels[r]`."},
+        {"name": "symbols", "type": "ItemName[]", "optional": false, "description": "The symbol at each stop. All three are the prize on a win."},
+        {"name": "prize", "type": "integer", "optional": false, "description": "The gross prize from `G.games.slots.prizes`. `0` on a loss."},
+        {"name": "payout", "type": "integer", "optional": false, "description": "The gold that the character got: `prize` minus the cut of the house (the edge on the profit). `0` on a loss."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The stake: `G.games.slots.gold`."},
+        {"name": "net", "type": "integer", "optional": false, "description": "`payout - gold`. Negative on a loss."}
+      ],
+      "example": {"event": "won", "type": "slots", "name": "Warrior", "stops": [4, 3, 9], "symbols": ["whiskey", "whiskey", "whiskey"], "prize": 3000000, "payout": 2960000, "gold": 1000000, "net": 1960000},
+      "source": "node/logic/tavern_slots.js:98-108",
+      "confirm": {"code": ["node/logic/tavern_slots.js:48-65", "node/logic/tavern_slots.js:98-108"]}
+    },
+    "TavernWheel": {
+      "summary": "The result of one spin of the wheel.",
+      "fields": [
+        {"name": "event", "type": "\"won\" | \"lost\"", "optional": false, "description": "`\"won\"` when `result` is the same as `side`."},
+        {"name": "type", "type": "\"wheel\"", "optional": false, "description": "Always `\"wheel\"`."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that played."},
+        {"name": "side", "type": "string", "optional": false, "description": "The side of the bet, from `G.games.wheel.sides` (`\"sun\"` or `\"moon\"`)."},
+        {"name": "result", "type": "string", "optional": false, "description": "The side of the slice that the wheel stopped on."},
+        {"name": "slice", "type": "string", "optional": false, "description": "The name of that slice (index 0 of the row in `G.games.wheel.slices`), for example `\"teal\"`."},
+        {"name": "index", "type": "integer", "optional": false, "description": "The index of that slice in `G.games.wheel.slices`."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The stake."},
+        {"name": "net", "type": "integer", "optional": false, "description": "The profit: `gold` minus the cut of the house on a win, `-gold` on a loss."},
+        {"name": "payout", "type": "integer", "optional": false, "description": "The gold that the character got: `2 * gold - cut` on a win, `0` on a loss."}
+      ],
+      "example": {"event": "lost", "type": "wheel", "name": "Warrior", "side": "sun", "result": "moon", "slice": "teal", "index": 2, "gold": 50000, "net": -50000, "payout": 0},
+      "source": "node/logic/tavern_wheel.js:73-84",
+      "confirm": {"code": ["node/logic/tavern_wheel.js:17-39", "node/logic/tavern_wheel.js:53", "node/logic/tavern_wheel.js:73-84"]}
+    },
+    "TavernRefund": {
+      "summary": "A wager that the tavern returned at the start of a shutdown.",
+      "fields": [
+        {"name": "event", "type": "\"refund\"", "optional": false, "description": "Always `\"refund\"`."},
+        {"name": "type", "type": "\"wheel\" | \"slots\" | \"dice\"", "optional": false, "description": "The game of the wager."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that got the gold back."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gold returned. For dice, the total of all open bets of the character."},
+        {"name": "index", "type": "integer", "optional": true, "description": "Only for the wheel: the slice that the spin had drawn."},
+        {"name": "symbols", "type": "ItemName[]", "optional": true, "description": "Only for slots: the symbols that the spin had drawn."}
+      ],
+      "example": {"event": "refund", "type": "wheel", "name": "Warrior", "index": 5, "gold": 50000},
+      "source": "node/logic/tavern.js:34-80",
+      "confirm": {"code": ["node/logic/tavern.js:41-47", "node/logic/tavern.js:58-64", "node/logic/tavern.js:69-79"]}
+    },
+    "TavernRoulette": {
+      "summary": "A roulette bet object (dev servers only).",
+      "fields": [
+        {"name": "id", "type": "string", "optional": false, "description": "The bet id: 10 random characters."},
+        {"name": "type", "type": "\"roulette\"", "optional": false, "description": "Always `\"roulette\"`."},
+        {"name": "odds", "type": "string", "optional": false, "description": "The odds name of the bet, a key of `tavern.roulette.odds`. Default `\"black\"`."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The stake, at least 1."},
+        {"name": "pid", "type": "string", "optional": false, "description": "The socket id of the character."},
+        {"name": "state", "type": "\"bet\"", "optional": false, "description": "Always `\"bet\"`."}
+      ],
+      "example": {"id": "x7Qm2LpZ0a", "type": "roulette", "odds": "black", "gold": 1000, "pid": "Kj3n0aZx9QfP1wErAAAB", "state": "bet"},
+      "source": "node/server.js:12774-12781",
+      "confirm": {"code": ["node/server.js:12741-12745", "node/server.js:12771-12781", "node/server.js:12787"]}
+    }
+  },
+  "senders": [
+    {"what": "The `tavern` handler with `event: \"info\"`.", "source": "node/server.js:12867-12874"},
+    {"what": "The `bet` handler, dice: the new bet. Roulette (dev only): the bet object to you.", "source": "node/server.js:12787, 12853"},
+    {"what": "`tavern_loop`: the dice round ends and each bet settles.", "source": "node/server_functions.js:1487, 1521"},
+    {"what": "The timer loop of the character: the `wheel` or `slots` timer ends (`tavern_result`).", "source": "node/server.js:14965-14970"},
+    {"what": "`tavern_close`: the start of a shutdown returns each open wager.", "source": "node/logic/tavern.js:84-118"}
+  ]
+}

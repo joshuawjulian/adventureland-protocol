@@ -1,0 +1,86 @@
+{
+  "event": "activate",
+  "source": "node/server.js:9591-9712",
+  "request": {
+    "fields": [
+      {"name": "slot", "type": "string", "optional": true, "coerce": "any truthy value selects the equipment path; then used as a key of `player.slots`", "description": "The equipment slot of the item to activate. A true value selects the variant Equipment; absent or false selects the variant Inventory."}
+    ],
+    "others": "ignored",
+    "example": {"slot": "amulet"}, "confirm": {"code": ["node/server.js:9597-9598", "node/server.js:9657"], "note": "The handler reads only `slot` and, without it, `num`"}
+  },
+  "variants": {
+    "key": "slot",
+    "list": [
+      {
+        "name": "Equipment",
+        "match": "a true `slot`",
+        "when": "Activates an equipped item: `etherealamulet`, `angelwings`, `tristone` or `darktristone`.",
+        "request": {
+          "fields": [
+            {"name": "slot", "type": "string", "optional": false, "coerce": "any truthy value selects this path; then used as a key of `player.slots`", "description": "The equipment slot of the item to activate: `etherealamulet`, `angelwings`, `tristone` or `darktristone`. A trade slot (`trade1` to `trade48`) does nothing."}
+          ],
+          "example": {"slot": "amulet"}, "confirm": {"code": ["node/server.js:9597-9601", "js/old_common_functions.js:52-53"]}
+        },
+        "responses": [
+          {"name": "Updated", "event": "player", "when": "`angelwings`, `tristone` and `darktristone`. There is no `game_response` success reply.", "summary": "Your state with `reopen: true`. `skin` shows the new temporary skin (`tskin || skin`, node/server.js:918). The server does not send `tskin` itself: when the item clears it to `\"\"`, `skin` is your normal skin again.", "example": {"id": "Merlin", "skin": "tm_green", "cid": 419, "reopen": true}, "example_trimmed": true, "source": "node/server.js:9655", "confirm": {"code": ["node/server.js:9610-9655", "node/server.js:918", "node/server.js:4550-4594"], "note": "`skin` is `tskin || skin` in `player_to_client`"}},
+          {
+            "name": "Ethereal",
+            "event": "eval",
+            "when": "`etherealamulet`: you get the `ethereal` condition for 5,000 ms. A `player` update (not `reopen`) follows.",
+            "fields": [
+              {"name": "code", "type": "\"skill_timeout('ethereal',120)\"", "optional": false, "description": "JavaScript for the official client: it shows the cooldown."}
+            ],
+            "example": {"code": "skill_timeout('ethereal',120)"},
+            "source": "node/server.js:9602-9609", "confirm": {"code": ["node/server.js:9606-9608"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "The slot is empty, or it is a trade slot.", "replies": [], "source": "node/server.js:9598-9601", "confirm": {"code": ["node/server.js:9598-9601"]}},
+            {"when": "`etherealamulet`, less than 120 ms after its last use (`mssince(last_ethereal) < 120`).", "code": "not_ready", "form": "bare", "source": "node/server.js:9603-9605", "confirm": {"code": ["node/server.js:9603-9605"]}},
+            {"when": "`angelwings`, the `snow_angel` skin is not on, and the wings are below +8 or you are not a mage or a priest.", "code": "nothing", "form": "bare", "source": "node/server.js:9610-9617", "confirm": {"code": ["node/server.js:9610-9617"]}},
+            {"when": "The item is not one of the four items above.", "replies": [], "source": "node/server.js:9652-9654", "confirm": {"code": ["node/server.js:9652-9654"]}}
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "`etherealamulet`, after the `eval`: a normal update (`u+cid`), without `reopen`.", "summary": "Your state with `s.ethereal` (`{ms: 5000}`).", "source": "node/server.js:9609", "confirm": {"code": ["node/server.js:9607", "node/server.js:9609", "node/server.js:4550-4594"]}}
+        ],
+        "order": {"etherealamulet": ["`eval` `{code}` to you", "`player` to you (no `reopen`)"], "Other items": ["`player` to you (`reopen: true`)"]}
+      },
+      {
+        "name": "Inventory",
+        "match": "no `slot`, or a false value",
+        "when": "Uses an inventory item: `frozenstone`, `bkey`, `ukey` or `dkey`.",
+        "request": {
+          "fields": [
+            {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key (`player.items[num]`), so a number or a numeric string; any other value is an empty slot", "description": "The inventory slot: `frozenstone`, `bkey`, `ukey` or `dkey`."}
+          ],
+          "example": {"num": 3}, "confirm": {"code": ["node/server.js:9656-9658"]}
+        },
+        "responses": [
+          {"name": "Door unlocked", "event": "game_response", "code": "door_unlocked", "when": "`bkey` (unlocks `bank_b` and creates pack `items8`) or `ukey` (unlocks `bank_u` and creates pack `items24`). The server uses one key. The `player` update follows.", "type": "\"door_unlocked\"", "example": "door_unlocked", "source": "node/server.js:9662-9687", "confirm": {"code": ["node/server.js:9662-9687"]}},
+          {"name": "Pack unlocked", "event": "game_response", "code": "bank_pack_unlocked", "when": "`dkey`: the server unlocks the first bank pack (`items0` to `items47`) that you do not have, and uses one key. The `player` update follows.", "type": "\"bank_pack_unlocked\"", "example": "bank_pack_unlocked", "source": "node/server.js:9688-9708", "confirm": {"code": ["node/server.js:9688-9708"]}},
+          {"name": "Inventory updated", "event": "player", "when": "Every inventory path that does not stop early. This includes an empty `num` slot and an item that has no effect here (a `frozenstone` is used up). There is no `game_response` success reply for these.", "summary": "Your state with `reopen: true`. A used item is gone from `items`.", "example": {"id": "Merlin", "esize": 31, "items": [{"name": "hpot0", "q": 200}, {"name": "mpot0", "q": 150}, null, null], "reopen": true}, "example_trimmed": true, "source": "node/server.js:9710", "confirm": {"code": ["node/server.js:9657-9661", "node/server.js:9710", "node/server.js:4550-4594"]}}
+        ],
+        "failures": {
+          "rows": [
+            {"when": "`bkey`, `ukey` or `dkey`, and you are not in the bank.", "code": "only_in_bank", "form": "bare", "source": "node/server.js:9663-9665, 9676-9678, 9689-9691", "confirm": {"code": ["node/server.js:9663-9665", "node/server.js:9676-9678", "node/server.js:9689-9691"]}},
+            {"when": "`bkey` or `ukey`, and that bank area is unlocked already. The server keeps the key.", "code": "already_unlocked", "form": "bare", "source": "node/server.js:9666-9668, 9679-9681", "confirm": {"code": ["node/server.js:9666-9668", "node/server.js:9679-9681"]}},
+            {"when": "`dkey`, and you have every pack already. The server keeps the key.", "replies": [], "source": "node/server.js:9703-9705", "confirm": {"code": ["node/server.js:9692-9705"]}}
+          ]
+        },
+        "order": [
+          "for `bkey`, `ukey` or `dkey`: `game_response` (`\"door_unlocked\"` or `\"bank_pack_unlocked\"`, a bare string) to you",
+          "`player` to you (`reopen: true`)"
+        ]
+      }
+    ]
+  },
+  "failures": {
+    "event": "game_response",
+    "intro": "Every failure reply is a bare string.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9594-9596", "confirm": {"code": ["node/server.js:9592-9596"]}}
+    ]
+  }
+}

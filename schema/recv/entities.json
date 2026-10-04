@@ -1,0 +1,17 @@
+{
+  "event": "entities",
+  "to": "each player and each observer separately. The payload holds only the entities in the vision box of that receiver",
+  "payload": {
+    "extends": "EntitiesFrame",
+    "fields": [],
+    "confirm": {"code": ["node/server_functions.js:3675-3708", "node/server.js:13675-13753", "node/server.js:1003-1073", "node/server.js:15229-15234", "node/server.js:5020-5027", "node/server.js:5049", "node/logic/instance_pause.js:20-29"], "note": "`\"all\"` frames are built by `send_all_xy`; `\"xy\"` frames are a raw JSON string (`RawFrame`) with the same keys, from entries that `monster_to_client` / `player_to_client(p, 1)` built"}
+  },
+  "example": {"type": "xy", "in": "main", "map": "main", "players": [{"id": "Ranger", "hp": 3120, "max_hp": 3400, "mp": 1500, "max_mp": 1700, "xp": 51230000, "attack": 812.5, "frequency": 1.62, "speed": 55, "range": 160, "armor": 240, "resistance": 120, "level": 70, "party": "Wizard", "s": {"mluck": {"ms": 3540000, "f": "Merchy", "strong": true}}, "c": {}, "q": {}, "age": 412, "pdps": 18520, "x": -95.3, "y": 402, "moving": true, "going_x": -40, "going_y": 380, "move_num": 1934821, "cid": 2841, "skin": "mranger", "cx": {"hat": "hat221"}, "slots": {"mainhand": {"name": "crossbow", "level": 7}}, "ctype": "ranger", "owner": "5629499534213120"}], "monsters": [{"id": "48213", "type": "goo", "x": -60, "y": 420, "moving": true, "going_x": -72.4, "going_y": 431.9, "abs": false, "move_num": 1934822, "cid": 3, "target": "Ranger", "s": {}, "hp": 64}]},
+  "senders": [
+    {"what": "The tick of the instance: `send_xy_updates` sends an `\"xy\"` frame to each player and observer when something in view changed", "source": "node/server.js:15229-15234"},
+    {"what": "`send_xy_updates`: a `\"all\"` frame when the socket drains after a skipped tick", "source": "node/server.js:13684-13687"},
+    {"what": "The `send_updates` handler: a `\"all\"` frame", "source": "node/server.js:5020-5027"},
+    {"what": "The `loaded` handler: a `\"all\"` frame for the new observer", "source": "node/server.js:5049"},
+    {"what": "A cave pause freezes the instance: an `\"xy\"` frame with every actor", "source": "node/logic/instance_pause.js:20-29"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "event": "achievement_success",
+  "to": "you: only the socket of the character",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "\"abtesting\" | \"firehazard\" | \"stomped\" | \"gooped\" | \"festive\" | \"lucky\" | \"unlucky\"", "optional": false, "description": "The achievement. Each name except `\"unlucky\"` is a key of `G.achievements`."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:5841-5844", "node/server_functions.js:5862-5869", "node/server.js:7083-7087", "node/server.js:7469-7473", "node/server.js:7495-7500"]}
+  },
+  "example": {"name": "lucky"},
+  "senders": [
+    {"what": "`add_achievement`: it adds 1 to `player.p.achievements[name]`, then sends the event.", "source": "node/server_functions.js:5841-5844"},
+    {"what": "`item_achievement_increment`: the counter on an equipped item reaches `G.achievements[name].count`. The item gets the title as its `p` property, then a `player` update follows.", "source": "node/server_functions.js:5862-5869"},
+    {"what": "The `compound` handler: the roll equals the success chance (to 4 decimals). The achievement is `\"lucky\"`.", "source": "node/server.js:7083-7087"},
+    {"what": "The `upgrade` handler: the roll equals the chance (to 4 decimals). A success on an item of grade 1 or more gives `\"lucky\"`. Failure gives `\"unlucky\"`.", "source": "node/server.js:7469-7500"}
+  ]
+}

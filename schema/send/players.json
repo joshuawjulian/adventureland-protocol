@@ -1,0 +1,38 @@
+{
+  "event": "players",
+  "source": "node/server.js:12919-12954",
+  "request": {"fields": [], "note": "No payload. The handler reads no field.", "confirm": {"code": ["node/server.js:12919-12954"], "note": "The handler never reads `data`"}},
+  "responses": [
+    {
+      "name": "Success",
+      "event": "players",
+      "when": "You have a character. The array has every online character that is not in a PvP area (`is_in_pvp`), in no fixed order.",
+      "type": "PlayersEntry[]",
+      "example": [
+        {"name": "Wizard", "map": "main", "age": 412, "level": 62, "type": "mage", "afk": 0, "party": "Wizard"},
+        {"name": "Merchant", "map": "main", "age": 380, "level": 75, "type": "merchant", "afk": 1, "party": ""}
+      ],
+      "source": "node/server.js:12941-12953",
+      "confirm": {"code": ["node/server.js:12925-12928", "node/server.js:12941-12953", "node/server_functions.js:483-492"]},
+      "note": "`pets` also replies on the `players` event, with an array of pet records. Tell the two replies apart by the request that you sent."
+    },
+    {
+      "name": "Success on a PvP server",
+      "event": "players",
+      "when": "On a PvP server (`is_pvp`): every online character, with the name and the map hidden.",
+      "type": "PlayersEntry[]",
+      "example": [{"name": "Hidden", "map": "Unknown", "age": 412, "level": 62, "type": "mage", "afk": 0, "party": "Hidden", "kills": 3}],
+      "source": "node/server.js:12929-12940",
+      "confirm": {"code": ["node/server.js:12925-12940", "node/server.js:12953"], "note": "`kills` is absent when the character has no `kills` value"},
+      "note": "`pets` also replies on the `players` event, with an array of pet records. Tell the two replies apart by the request that you sent."
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "players",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12922-12924", "confirm": {"code": ["node/server.js:12920-12924"]}}
+    ]
+  },
+  "order": ["`players` (an array) to you"]
+}

@@ -1,0 +1,491 @@
+{
+  "event": "heal",
+  "source": "node/server.js:11006-11008",
+  "request": {
+    "fields": [
+      {
+        "name": "id",
+        "type": "EntityId",
+        "optional": false,
+        "coerce": "`\"\" + parseInt(id) === \"\" + id` means a monster id, else a character name",
+        "description": "The target: a character name (your own name too) or a monster id. A missing or `null` id fails with `no_target`."
+      }
+    ],
+    "others": "ignored: the handler calls `skill` with `{name: \"heal\", id}` only",
+    "example": {
+      "id": "Warrior"
+    },
+    "confirm": {
+      "code": [
+        "node/server.js:11006-11008",
+        "node/server.js:9899-9903"
+      ],
+      "note": "The handler passes only `id` on to `skill`"
+    }
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass and the projectile starts. The object is the `Action` plus `response` and `place`. It has `heal` and `positive`, and no `damage` or `success` field.",
+      "extends": "Action",
+      "fields": [
+        {
+          "name": "response",
+          "type": "\"data\"",
+          "optional": false,
+          "description": "Always `\"data\"`."
+        },
+        {
+          "name": "place",
+          "type": "\"heal\"",
+          "optional": false,
+          "description": "The request."
+        }
+      ],
+      "example": {
+        "attacker": "Priest",
+        "target": "Warrior",
+        "type": "heal",
+        "source": "heal",
+        "x": 340.5,
+        "y": -112,
+        "eta": 1000,
+        "m": 0,
+        "pid": "Rk2Lw9",
+        "projectile": "plight",
+        "heal": 412,
+        "positive": true,
+        "response": "data",
+        "place": "heal"
+      },
+      "source": "node/server.js:3298-3300, 3591-3596, 3609-3612, 10102-10108, 10995-10996",
+      "confirm": {
+        "code": [
+          "node/server.js:3229-3248",
+          "node/server.js:3264-3277",
+          "node/server.js:3547-3557",
+          "node/server.js:3591-3596",
+          "node/server.js:3603-3612",
+          "node/server.js:10102-10104",
+          "node/server.js:10995-10996"
+        ],
+        "note": "`G.skills.heal` has `projectile: \"plight\"` and `heal: true`; the Action replaces `resolve`, so there is no `success`"
+      }
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "heal",
+    "intro": "The socket wrapper check runs first, then the checks of the `skill` envelope, then the checks of `commence_attack`. A failure of `commence_attack` ends with one `data` reply that has a `reason`; some send a short `game_response` before it.",
+    "rows": [
+      {
+        "when": "No character.",
+        "replies": [],
+        "source": "node/server.js:9766-9768",
+        "confirm": {
+          "code": [
+            "node/server.js:9766-9768"
+          ]
+        }
+      },
+      {
+        "when": "You are disabled: dead (`rip`), or `stunned`, `fingered`, `stoned`, `deepfreezed` or `sleeping`.",
+        "code": "disabled",
+        "source": "node/server.js:9780-9782",
+        "confirm": {
+          "code": [
+            "node/server.js:9780-9782",
+            "js/old_common_functions.js:763-771",
+            "node/server_functions.js:3393-3419"
+          ]
+        }
+      },
+      {
+        "when": "You are `silenced`, or your temporary skin is `konami`.",
+        "code": "skill_cant_incapacitated",
+        "source": "node/server.js:9784-9786",
+        "confirm": {
+          "code": [
+            "node/server.js:9784-9786",
+            "js/old_common_functions.js:763-766",
+            "node/server_functions.js:3393-3419"
+          ]
+        }
+      },
+      {
+        "when": "The attack cooldown runs. `heal` shares it (`share: \"attack\"`): the cooldown is `attack_ms` (`round(1000 / frequency)`, node/server.js:1627), and the last use is `last.attack`.",
+        "code": "cooldown",
+        "extra": [
+          {
+            "name": "skill",
+            "type": "\"heal\"",
+            "optional": false,
+            "description": "The skill of the request (not `\"attack\"`)."
+          },
+          {
+            "name": "id",
+            "type": "EntityId",
+            "optional": false,
+            "description": "The `id` from the request.",
+            "example": "Warrior"
+          },
+          {
+            "name": "ms",
+            "type": "Milliseconds",
+            "optional": false,
+            "description": "The time left.",
+            "example": 312
+          }
+        ],
+        "source": "node/server.js:9778, 9853-9869",
+        "confirm": {
+          "code": [
+            "node/server.js:9778",
+            "node/server.js:9853-9869",
+            "node/server_functions.js:3393-3419"
+          ]
+        }
+      },
+      {
+        "when": "You are not a priest (`G.skills.heal.class`), and your `role` is not `gm`.",
+        "code": "skill_cant_use",
+        "source": "node/server.js:9871-9873",
+        "confirm": {
+          "code": [
+            "node/server.js:9871-9873",
+            "node/server_functions.js:3393-3419"
+          ]
+        }
+      },
+      {
+        "when": "`id` is missing or `null`.",
+        "code": "no_target",
+        "source": "node/server.js:9899-9902",
+        "confirm": {
+          "code": [
+            "node/server.js:9899-9902",
+            "node/server_functions.js:3393-3419"
+          ]
+        }
+      },
+      {
+        "when": "No monster with that id is in your instance, and no character has that name. Or the target is invisible, or more than `B.max_vision` (1,000 px) from you.",
+        "replies": [
+          {
+            "event": "disappear",
+            "example": {
+              "id": "Warrior",
+              "place": "heal",
+              "reason": "not_there"
+            },
+            "note": "no `game_response`"
+          }
+        ],
+        "source": "node/server.js:9916-9925",
+        "confirm": {
+          "code": [
+            "node/server.js:9916-9925"
+          ]
+        }
+      },
+      {
+        "when": "The target is farther than `range + xrange`. `xrange` is a leeway of up to 25 px; a heal that uses it lowers it.",
+        "code": "too_far",
+        "extra": [
+          {
+            "name": "dist",
+            "type": "number",
+            "optional": false,
+            "description": "The distance to the target in px.",
+            "example": 241.7
+          },
+          {
+            "name": "id",
+            "type": "EntityId",
+            "optional": false,
+            "description": "The id of the target.",
+            "example": "Warrior"
+          }
+        ],
+        "source": "node/server.js:10001-10031",
+        "confirm": {
+          "code": [
+            "node/server.js:10001-10031",
+            "node/server_functions.js:3393-3419"
+          ]
+        }
+      },
+      {
+        "when": "`commence_attack`: your instance or the instance of the target is paused, or one of you is entering a zone. No cooldown starts.",
+        "code": "data",
+        "extra": [
+          {
+            "name": "reason",
+            "type": "\"cave_paused\"",
+            "optional": false,
+            "description": "Why."
+          }
+        ],
+        "source": "node/server.js:3160-3161, 10990-10994",
+        "confirm": {
+          "code": [
+            "node/server.js:3160-3161",
+            "node/logic/instance_pause.js:3-5",
+            "node/server.js:10102-10108",
+            "node/server.js:10990-10994"
+          ]
+        }
+      },
+      {
+        "when": "`commence_attack`: you are a merchant. Only a character with `role: \"gm\"` passes the class check as a merchant.",
+        "replies": [
+          {
+            "code": "attack_failed",
+            "form": "plain",
+            "extra": [
+              {
+                "name": "id",
+                "type": "EntityId",
+                "optional": false,
+                "description": "The target.",
+                "example": "Warrior"
+              }
+            ]
+          },
+          {
+            "code": "data",
+            "extra": [
+              {
+                "name": "reason",
+                "type": "\"merchant\"",
+                "optional": false,
+                "description": "Why."
+              },
+              {
+                "name": "id",
+                "type": "EntityId",
+                "optional": false,
+                "description": "The target.",
+                "example": "Warrior"
+              }
+            ]
+          }
+        ],
+        "source": "node/server.js:3208-3216",
+        "confirm": {
+          "code": [
+            "node/server.js:3208-3216",
+            "node/server.js:10102-10108",
+            "node/server.js:10990-10994"
+          ]
+        }
+      },
+      {
+        "when": "`commence_attack`: the target is an NPC. A heal on a character outside a PvP area passes (a heal is `positive`).",
+        "replies": [
+          {
+            "code": "attack_failed",
+            "form": "plain",
+            "extra": [
+              {
+                "name": "id",
+                "type": "EntityId",
+                "optional": false,
+                "description": "The target.",
+                "example": "$Venn"
+              }
+            ]
+          },
+          {
+            "code": "data",
+            "extra": [
+              {
+                "name": "reason",
+                "type": "\"no_pvp\"",
+                "optional": false,
+                "description": "Why."
+              },
+              {
+                "name": "id",
+                "type": "EntityId",
+                "optional": false,
+                "description": "The target.",
+                "example": "$Venn"
+              }
+            ]
+          }
+        ],
+        "source": "node/server.js:3279-3282",
+        "confirm": {
+          "code": [
+            "node/server.js:3264-3282",
+            "node/server.js:10102-10108",
+            "node/server.js:10990-10994"
+          ]
+        }
+      },
+      {
+        "when": "`commence_attack`: the map is `duelland`, and you or the target is not in the duel. A `safe` map, your party and your guild do not stop a heal.",
+        "replies": [
+          {
+            "code": "friendly",
+            "form": "plain",
+            "extra": [
+              {
+                "name": "id",
+                "type": "EntityId",
+                "optional": false,
+                "description": "The target.",
+                "example": "Warrior"
+              }
+            ]
+          },
+          {
+            "code": "data",
+            "extra": [
+              {
+                "name": "reason",
+                "type": "\"friendly\"",
+                "optional": false,
+                "description": "Why."
+              },
+              {
+                "name": "id",
+                "type": "EntityId",
+                "optional": false,
+                "description": "The target.",
+                "example": "Warrior"
+              }
+            ]
+          }
+        ],
+        "source": "node/server.js:3445-3456",
+        "confirm": {
+          "code": [
+            "node/server.js:3445-3456",
+            "node/server.js:10102-10108",
+            "node/server.js:10990-10994"
+          ]
+        }
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "action",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds you, and the target.",
+      "type": "Action",
+      "example": {
+        "attacker": "Priest",
+        "target": "Warrior",
+        "type": "heal",
+        "source": "heal",
+        "x": 340.5,
+        "y": -112,
+        "eta": 1000,
+        "m": 0,
+        "pid": "Rk2Lw9",
+        "projectile": "plight",
+        "heal": 412,
+        "positive": true
+      },
+      "source": "node/server.js:3603",
+      "confirm": {
+        "code": [
+          "node/server.js:3547-3557",
+          "node/server.js:3591-3603",
+          "node/server_functions.js:3744-3791"
+        ],
+        "note": "Sent before `response` and `place` are added (node/server.js:3609-3610)"
+      }
+    },
+    {
+      "event": "skill_timeout",
+      "to": "you",
+      "when": "Success: the cooldown starts. Its `name` is `\"attack\"`, because `heal` shares the attack cooldown.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "\"attack\"",
+          "optional": false,
+          "description": "The cooldown that starts: the attack cooldown."
+        },
+        {
+          "name": "ms",
+          "type": "Milliseconds",
+          "optional": false,
+          "description": "The cooldown: `attack_ms` plus `penalty`."
+        },
+        {
+          "name": "penalty",
+          "type": "Milliseconds",
+          "optional": false,
+          "description": "`penalty_cd`, up to 10,000."
+        }
+      ],
+      "example": {
+        "name": "attack",
+        "ms": 625,
+        "penalty": 0
+      },
+      "source": "node/server.js:10984-10986, node/server_functions.js:3448-3468",
+      "confirm": {
+        "code": [
+          "node/server.js:9778",
+          "node/server.js:10984-10986",
+          "node/server_functions.js:3448-3468"
+        ],
+        "note": "`consume_skill` swaps `heal` for its `share`, `attack`"
+      }
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, after `skill_timeout`. A `commence_attack` failure sends it too when the heal removed your `invincible` condition.",
+      "summary": "Your new `mp`, `target`, and empty `c` (the heal stops your channeled actions).",
+      "example": {
+        "id": "Priest",
+        "mp": 1180,
+        "target": "Warrior",
+        "c": {}
+      },
+      "example_trimmed": true,
+      "source": "node/server.js:9995-9998, 3460-3467, 10987-10989",
+      "confirm": {
+        "code": [
+          "node/server.js:9995-9998",
+          "node/server.js:3465-3467",
+          "node/server.js:10987-10989",
+          "node/server.js:4550-4594"
+        ]
+      }
+    },
+    {
+      "event": "hit",
+      "to": "nearby",
+      "when": "Later: when the projectile arrives, after `eta` ms.",
+      "summary": "The result of the heal, with `heal` (the HP that the target gets). Look for `pid` of the `Action`.",
+      "source": "node/server.js:4342-4344",
+      "confirm": {
+        "code": [
+          "node/server.js:3588-3589",
+          "node/server.js:16307-16328",
+          "node/server.js:3707-3714",
+          "node/server.js:3985-3999",
+          "node/server.js:4342-4344"
+        ],
+        "note": "`complete_attack` can also return without any `hit` (node/server.js:3708-3714)"
+      }
+    }
+  ],
+  "order": [
+    "`action` to clients nearby (you included)",
+    "`skill_timeout` `{name: \"attack\"}` to you",
+    "`player` to you",
+    "`game_response` (the `Action` with `response: \"data\"`) to you",
+    "later, `hit` when the projectile arrives"
+  ]
+}

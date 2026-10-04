@@ -1,0 +1,111 @@
+{
+  "event": "use",
+  "source": "node/server.js:11988-12026",
+  "request": {
+    "fields": [
+      {"name": "item", "type": "\"hp\" | \"mp\"", "optional": false, "coerce": "compared with `==` to `\"hp\"` and `\"mp\"`", "description": "The regeneration to use. Selects the variant."}
+    ],
+    "others": "ignored",
+    "example": {"item": "hp"},
+    "confirm": {"code": ["node/server.js:11993", "node/server.js:12000", "node/server.js:12009", "node/server.js:12025"], "note": "The handler reads only `item`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "Always when you have a character and the checks of the variant pass.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"use\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "used", "type": "any", "optional": true, "description": "The `item` from the request, unchanged. Absent when the request has no `item`."}
+      ],
+      "example": {"used": "hp", "success": true, "response": "data", "place": "use"},
+      "source": "node/server.js:12025",
+      "confirm": {"code": ["node/server.js:12025", "node/server_functions.js:3421-3446", "node/server.js:4886"], "note": "`used` is `data.item`; an absent `item` drops out of the JSON"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "use",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:11990-11992", "confirm": {"code": ["node/server.js:11989-11992"]}}
+    ]
+  },
+  "variants": {
+    "key": "item",
+    "list": [
+      {
+        "value": ["hp", "mp"],
+        "name": "Potion",
+        "request": {"confirm": {"code": ["node/server.js:11993", "node/server.js:12000", "node/server.js:12009"]}},
+        "when": "Restores `G.skills.regen_hp.output` HP or `G.skills.regen_mp.output` MP, up to the maximum, and starts the potion cooldown of 4,000 ms.",
+        "failures": {
+          "rows": [
+            {
+              "when": "The potion cooldown is active. `equip` of a potion uses the same cooldown (node/server.js:7825-7828, 7874).",
+              "code": "not_ready",
+              "extra": [
+                {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time left on the potion cooldown.", "example": 2210}
+              ],
+              "source": "node/server.js:11994-11998",
+              "confirm": {"code": ["node/server.js:11994-11998", "node/server_functions.js:3393-3419"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "disappearing_text",
+            "to": "nearby",
+            "when": "Success. Every client whose view holds you, you included.",
+            "fields": [
+              {"name": "message", "type": "string", "optional": false, "description": "`\"+\"` and the amount: `G.skills.regen_hp.output` (50 in G 17478) or `G.skills.regen_mp.output` (100)."},
+              {"name": "x", "type": "number", "optional": false, "description": "Your `x`."},
+              {"name": "y", "type": "number", "optional": false, "description": "Your `y` minus 30."},
+              {"name": "id", "type": "CharacterName", "optional": false, "description": "Your name."},
+              {"name": "args", "type": "object", "optional": false, "description": "The style: `{c: \"green\", s: \"hp\"}` for HP, `{c: \"#006AA9\", s: \"mp\"}` for MP."}
+            ],
+            "example": {"message": "+50", "x": 120.5, "y": -64, "id": "Wizard", "args": {"c": "green", "s": "hp"}},
+            "source": "node/server.js:12003-12008, 12012-12017; node/server_functions.js:3956-3995",
+            "confirm": {"code": ["node/server.js:12001-12008", "node/server.js:12010-12017", "node/server_functions.js:3956-3990", "node/server_functions.js:3744-3791"], "note": "`xy: 1` sends through `xy_emit`; no `size`, so no `sz` in `args`"}
+          },
+          {"event": "player", "to": "you", "when": "Success, after `disappearing_text`. It has no `reopen`.", "summary": "Your state with the new `hp` or `mp`: the old value plus the output, up to `max_hp` or `max_mp`.", "source": "node/server.js:12022", "confirm": {"code": ["node/server.js:12020-12022", "node/server.js:855"], "note": "A direct emit of `player_to_client`, not `resend`: no `reopen`, no `hitchhikers`"}},
+          {
+            "event": "eval",
+            "to": "you",
+            "when": "Success, after `player`. The official client starts its potion cooldown display.",
+            "fields": [
+              {"name": "code", "type": "\"pot_timeout(4000)\"", "optional": false, "description": "JavaScript for the official client. 4000 is the cooldown in ms."}
+            ],
+            "example": {"code": "pot_timeout(4000)"},
+            "source": "node/server.js:12023",
+            "confirm": {"code": ["node/server.js:12023"]}
+          }
+        ],
+        "order": [
+          "`disappearing_text` to clients nearby (you included)",
+          "`player` to you",
+          "`eval` `{code: \"pot_timeout(4000)\"}` to you",
+          "`game_response` `data` with `used` to you"
+        ],
+        "source": "node/server.js:11994-12023"
+      },
+      {
+        "other": true,
+        "name": "Other",
+        "when": "Any other value, or no `item`. The server changes nothing, starts no cooldown, and sends only the success reply.",
+        "request": {
+          "fields": [
+            {"name": "item", "type": "any", "optional": true, "coerce": "compared with `==` to `\"hp\"` and `\"mp\"`", "description": "Any value but `\"hp\"` and `\"mp\"`, or absent."}
+          ],
+          "example": {"item": "elixir"},
+          "confirm": {"code": ["node/server.js:11993", "node/server.js:12025"], "note": "Any other value skips the block and goes straight to `success_response`"}
+        },
+        "order": ["`game_response` `data` with `used` to you"],
+        "source": "node/server.js:12025"
+      }
+    ]
+  }
+}

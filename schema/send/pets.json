@@ -1,0 +1,16 @@
+{
+  "event": "pets",
+  "source": "node/server.js:12955-12965",
+  "request": {"fields": [], "note": "No payload. The handler reads no field.", "confirm": {"code": ["node/server.js:12955-12965"], "note": "The handler never reads `data`"}},
+  "responses": [
+    {"name": "Success", "event": "players", "when": "You have a character. **Server bug:** the reply goes out on the `players` event, not on a `pets` event. The array has the values of `player.p.pets`, or is empty. The shape of a pet record is unclear from the source: no live code writes `p.pets`.", "type": "any[]", "example": [], "source": "node/server.js:12961-12964", "confirm": {"code": ["node/server.js:12957", "node/server.js:12961-12964"], "live_needed": "The items come from `player.p.pets`, which no live code writes; their shape (if any character has them) is only visible live."}, "note": "The `players` request replies on the same event with `PlayersEntry` objects. Tell the two replies apart by the request that you sent."}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "pets",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12958-12960", "confirm": {"code": ["node/server.js:12956-12960"]}}
+    ]
+  },
+  "order": ["`players` (an array of pet records) to you"]
+}

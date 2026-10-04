@@ -1,0 +1,31 @@
+{
+  "event": "code",
+  "source": "node/server.js:5536-5547",
+  "request": {
+    "fields": [
+      {"name": "run", "type": "boolean", "optional": true, "default": false, "coerce": "tested as true or false: any truthy value means `true`", "description": "`true`: your code runs. Falsy or missing: your code does not run."}
+    ],
+    "others": "ignored",
+    "example": {"run": true}, "confirm": {"code": ["node/server.js:5541-5545"]}
+  },
+  "responses": [
+    {
+      "name": "Update",
+      "event": "player",
+      "when": "Always when you have a character. There is no `game_response`.",
+      "summary": "Your character (`u+cid`) with the new `code` flag. Other clients see `code` in the entity of your character.",
+      "example": {"id": "Merlin", "code": true, "cid": 419},
+      "example_trimmed": true,
+      "source": "node/server.js:5541-5546", "confirm": {"code": ["node/server.js:5541-5546", "node/server.js:4550-4594"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5538-5540", "confirm": {"code": ["node/server.js:5537-5540"]}}
+    ]
+  },
+  "order": [
+    "`player` to you"
+  ]
+}

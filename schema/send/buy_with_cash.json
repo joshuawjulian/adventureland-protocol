@@ -1,0 +1,73 @@
+{
+  "event": "buy_with_cash",
+  "source": "node/server.js:8144-8230",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "ItemName", "optional": false, "description": "The item. It must have a `cash` price, and no `ignore` or `p2w`."},
+      {"name": "quantity", "type": "integer", "optional": true, "default": 1, "coerce": "`min(max(parseInt(quantity) || 0, 1), G.items[name].s || 9999)`", "description": "How many to buy. The server uses 1 for an item that does not stack."},
+      {"name": "request_id", "type": "any", "optional": true, "description": "Any value. The server copies it into the final reply."}
+    ],
+    "others": "ignored",
+    "example": {"name": "cosmo0", "quantity": 1},
+    "confirm": {"code": ["node/server.js:8146-8148", "node/server.js:8158", "node/server.js:8174-8176"], "note": "The handler reads `name`, `quantity` and `request_id`"}
+  },
+  "responses": [
+    {"name": "Started", "event": "game_response", "code": "data", "when": "All checks pass. The server starts the payment in the account database. The result comes later.", "extends": "GameResponseSuccess", "fields": [{"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."}, {"name": "place", "type": "\"buy_with_cash\"", "optional": false, "description": "The request."}, {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the result comes later."}, {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."}], "example": {"success": false, "in_progress": true, "response": "data", "place": "buy_with_cash"}, "source": "node/server.js:8229", "confirm": {"code": ["node/server.js:8229", "node/server_functions.js:3421-3446"]}},
+    {"name": "Complete", "event": "game_response", "code": "shell_purchase_complete", "when": "Later: the payment succeeds. The server sets your `cash`, adds the item and sends `game_log` and `player` first. Not sent if your socket has no character now.", "fields": [{"name": "response", "type": "\"shell_purchase_complete\"", "optional": false, "description": "The code."}, {"name": "name", "type": "string", "optional": false, "description": "`name` from the request."}, {"name": "quantity", "type": "integer", "optional": false, "description": "The quantity after the server corrected it."}, {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id`. The server copies the value with no check, so it is present whenever the request has the key, also when the value is falsy (`null`, `0`, `\"\"`).", "example": "r1"}, {"name": "cevent", "type": "\"shell_purchase_complete\"", "optional": false, "description": "Tells the official client to fire this code event."}, {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}, {"name": "cost", "type": "integer", "optional": false, "description": "The shells paid: `G.items[name].cash * quantity`."}], "example": {"response": "shell_purchase_complete", "name": "cosmo0", "quantity": 1, "request_id": "r1", "cevent": "shell_purchase_complete", "success": true, "cost": 289}, "source": "node/server.js:8149-8163, 8223", "confirm": {"code": ["node/server.js:8149-8164", "node/server.js:8206-8223"], "live_needed": "The reply comes after an async database transaction; whether it arrives (and when) depends on the account database"}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "buy_with_cash",
+    "rows": [
+      {"when": "No character, the character is in the bank, or the server has `hardcore` or `test` gameplay.", "code": "cant_in_bank", "source": "node/server.js:8165-8167", "confirm": {"code": ["node/server.js:8165-8167", "node/server_functions.js:3393-3419"]}},
+      {"when": "`name` is not an item, the item has no `cash` price, or it has `ignore`.", "code": "invalid", "source": "node/server.js:8168-8170", "confirm": {"code": ["node/server.js:8168-8170", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has `p2w`.", "code": "invalid", "source": "node/server.js:8171-8173", "confirm": {"code": ["node/server.js:8171-8173", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item does not fit in the inventory.", "code": "no_space", "source": "node/server.js:8178-8180", "confirm": {"code": ["node/server.js:8177-8180", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "Later, after the `data` reply: the payment fails. Not sent if your socket has no character now.",
+        "replies": [
+          {"event": "game_log", "example": {"message": "Purchase failed", "phrase": "server.game_log.purchase_failed", "phrase_args": {}}},
+          {
+            "code": "shell_purchase_failed",
+            "form": "plain",
+            "extra": [
+              {"name": "name", "type": "string", "optional": false, "description": "`name` from the request."},
+              {"name": "quantity", "type": "integer", "optional": false, "description": "The quantity after the server corrected it."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id`. The server copies the value with no check, so it is present whenever the request has the key, also when the value is falsy (`null`, `0`, `\"\"`).", "example": "r1"},
+              {"name": "cevent", "type": "\"shell_purchase_failed\"", "optional": false, "description": "The code again."},
+              {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "reason", "type": "\"nouser\" | \"not_enough\" | \"exception\" | \"coms_failure\" | \"purchase_failed\"", "optional": false, "description": "Why: `\"nouser\"` (no account), `\"not_enough\"` (too few shells), `\"exception\"` (a database error in the transaction, common:mongodb_functions.js:86-95), `\"coms_failure\"` (another error), or `\"purchase_failed\"` (a failure without a reason).", "example": "not_enough"}
+            ]
+          }
+        ],
+        "source": "node/server.js:8184-8187, 8201-8204, 8224-8227",
+        "confirm": {"code": ["node/server.js:8149-8164", "node/server.js:8183-8188", "node/server.js:8189-8204", "node/server.js:8224-8227", "common:mongodb_functions.js:71-74", "common:mongodb_functions.js:86-95", "languages/index.js:256-258"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "game_log",
+      "to": "you",
+      "when": "Later: the payment succeeds.",
+      "type": "LocalizedText",
+      "example": {"message": "Spent 289 shells", "phrase": "server.game_log.spent_shells", "phrase_args": {"amount": "289"}},
+      "source": "node/server.js:8210-8213",
+      "confirm": {"code": ["node/server.js:8210-8213", "languages/index.js:256-258"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Later: the payment succeeds, before `shell_purchase_complete`.",
+      "summary": "Your state with `reopen: true`, the new `cash` and the item in `items`.",
+      "source": "node/server.js:8222",
+      "confirm": {"code": ["node/server.js:8222", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "now: `game_response` `data` with `in_progress: true` to you",
+    "later: `game_log` to you",
+    "`player` to you",
+    "`game_response` `shell_purchase_complete` to you"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "event": "stop",
+  "source": "node/server.js:12656-12696",
+  "request": {
+    "fields": [
+      {"name": "action", "type": "\"invis\" | \"channeling\" | \"teleport\" | \"town\" | \"revival\"", "optional": true, "coerce": "compared with `==` to each string; a falsy value (absent, `\"\"`, `0`, `null`) selects the default", "description": "What to stop. `\"invis\"`: your invisibility. `\"channeling\"`: every channeled action (all of `c`). `\"teleport\"` and `\"town\"`: `c.town`. `\"revival\"`: `c.revival`. Absent: invisibility and every channeled action. Any other value stops nothing."}
+    ],
+    "others": "ignored. The handler accepts a `null` payload (`!data`) and then uses the default.",
+    "example": {"action": "town"},
+    "confirm": {"code": ["node/server.js:12662-12691"]}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "Always when you have a character: also when nothing stopped, and for an unknown `action`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"stop\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "stop"},
+      "source": "node/server.js:12695",
+      "confirm": {"code": ["node/server.js:12695", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "stop",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12659-12661", "confirm": {"code": ["node/server.js:12657-12661"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "skill_timeout",
+      "to": "you",
+      "when": "The stop ended your invisibility (`step_out_of_invis`). The cooldown is `G.skills.invis.reuse_cooldown` (12,000 ms) plus `penalty_cd` (up to 10,000).",
+      "fields": [
+        {"name": "name", "type": "\"invis\"", "optional": false, "description": "The skill."},
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The cooldown."},
+        {"name": "penalty", "type": "Milliseconds", "optional": false, "description": "`penalty_cd`, up to 10,000."}
+      ],
+      "example": {"name": "invis", "ms": 12000, "penalty": 0},
+      "source": "node/server.js:13756-13767; node/server_functions.js:3448-3468",
+      "confirm": {"code": ["node/server.js:13765", "node/server_functions.js:3448-3468"], "note": "`G.skills.invis` has no `share` and `reuse_cooldown: 12000` in G 17478, so `ms` is `12000 + penalty`"}
+    },
+    {"name": "Invisibility ended", "event": "player", "to": "you", "when": "The stop ended your invisibility, right after `skill_timeout` (`resend` with no flags). It also ends `invincible` (`s.invincible` becomes `{ms: 0}`).", "summary": "Your state without `s.invis`.", "source": "node/server.js:13757-13766", "confirm": {"code": ["node/server.js:13757-13766", "node/server.js:4550-4594"]}},
+    {"name": "Stopped", "event": "player", "to": "you", "when": "Something stopped (`resend \"u+cid\"`), before the `game_response`.", "summary": "Your state with the new `s` and `c`.", "source": "node/server.js:12692-12694", "confirm": {"code": ["node/server.js:12692-12694", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "if invisibility ended: `skill_timeout` `{name: \"invis\"}`, then `player` to you",
+    "if anything stopped: `player` to you",
+    "`game_response` `{response: \"data\", place: \"stop\", success: true}` to you"
+  ]
+}

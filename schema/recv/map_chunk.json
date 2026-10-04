@@ -1,0 +1,52 @@
+{
+  "event": "map_chunk",
+  "to": "one socket: the socket that connects, the observer or the character that goes to a generated map",
+  "payload": {
+    "fields": [
+      {"name": "run", "type": "string", "optional": false, "description": "The key of the cave run: 24 hexadecimal characters."},
+      {"name": "index", "type": "integer", "optional": false, "description": "The number of this part, from 0. Parts arrive in order."},
+      {"name": "count", "type": "integer", "optional": false, "description": "The number of parts. The official client accepts 1 to 1,400 (js/generated_zones.js:9-10)."},
+      {"name": "text", "type": "string", "optional": false, "description": "Up to 12,000 characters of the JSON text of a `MapChunkBundle`."}
+    ],
+    "confirm": {"code": ["node/logic/generated_maps.js:178-218", "node/logic/generated_maps.js:473"], "note": "Nothing is sent when `map_protocol` in the handshake query is not 1: `send_generated_maps` throws `client_update_required` (node/logic/generated_maps.js:186)."}
+  },
+  "types": {
+    "MapChunkBundle": {
+      "summary": "The JSON text that the `map_chunk` parts of one floor make, joined in `index` order.",
+      "fields": [
+        {"name": "run", "type": "string", "optional": false, "description": "The key of the cave run, the same as `map_chunk.run`."},
+        {"name": "floors", "type": "MapChunkFloor[]", "optional": false, "description": "The floor that the socket goes to. The server sends one floor each time."},
+        {"name": "manifest", "type": "MapChunkManifestEntry[]", "optional": false, "description": "All floors of the run, in floor order (node/logic/dream_layout.js:1230)."}
+      ],
+      "source": "node/logic/generated_maps.js:187-207",
+      "confirm": {"code": ["node/logic/generated_maps.js:187-207"]}
+    },
+    "MapChunkFloor": {
+      "summary": "One floor in a `MapChunkBundle`.",
+      "fields": [
+        {"name": "key", "type": "MapName", "optional": false, "description": "The map name of the floor: `zone_<run>_<floor number>`."},
+        {"name": "definition", "type": "object", "optional": false, "description": "The `G.maps` entry of the floor, without `data`. `definition.generated` has `run` and `floor`."},
+        {"name": "geometry", "type": "object", "optional": false, "description": "The geometry of the floor, the same form as `G.geometry` entries. With `no_graphics=1` it has only `x_lines`, `y_lines`, `min_x`, `min_y`, `max_x`, `max_y`, and empty `tiles`, `placements`, `groups` and `animations`."},
+        {"name": "navigation", "type": "object", "optional": true, "description": "Only with `no_graphics=1`: the walk map of the floor (`floor.amap`)."}
+      ],
+      "source": "node/logic/generated_maps.js:187-205",
+      "confirm": {"code": ["node/logic/generated_maps.js:187-205", "node/logic/dream_layout.js:1229"]}
+    },
+    "MapChunkManifestEntry": {
+      "summary": "One floor in the `manifest` of a `MapChunkBundle`.",
+      "fields": [
+        {"name": "key", "type": "MapName", "optional": false, "description": "The map name of the floor: `zone_<run>_<floor number>`."},
+        {"name": "definition", "type": "object", "optional": false, "description": "The `G.maps` entry of the floor that the server builds: `name` (`\"Cave of Many Dreams\"`), `spawns`, `doors`, `generated` (`run`, `floor`, `version`, `zone`), `rooms` and more."}
+      ],
+      "source": "node/logic/dream_layout.js:1230-1260",
+      "confirm": {"code": ["node/logic/dream_layout.js:1229-1263"]}
+    }
+  },
+  "example": {"run": "66f1c2a9b3e4d5f6a7b8c9d0", "index": 0, "count": 3, "text": "{\"run\":\"66f1c2a9b3e4d5f6a7b8c9d0\",\"floors\":[{\"key\":\"zone_66f1c2a9b3e4d5f6a7b8c9d0_0\",\"definition\":{\"name\":\"Cave of Many Dreams\",\"instance\":true,..."},
+  "senders": [
+    {"what": "`send_generated_maps`. It sends nothing when the map is not generated, or when the socket already has this floor.", "source": "node/logic/generated_maps.js:178-218"},
+    {"what": "The `connection` handler, before `welcome`, for an observer that follows a character in a generated map.", "source": "node/server.js:5018"},
+    {"what": "`transport_observer_to`, before `new_map`, for example after `o:home`.", "source": "node/server.js:4614-4618"},
+    {"what": "`transport_player_to`, before `new_map`: a cave door, `enter` of the dream cave, or a return to a cave run.", "source": "node/server.js:4640-4648"}
+  ]
+}

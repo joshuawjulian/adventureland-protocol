@@ -1,0 +1,49 @@
+{
+  "event": "eval",
+  "to": "you for the `{code}` form (the shutdown code goes to everyone). The bare-string form goes to clients and observers near a point (`xy_emit`)",
+  "payload": {
+    "type": "EvalCode | string",
+    "confirm": {"code": ["node/server.js:4402-4408", "node/server.js:7878", "node/server.js:9608", "node/server.js:10210", "node/server.js:12023", "node/server.js:16981", "node/server_functions.js:4423-4438", "node/server.js:9510-9547", "node/server.js:10968-10972", "node/server_functions.js:2983-2996", "node/server_functions.js:3744-3790"]}
+  },
+  "example": {"code": "pot_timeout(4000)"},
+  "variants": [
+    {
+      "name": "Object",
+      "type": "EvalCode",
+      "when": "UI timers for one character, and the shutdown countdown. Also a hitchhiker in `player` at login.",
+      "example": {"code": "skill_timeout('supershot',21450)"},
+      "source": "node/server_functions.js:4427-4437",
+      "confirm": {"code": ["node/server.js:4402-4408", "node/server.js:7878", "node/server.js:9608", "node/server.js:10210", "node/server.js:12023", "node/server.js:16981", "node/server_functions.js:4423-4438"]}
+    },
+    {
+      "name": "Bare string",
+      "type": "string",
+      "when": "Visual effects at a point: `throw` of an item, `temporalsurge`, the end of a duel. The string is the code.",
+      "example": "egg_splash(512,-96)",
+      "source": "node/server.js:9537",
+      "confirm": {"code": ["node/server.js:9510-9547", "node/server.js:10968-10972", "node/server_functions.js:2983-2996", "node/server_functions.js:3744-3790"], "note": "Sent with `xy_emit` to the clients near the point."}
+    }
+  ],
+  "types": {
+    "EvalCode": {
+      "summary": "An `eval` payload in object form: the code of the official client to run.",
+      "fields": [
+        {"name": "code", "type": "string", "optional": false, "description": "A call of a function of the official client, for example `pot_timeout(4000)`, `pvp_timeout(3600)`, `skill_timeout('ethereal',120)`, `ui_move(x,y)`, `call_code_function('trigger_event','shutdown',{seconds:N})`."}
+      ],
+      "example": {"code": "pvp_timeout(3600)"},
+      "confirm": {"code": ["node/server.js:4402-4408", "node/server.js:7878", "node/server.js:9608", "node/server.js:10210", "node/server.js:12023", "node/server.js:16981", "node/server_functions.js:4423-4438"]}
+    }
+  },
+  "senders": [
+    {"what": "`use` of a potion: `pot_timeout(4000)`.", "source": "node/server.js:12023"},
+    {"what": "`equip` of a potion: `pot_timeout(<ms>)`.", "source": "node/server.js:7878"},
+    {"what": "`complete_attack`, a PvP hit: `pvp_timeout(3600)` to the target, and `pvp_timeout(3600,1)` to the attacker (`mode.dpvpblock` is 1, node/server.js:272).", "source": "node/server.js:4402-4408"},
+    {"what": "`activate` of an `etherealamulet`: `skill_timeout('ethereal',120)`.", "source": "node/server.js:9608"},
+    {"what": "The `dash` skill: `ui_move(x,y)`.", "source": "node/server.js:10210"},
+    {"what": "Login (`init_player`): a hitchhiker `[\"eval\", {code: \"skill_timeout('<skill>',<ms>)\"}]` for each class skill whose cooldown is not over.", "source": "node/server_functions.js:4423-4438"},
+    {"what": "The shutdown countdown: `call_code_function('trigger_event','shutdown',{seconds:N})` to everyone (`broadcast`).", "source": "node/server.js:16981"},
+    {"what": "`throw` of `confetti`, `firecrackers`, `whiteegg` or `smoke`: a bare string near the target point.", "source": "node/server.js:9510-9546"},
+    {"what": "`temporalsurge`: `assassin_smoke(x,y,'icecrack');` near each respawn point that it speeds up.", "source": "node/server.js:10968-10972"},
+    {"what": "The end of a duel: `confetti_shower(get_player('<name>'),2)` near each winner.", "source": "node/server_functions.js:2983-2996"}
+  ]
+}

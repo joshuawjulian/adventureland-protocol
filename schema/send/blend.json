@@ -1,0 +1,8 @@
+{
+  "event": "blend",
+  "source": "node/server.js:12996-13019",
+  "request": {"fields": [], "note": "No payload. The handler reads no field.", "confirm": {"code": ["node/server.js:12996-12997"], "note": "The handler returns before it reads anything"}},
+  "responses": [
+    {"name": "Nothing", "kind": "none", "when": "Every call. The handler starts with `return;`. The dead code after it gives you the skin of the nearest monster in your instance as a temporary skin (`player.tskin`).", "source": "node/server.js:12997", "confirm": {"code": ["node/server.js:12996-12997"]}}
+  ]
+}

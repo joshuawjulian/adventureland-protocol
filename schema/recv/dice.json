@@ -1,0 +1,71 @@
+{
+  "event": "dice",
+  "to": "every character in the tavern instance (`instance_emit`). On hardcore servers too: `instance_emit` does not broadcast `dice`",
+  "payload": {
+    "type": "DiceRoll | DiceLock | DiceBets",
+    "confirm": {"code": ["node/server_functions.js:1414", "node/server_functions.js:1453-1458", "node/server_functions.js:1587", "node/server_functions.js:3540-3551"]}
+  },
+  "variants": [
+    {
+      "name": "Roll",
+      "type": "DiceRoll",
+      "when": "The round of bets ended after 30 s. The server takes no more bets. The roll shows for 10 s.",
+      "example": {"state": "roll"},
+      "source": "node/server_functions.js:1410-1414",
+      "confirm": {"code": ["node/server_functions.js:1405-1414", "node/server_functions.js:3540-3551"]}
+    },
+    {
+      "name": "Lock",
+      "type": "DiceLock",
+      "when": "10 s after `roll`: the server settles the bets and shows the result and the key. The `tavern` results follow 1.6 s later.",
+      "example": {"state": "lock", "num": "42.17", "text": "Num: 42.17 Initials: WRM Random: aZ81kQpLm0Xv2TcY", "key": "pX0r7T2kW9qLmN4bZ8vC1eA6"},
+      "source": "node/server_functions.js:1453-1458",
+      "confirm": {"code": ["node/server_functions.js:1416-1458", "node/server_functions.js:3540-3551"]}
+    },
+    {
+      "name": "Bets",
+      "type": "DiceBets",
+      "when": "2 s after the results: a new round of bets starts, with the commitment of its number.",
+      "example": {"state": "bets", "hex": "3f9a1c0e5b7d2a4f8e6c1b0d9a7f5e3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e", "algorithm": "hmac-sha256"},
+      "source": "node/server_functions.js:1587",
+      "confirm": {"code": ["node/server_functions.js:1551-1587", "node/server_functions.js:3540-3551"]}
+    }
+  ],
+  "types": {
+    "DiceRoll": {
+      "summary": "The dice table stops taking bets and rolls.",
+      "fields": [
+        {"name": "state", "type": "\"roll\"", "optional": false, "description": "Always `\"roll\"`."}
+      ],
+      "example": {"state": "roll"},
+      "source": "node/server_functions.js:1414",
+      "confirm": {"code": ["node/server_functions.js:1414"]}
+    },
+    "DiceLock": {
+      "summary": "The result of the dice round, with the key that proves the commitment.",
+      "fields": [
+        {"name": "state", "type": "\"lock\"", "optional": false, "description": "Always `\"lock\"`."},
+        {"name": "num", "type": "string", "optional": false, "description": "The roll: 5 characters, two digits, a dot and two digits (`\"00.00\"` to `\"99.99\"`) (node/server_functions.js:1560-1568). Server bug: on a hardcore server, in 7% of the rounds the server replaces the number after the commitment with the roll of an earlier round (node/server_functions.js:1588-1590). `num` is then not the number in `text`, and the HMAC check of `text` still passes."},
+        {"name": "text", "type": "string", "optional": false, "description": "The committed text: `\"Num: <num> Initials: <first letters of the names in the tavern> Random: <16 to 31 random characters>\"`."},
+        {"name": "key", "type": "string", "optional": false, "description": "The HMAC key: 20 to 39 random characters. `HMAC-SHA256(key, text)` in hex must equal `hex` of the `bets` event of the round."}
+      ],
+      "example": {"state": "lock", "num": "42.17", "text": "Num: 42.17 Initials: WRM Random: aZ81kQpLm0Xv2TcY", "key": "pX0r7T2kW9qLmN4bZ8vC1eA6"},
+      "source": "node/server_functions.js:1453-1458",
+      "confirm": {"code": ["node/server_functions.js:1453-1458", "node/server_functions.js:1559-1584", "node/server_functions.js:1588-1590"]}
+    },
+    "DiceBets": {
+      "summary": "A new round of dice bets, with the commitment to its number.",
+      "fields": [
+        {"name": "state", "type": "\"bets\"", "optional": false, "description": "Always `\"bets\"`."},
+        {"name": "hex", "type": "string", "optional": false, "description": "`HMAC-SHA256(key, text)` as 64 hex characters. The `lock` event shows `key` and `text`."},
+        {"name": "algorithm", "type": "\"hmac-sha256\"", "optional": false, "description": "Always `\"hmac-sha256\"`."}
+      ],
+      "example": {"state": "bets", "hex": "3f9a1c0e5b7d2a4f8e6c1b0d9a7f5e3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e", "algorithm": "hmac-sha256"},
+      "source": "node/server_functions.js:1569-1587",
+      "confirm": {"code": ["node/server_functions.js:1569-1587"]}
+    }
+  },
+  "senders": [
+    {"what": "`tavern_loop` (every 1 s): each change of the state of the dice round.", "source": "node/server_functions.js:1399-1592"}
+  ]
+}

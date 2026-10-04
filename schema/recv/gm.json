@@ -1,0 +1,13 @@
+{
+  "event": "gm",
+  "to": "you: only the socket that sent the request (role `gm`)",
+  "payload": {
+    "fields": [
+      {"name": "action", "type": "\"jump_list\"", "optional": false, "description": "Always `\"jump_list\"`."},
+      {"name": "ids", "type": "CharacterName[]", "optional": false, "description": "The names of all characters on this game server, in the order of the `players` object."}
+    ],
+    "confirm": {"code": ["node/server.js:5381-5386"]}
+  },
+  "example": {"action": "jump_list", "ids": ["Wizard", "Archer", "Healer"]},
+  "senders": [{"what": "The `gm` handler with `action: \"jump_list\"`. Only a character with `role: \"gm\"` gets an answer.", "source": "node/server.js:5381-5386"}]
+}

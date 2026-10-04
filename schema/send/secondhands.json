@@ -1,0 +1,79 @@
+{
+  "event": "secondhands",
+  "source": "node/server.js:7959-7973",
+  "request": {
+    "fields": [
+      {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. The replies become `game_response` objects that carry it."}
+    ],
+    "others": "ignored",
+    "example": {"request_id": "r1"},
+    "confirm": {"code": ["node/server.js:7961"], "note": "The handler reads only `request_id`"}
+  },
+  "responses": [
+    {
+      "name": "List",
+      "event": "game_response",
+      "when": "You are within 500 px of Ponty (`secondhands` on `main`).",
+      "with_request_id": {
+        "code": "data",
+        "extends": "GameResponseSuccess",
+        "fields": [
+          {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+          {"name": "place", "type": "\"secondhands\"", "optional": false, "description": "The request."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+          {"name": "items", "type": "ResaleItem[]", "optional": false, "description": "The same list, in reverse order."}
+        ],
+        "example": {
+          "request_id": "r1",
+          "items": [
+            {"name": "ringsj", "level": 2, "rid": "Zt9Kp"},
+            {"name": "wbook0", "rid": "aB3xQ"}
+          ],
+          "success": true,
+          "response": "data",
+          "place": "secondhands"
+        }
+      },
+      "without_request_id": {
+        "event": "secondhands",
+        "type": "ResaleItem[]",
+        "summary": "The items that players sold to NPCs (`csold`), in the order of `S.sold`. Each has a `rid` for `sbuy`. The price is in `sbuy`.",
+        "example": [{"name": "wbook0", "rid": "aB3xQ"}, {"name": "ringsj", "level": 2, "rid": "Zt9Kp"}]
+      },
+      "source": "node/server.js:7970-7972",
+      "confirm": {"code": ["node/server.js:7970-7972", "node/server_functions.js:614", "node/server_functions.js:636-637", "node/server_functions.js:3188", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "secondhands",
+    "rows": [
+      {
+        "when": "No character.",
+        "code": "invalid",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"}
+          ]
+        },
+        "without_request_id": {"none": true},
+        "source": "node/server.js:7962-7965",
+        "confirm": {"code": ["node/server.js:7962-7965", "node/server_functions.js:3393-3419"], "note": "Without `request_id` the handler returns and sends nothing; live, a socket with no character got no reply"}
+      },
+      {
+        "when": "You are more than 500 px from Ponty (`secondhands` on `main`).",
+        "code": "distance",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:7966-7969",
+        "confirm": {"code": ["node/server.js:7966-7969", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "order": ["without `request_id`: `secondhands` to you; with `request_id`: `game_response` `data` to you"]
+}

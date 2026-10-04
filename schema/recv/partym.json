@@ -1,0 +1,18 @@
+{
+  "event": "partym",
+  "to": "each member of the party of the sender, the sender too (`party_emit`)",
+  "payload": {
+    "fields": [
+      {"name": "owner", "type": "CharacterName", "optional": false, "description": "The name of the sender."},
+      {"name": "message", "type": "string", "optional": false, "description": "The text, at most 1,200 characters. The server removes some characters first (`strip_string`)."},
+      {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the sender: the character name."},
+      {"name": "p", "type": "true", "optional": false, "description": "Always `true`."}
+    ],
+    "confirm": {
+      "code": ["node/server.js:5092-5113", "node/server_functions.js:3553-3570"],
+      "note": "`message` is `strip_string(data.message).substr(0, 1200)`; `party_emit` sends the same object to every member"
+    }
+  },
+  "example": {"owner": "Wizard", "message": "pull the next pack", "id": "Wizard", "p": true},
+  "senders": [{"what": "The `say` handler with `party`, when the sender is in a party.", "source": "node/server.js:5109-5113"}]
+}

@@ -1,0 +1,39 @@
+{
+  "event": "set_home",
+  "source": "node/server.js:5523-5535",
+  "request": {"fields": [], "note": "No payload. The handler does not read `data`.", "confirm": {"code": ["node/server.js:5523-5535"], "note": "The handler never reads `data`"}},
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "home_set",
+      "when": "No home change in the last 36 hours. The server sets the home, records the time, and removes the `hopsickness` condition. No `player` update comes now; the next one shows the change.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"home_set\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"set_home\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "home", "type": "string", "optional": false, "description": "The new home: region and server name with no space between them (`region + server_name`), for example `\"EUI\"`."}
+      ],
+      "example": {"home": "EUI", "success": true, "response": "home_set", "place": "set_home"},
+      "source": "node/server.js:5531-5534", "confirm": {"code": ["node/server.js:5531-5534", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5525-5527", "confirm": {"code": ["node/server.js:5524-5527"]}},
+      {
+        "when": "You set the home less than 36 hours ago.",
+        "code": "sh_time",
+        "extra": [
+          {"name": "hours", "type": "number", "optional": false, "description": "The hours that remain, with a fraction: `36 - hsince(last_homeset)`.", "example": 12.48}
+        ],
+        "source": "node/server.js:5528-5530", "confirm": {"code": ["node/server.js:5528-5530", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "order": [
+    "`game_response` `home_set` to you"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "event": "test",
+  "to": "the socket that sent `test` only",
+  "payload": {
+    "fields": [
+      {"name": "date", "type": "string", "optional": false, "description": "The time of the server now: a `Date`, which arrives as an ISO 8601 string in UTC."}
+    ],
+    "confirm": {"code": ["node/server.js:5584-5589"]}
+  },
+  "example": {"date": "2026-10-04T12:00:00.000Z"},
+  "senders": [
+    {"what": "The `test` handler. It does not read the payload, except to log `data.test` on a development server.", "source": "node/server.js:5584-5589"}
+  ]
+}

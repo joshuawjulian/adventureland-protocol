@@ -1,0 +1,41 @@
+{
+  "event": "disconnect",
+  "source": "node/server.js:13044-13151",
+  "trigger": "Socket.IO runs this handler when the connection closes (for example after `sock.close()`, or when the server drops the socket). It is not an event to emit.",
+  "request": {"fields": [], "note": "The handler takes no argument. The call-cost limit does not apply to it (node/server.js:4939).", "confirm": {"code": ["node/server.js:13044", "node/server.js:4939"]}},
+  "responses": [
+    {"name": "Closed", "kind": "none", "when": "The socket is closed, so you get nothing. Each cleanup step has its own `try`/`catch`: an error in one step does not stop the others. Also sent lists what other clients get. When the socket has no character, or the character is marked `dc` already, the server only cancels a login in progress, removes the socket, and removes the observer of the socket (if any).", "source": "node/server.js:13045-13053, 13143-13150", "confirm": {"code": ["node/server.js:13044-13151", "node/server_functions.js:3669-3673"], "note": "A `player.monster` (from `pet`) would get `remove_monster` and a `death` to clients nearby, but no code ever sets it (see `pet`)"}}
+  ],
+  "also": [
+    {
+      "event": "server_message",
+      "to": "everyone in the instance of the attacker",
+      "when": "Not on a generated map, and a different character hit you recently (`s.block.f`): `defeat_player` gives that character the PvP kill and kills you. In the arena the `pvp` NPC also sends `chat_log`. On every disconnect outside generated maps, `player.violations` goes up by 1.",
+      "type": "LocalizedText",
+      "example": {"color": "gray", "message": "Ranger defeated Wizard", "phrase": "server.server_message.defeated", "phrase_args": {"attacker": "Ranger", "player": "Wizard"}},
+      "source": "node/server.js:13062, 4499-4532",
+      "confirm": {"code": ["node/server.js:13062", "node/server.js:4499-4532", "node/server_functions.js:3540-3551", "languages/index.js:256-258"]}
+    },
+    {"event": "party_update", "to": "party", "when": "PvP kill only, when you are in a party: `rip` sends the party state to each member (you too, but your socket is closed).", "summary": "`{list, party}`: the names and the state of the party. See the `party_update` entry.", "source": "node/server_functions.js:445-447; node/server.js:1215-1226", "confirm": {"code": ["node/server.js:4529", "node/server_functions.js:439-449", "node/server.js:1215-1226"]}},
+    {"event": "party_update", "to": "the other members of your party", "when": "You were in a party: `leave_party`. Each member also gets a `player` update (`resend \"nc+u+cid\"`).", "summary": "A `LocalizedText` (`server.party.left`) with `leave: 1`, `list` (the new party, or `false`) and `party`.", "source": "node/server.js:13079-13081; node/server_functions.js:3647-3666", "confirm": {"code": ["node/server.js:13079-13081", "node/server_functions.js:3603-3667", "languages/index.js:256-258", "node/server.js:4550-4594"], "note": "`list` is `false` and `party` is `{}` when fewer than 2 members are left"}},
+    {
+      "event": "disappear",
+      "to": "nearby",
+      "when": "Always for a character, after the party step.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "You."},
+        {"name": "reason", "type": "\"disconnect\"", "optional": false, "description": "Why."}
+      ],
+      "example": {"id": "Wizard", "reason": "disconnect"},
+      "source": "node/server.js:13087",
+      "confirm": {"code": ["node/server.js:13087", "node/server_functions.js:3834-3866"], "note": "Clients that had you in view (`seen`), or in the same instance and in range"}
+    },
+    {"event": "poker", "to": "everyone in the `tavern` instance", "when": "You had a poker seat: the seat is marked `dc`. It stays for 5 min (`grace_ms`), plays 2 hands by the clock, then sits out. Before this, the server returns your open dice stakes to your gold, and settles a wheel spin or a slots pull at once with no messages.", "type": "PokerState", "summary": "The public state, with `dc: true` on your seat.", "source": "node/server.js:13094-13104; node/logic/tavern_poker.js:1216-1226", "confirm": {"code": ["node/server.js:13094-13104", "node/logic/tavern_poker.js:1216-1226", "node/logic/tavern_poker.js:499-502", "node/logic/tavern_wheel.js:52-64", "node/logic/tavern_slots.js:71-78", "node/logic/tavern_poker.js:1268"], "live_needed": "The grace time and the hands come from `G.games.poker` (`grace_ms` 300000, `blind_hands` 2 in G 17478); the live G may differ."}}
+  ],
+  "order": [
+    "PvP kill only: `server_message` to the instance of the attacker (and `chat_log` in the arena), then `party_update` to your party",
+    "party only: `party_update` and `player` to each other member",
+    "`disappear` `{id, reason: \"disconnect\"}` to clients nearby",
+    "poker seat only: `poker` state to the tavern"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "event": "magiport",
+  "source": "node/server.js:12548-12566",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "CharacterName", "optional": false, "coerce": "none: used as an object key in `magiportations`", "description": "The mage who sent the offer: the `name` of the `magiport` event that you got."}
+    ],
+    "others": "ignored",
+    "example": {"name": "Wizard"},
+    "confirm": {"code": ["node/server.js:12553-12554", "node/server.js:12563"], "note": "The handler reads only `name`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The offer is open, and the server found a safe spot near the mage. The teleport itself happens 400 ms later (see Also sent).",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"magiport\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "magiport"},
+      "source": "node/server.js:12561",
+      "confirm": {"code": ["node/server.js:12561", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "magiport",
+    "intro": "The server deletes the offer before the checks of rows 3 and 4. Thus, after one of these failures, the offer is gone.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12550-12552", "confirm": {"code": ["node/server.js:12550-12552"]}},
+      {"when": "The mage did not send you an offer (`magiportations[name][you]`), the offer is used, or the mage is not online.", "replies": [
+        {"code": "magiport_gone", "form": "plain", "extra": [{"name": "name", "type": "CharacterName", "optional": false, "description": "The `name` from the request. It is absent when the request has no `name`.", "example": "Wizard"}]},
+        {"code": "inviter_gone"}
+      ], "source": "node/server.js:12553, 12562-12564", "confirm": {"code": ["node/server.js:12553", "node/server.js:12562-12564", "node/server_functions.js:3393-3419"], "note": "`magiport_gone` is a plain emit; `inviter_gone` goes through `fail_response`"}},
+      {"when": "The `mount` flag of your instance is not the same as that of the instance of the mage: one of you is in the bank and the other is not.", "code": "cant_in_bank", "source": "node/server.js:12555-12557", "confirm": {"code": ["node/server.js:12554-12557", "node/server_functions.js:3393-3419"]}},
+      {"when": "You or the mage is in a generated map (a dream cave, `generated_magiport_allowed`), or `safe_xy_nearby` found no free spot near the mage.", "code": "invalid", "source": "node/server.js:12558-12560, node/server_functions.js:4000, 4012-4015", "confirm": {"code": ["node/server.js:12558-12560", "node/server_functions.js:3999-4015", "node/logic/generated_maps.js:52-54", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with the new condition `s.magiport` `{ms: 400, x, y, f, in, map}`: the destination and the name of the mage in `f`.",
+      "source": "node/server_functions.js:4016-4025",
+      "confirm": {"code": ["node/server_functions.js:4016-4025", "node/server.js:4550-4594"]}
+    },
+    {
+      "event": "new_map",
+      "to": "you",
+      "when": "Later: the `magiport` condition ends (400 ms). The server moves you to the spot with `effect: \"magiport\"`. It does not move you if a `fieldgen0` monster is less than 300 px from the spot.",
+      "summary": "The map of the mage, with your new `x` and `y`. A `player` update follows.",
+      "source": "node/server.js:14701-14721",
+      "confirm": {"code": ["node/server.js:14701-14721", "node/server.js:4640-4757"], "note": "`transport_player_to` emits `new_map` and then `resend` (`player`)"}
+    },
+    {
+      "event": "ui",
+      "to": "nearby",
+      "when": "Later, instead of `new_map`: a `fieldgen0` monster is less than 300 px from the spot.",
+      "fields": [
+        {"name": "type", "type": "\"dampened\"", "optional": false, "description": "The field generator stopped the teleport."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "You."}
+      ],
+      "example": {"type": "dampened", "name": "Priest"},
+      "source": "node/server.js:14706",
+      "confirm": {"code": ["node/server.js:14702-14710"]}
+    }
+  ],
+  "order": [
+    "`player` (with `s.magiport`) to you",
+    "`game_response` `data` to you",
+    "after 400 ms: `new_map` and `player` to you (or `ui` `dampened` to clients nearby)"
+  ]
+}

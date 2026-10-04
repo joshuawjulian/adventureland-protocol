@@ -1,0 +1,12 @@
+# The game's source, fetched by scripts/fetch-source.sh; not ours to redistribute
+vendor/
+__pycache__/
+# Generated projects and compiler caches of scripts/check-examples.py
+.examples/
+# Build copies of course/ made by scripts/check-course.py
+.course-build/
+
+# Live captures of tools/capture (raw frames; never commit them)
+captures/
+# G cache of tools/capture
+.al-cache/

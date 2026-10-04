@@ -1,0 +1,18 @@
+// tsconfig.json: tsc only checks the types of the capture tool (Node.js 22.18+ runs the .ts files
+// itself). Same options as course/ts/tsconfig.json, whose files this tool imports.
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node"],
+    "typeRoots": ["/tc/node_modules/@types"],
+    "lib": ["es2022", "dom"],
+    "skipLibCheck": true
+  },
+  "include": ["*.ts"]
+}

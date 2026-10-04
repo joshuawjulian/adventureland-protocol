@@ -1,0 +1,169 @@
+{
+  "event": "citizen",
+  "to": "everyone near the NPC (`xy_emit`): players and observers. `route_marks` goes only to the character that asked",
+  "payload": {"type": "CitizenRepair | CitizenLamp | CitizenRouteMarks | CitizenDealerShuffle | CitizenDealerSay | CitizenDealerMock | CitizenDealerFlourish | CitizenDealerEmote", "confirm": {"code": ["node/server.js:15409", "node/server.js:15458", "node/server.js:15465", "node/server.js:11074-11079", "node/logic/tavern_dealer.js:29-31", "node/server_functions.js:3744-3791"]}},
+  "variants": [
+    {
+      "name": "Repair",
+      "type": "CitizenRepair",
+      "when": "Patch (`citizen18`) reaches an idle `mechagnome` and repairs it.",
+      "example": {"type": "repair", "target": "48213", "x": 16, "y": -120},
+      "source": "node/server.js:15409",
+      "confirm": {"code": ["node/server.js:15405-15409", "node/server_functions.js:3744-3791"]}
+    },
+    {
+      "name": "Lamp",
+      "type": "CitizenLamp",
+      "when": "Wick (`citizen20`) lights a lamp at a stop of the route.",
+      "example": {"type": "lamp", "x": -310, "y": 64},
+      "source": "node/server.js:15458, 15465",
+      "confirm": {"code": ["node/server.js:15458", "node/server.js:15465", "node/server_functions.js:3744-3791"]}
+    },
+    {
+      "name": "Route marks",
+      "type": "CitizenRouteMarks",
+      "when": "Rook (`citizen17`) in `desertland` marks the way, after `interaction` with `type: \"citizen_route\"`.",
+      "reply_to": ["interaction"],
+      "example": {"type": "route_marks", "destination": "locksmith", "from": [12, -240], "to": [-410, 380]},
+      "source": "node/server.js:11074-11079",
+      "confirm": {"code": ["node/server.js:11056-11079", "node/server.js:15331-15339"]}
+    },
+    {
+      "name": "Dealer: shuffle",
+      "type": "CitizenDealerShuffle",
+      "when": "Venn, the poker dealer in the `tavern`, shuffles the cards.",
+      "example": {"type": "dealer", "id": "$Venn", "act": "shuffle"},
+      "source": "node/logic/tavern_dealer.js:67, 74, 78",
+      "confirm": {"code": ["node/logic/tavern_dealer.js:29-31", "node/logic/tavern_dealer.js:67", "node/logic/tavern_dealer.js:74", "node/logic/tavern_dealer.js:78", "node/server_functions.js:1808"]}
+    },
+    {
+      "name": "Dealer: say",
+      "type": "CitizenDealerSay",
+      "when": "Venn says a line: while he waits (`idle`, `invite`), or for a hand (`deal`, `allin`, `win`, `split`).",
+      "example": {"type": "dealer", "id": "$Venn", "act": "say", "line": "win.1", "name": "Ranger"},
+      "source": "node/logic/tavern_dealer.js:35-44",
+      "confirm": {"code": ["node/logic/tavern_dealer.js:35-43", "node/logic/tavern_dealer.js:72", "node/logic/tavern_dealer.js:81", "node/logic/tavern_dealer.js:89-99", "node/logic/tavern_poker.js:736", "node/logic/tavern_poker.js:812-813", "node/logic/tavern_poker.js:1040-1045"]}
+    },
+    {
+      "name": "Dealer: mock",
+      "type": "CitizenDealerMock",
+      "when": "Venn deals to the empty seats as a joke.",
+      "example": {"type": "dealer", "id": "$Venn", "act": "mock", "seats": [1, 2, 3, 4]},
+      "source": "node/logic/tavern_dealer.js:73, 77",
+      "confirm": {"code": ["node/logic/tavern_dealer.js:57-64", "node/logic/tavern_dealer.js:73", "node/logic/tavern_dealer.js:77"]}
+    },
+    {
+      "name": "Dealer: flourish",
+      "type": "CitizenDealerFlourish",
+      "when": "Venn shows a card.",
+      "example": {"type": "dealer", "id": "$Venn", "act": "flourish", "card": "Q_hearts"},
+      "source": "node/logic/tavern_dealer.js:79",
+      "confirm": {"code": ["node/logic/tavern_dealer.js:45-48", "node/logic/tavern_dealer.js:79"]}
+    },
+    {
+      "name": "Dealer: emote",
+      "type": "CitizenDealerEmote",
+      "when": "Venn dances.",
+      "example": {"type": "dealer", "id": "$Venn", "act": "emote", "emote": "wiggle", "delay": 1400},
+      "source": "node/logic/tavern_dealer.js:83-84",
+      "confirm": {"code": ["node/logic/tavern_dealer.js:6", "node/logic/tavern_dealer.js:82-84"]}
+    }
+  ],
+  "types": {
+    "CitizenRepair": {
+      "summary": "`citizen`: an NPC repairs a worker monster.",
+      "fields": [
+        {"name": "type", "type": "\"repair\"", "optional": false, "description": "The repair animation."},
+        {"name": "target", "type": "string", "optional": false, "description": "The id of the `mechagnome` monster."},
+        {"name": "x", "type": "number", "optional": false, "description": "The position of the monster."},
+        {"name": "y", "type": "number", "optional": false, "description": "The position of the monster."}
+      ],
+      "example": {"type": "repair", "target": "48213", "x": 16, "y": -120},
+      "confirm": {"code": ["node/server.js:15409"]}
+    },
+    "CitizenLamp": {
+      "summary": "`citizen`: the lamplighter lights a lamp.",
+      "fields": [
+        {"name": "type", "type": "\"lamp\"", "optional": false, "description": "The lamp animation."},
+        {"name": "x", "type": "number", "optional": false, "description": "The position of the NPC."},
+        {"name": "y", "type": "number", "optional": false, "description": "The position of the NPC."}
+      ],
+      "example": {"type": "lamp", "x": -310, "y": 64},
+      "confirm": {"code": ["node/server.js:15458", "node/server.js:15465"]}
+    },
+    "CitizenRouteMarks": {
+      "summary": "`citizen`: Rook marks the way to an NPC in `desertland`.",
+      "fields": [
+        {"name": "type", "type": "\"route_marks\"", "optional": false, "description": "The route animation."},
+        {"name": "destination", "type": "\"transporter\" | \"locksmith\" | \"scrollsmith\"", "optional": false, "description": "The NPC of the request."},
+        {"name": "from", "type": "[number, number]", "optional": false, "description": "`[x, y]` of Rook."},
+        {"name": "to", "type": "[number, number]", "optional": false, "description": "`[x, y]` of the destination NPC."}
+      ],
+      "example": {"type": "route_marks", "destination": "locksmith", "from": [12, -240], "to": [-410, 380]},
+      "confirm": {"code": ["node/server.js:11057-11079", "node/server.js:15331-15339"]}
+    },
+    "CitizenDealerShuffle": {
+      "summary": "`citizen`: the poker dealer shuffles.",
+      "fields": [
+        {"name": "type", "type": "\"dealer\"", "optional": false, "description": "An act of the poker dealer."},
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the dealer NPC."},
+        {"name": "act", "type": "\"shuffle\"", "optional": false, "description": "The act."}
+      ],
+      "example": {"type": "dealer", "id": "$Venn", "act": "shuffle"},
+      "confirm": {"code": ["node/logic/tavern_dealer.js:29-31", "node/logic/tavern_dealer.js:67", "node/server_functions.js:1808"]}
+    },
+    "CitizenDealerSay": {
+      "summary": "`citizen`: the poker dealer says a line.",
+      "fields": [
+        {"name": "type", "type": "\"dealer\"", "optional": false, "description": "An act of the poker dealer."},
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the dealer NPC."},
+        {"name": "act", "type": "\"say\"", "optional": false, "description": "The act."},
+        {"name": "line", "type": "string", "optional": false, "description": "`<pool>.<index>`: an index into the list `G.npcs.pokerdealer[pool]` of the server (design/npcs.js:168-174). The pools are `idle`, `invite`, `deal`, `allin`, `win` and `split`. In the G that clients load, each pool is only its count (for example `idle: 8`): each client shows the line from its own language file."},
+        {"name": "name", "type": "CharacterName", "optional": true, "description": "Only for `win`: the winner of the main pot (node/logic/tavern_poker.js:1045)."}
+      ],
+      "example": {"type": "dealer", "id": "$Venn", "act": "say", "line": "idle.2"},
+      "confirm": {"code": ["node/logic/tavern_dealer.js:29-43", "node/logic/tavern_poker.js:1045", "design/npcs.js:160-175"]}
+    },
+    "CitizenDealerMock": {
+      "summary": "`citizen`: the poker dealer deals to the empty seats.",
+      "fields": [
+        {"name": "type", "type": "\"dealer\"", "optional": false, "description": "An act of the poker dealer."},
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the dealer NPC."},
+        {"name": "act", "type": "\"mock\"", "optional": false, "description": "The act."},
+        {"name": "seats", "type": "integer[]", "optional": false, "description": "The indexes of the empty seats, 0 to 4."}
+      ],
+      "example": {"type": "dealer", "id": "$Venn", "act": "mock", "seats": [1, 2, 3, 4]},
+      "confirm": {"code": ["node/logic/tavern_dealer.js:29-31", "node/logic/tavern_dealer.js:57-64", "node/logic/tavern_dealer.js:73"]}
+    },
+    "CitizenDealerFlourish": {
+      "summary": "`citizen`: the poker dealer shows a card.",
+      "fields": [
+        {"name": "type", "type": "\"dealer\"", "optional": false, "description": "An act of the poker dealer."},
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the dealer NPC."},
+        {"name": "act", "type": "\"flourish\"", "optional": false, "description": "The act."},
+        {"name": "card", "type": "string", "optional": false, "description": "A random card, `<rank>_<suit>` from `G.games.poker`, for example `\"10_spades\"`."}
+      ],
+      "example": {"type": "dealer", "id": "$Venn", "act": "flourish", "card": "Q_hearts"},
+      "confirm": {"code": ["node/logic/tavern_dealer.js:29-31", "node/logic/tavern_dealer.js:45-48", "node/logic/tavern_dealer.js:79"]}
+    },
+    "CitizenDealerEmote": {
+      "summary": "`citizen`: the poker dealer dances.",
+      "fields": [
+        {"name": "type", "type": "\"dealer\"", "optional": false, "description": "An act of the poker dealer."},
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the dealer NPC."},
+        {"name": "act", "type": "\"emote\"", "optional": false, "description": "The act."},
+        {"name": "emote", "type": "\"wiggle\" | \"headwiggle\" | \"joy\" | \"jump\"", "optional": false, "description": "The emote to show."},
+        {"name": "delay", "type": "Milliseconds", "optional": true, "description": "Only after an `idle` line: wait this long (1400 ms) before the emote."}
+      ],
+      "example": {"type": "dealer", "id": "$Venn", "act": "emote", "emote": "wiggle"},
+      "confirm": {"code": ["node/logic/tavern_dealer.js:6", "node/logic/tavern_dealer.js:29-31", "node/logic/tavern_dealer.js:82-84"]}
+    }
+  },
+  "senders": [
+    {"what": "`citizen_repairer_loop` (Patch)", "source": "node/server.js:15376-15445"},
+    {"what": "`citizen_lamplighter_loop` (Wick)", "source": "node/server.js:15458, 15465"},
+    {"what": "The `interaction` handler, `type: \"citizen_route\"` (Rook)", "source": "node/server.js:11056-11079"},
+    {"what": "`tavern_dealer_loop`: an act every 7 to 12 s while a player is near and no hand runs", "source": "node/logic/tavern_dealer.js:51-86"},
+    {"what": "`tavern_dealer_announce`: a hand starts (`deal`), the first all in of a hand (`allin`), the hand ends (`win`, `split`)", "source": "node/logic/tavern_poker.js:736, 813, 1043-1045"}
+  ]
+}

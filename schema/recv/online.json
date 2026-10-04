@@ -1,0 +1,20 @@
+{
+  "event": "online",
+  "to": "each character on this server that has the account of the new character in its friend list",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "CharacterName", "optional": false, "description": "The character of a friend that logged in."},
+      {"name": "server", "type": "string", "optional": false, "description": "The server of that character: the region and the server name, for example `\"EU I\"` or `\"US PVP\"`."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:451-459", "adventure_functions.js:1541-1557", "node/server.js:11956-11960"], "note": "`server` is `server_regions[region] + \" \" + server_name`"}
+  },
+  "example": {"name": "Wizard", "server": "EU I"},
+  "senders": [
+    {
+      "what": "`notify_friends_emit`. The login server runs `notify_friends` (shared code in adventure_functions.js). It runs this function on each server that has online friends, through `server_eval_safe`.",
+      "source": "node/server_functions.js:451-459"
+    },
+    {"what": "The login of a character (the `auth` handler) calls `notify_friends`, when the account has friends and the character is not private.", "source": "node/server.js:11956-11960"},
+    {"what": "`notify_friends`: it finds the online characters whose friend list has the account.", "source": "adventure_functions.js:1541-1557"}
+  ]
+}

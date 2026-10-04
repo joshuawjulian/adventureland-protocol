@@ -1,0 +1,19 @@
+{
+  "event": "notice",
+  "to": "everyone: every socket on the server (`broadcast`), also sockets with no character",
+  "payload": {
+    "fields": [
+      {"name": "message", "type": "string", "optional": false, "description": "The English text. From the admin `notice` handler: the `message` of the request, with no check of its type."},
+      {"name": "phrase", "type": "string", "optional": true, "description": "The phrase key. Absent on an admin notice."},
+      {"name": "phrase_args", "type": "object", "optional": true, "description": "The values for the phrase. Absent on an admin notice."}
+    ],
+    "confirm": {"code": ["node/server.js:13161-13166", "node/server.js:736", "node/server_functions.js:2499-2502", "node/server_functions.js:2510-2513", "node/server_functions.js:2557", "node/server_functions.js:2564", "node/server_functions.js:3041", "node/server_functions.js:3495-3504", "languages/index.js:256-258"], "note": "`broadcast` sets `color: \"orange\"` on the object only after the emit (node/server_functions.js:3502-3504), so clients never get it."}
+  },
+  "example": {"message": "Goo Brawl has begun!", "phrase": "server.notice.goo_brawl_has_begun", "phrase_args": {}},
+  "senders": [
+    {"what": "The admin `notice` handler (`pass` must be the master key): `{message}` only.", "source": "node/server.js:13161-13166"},
+    {"what": "`live_reload` failed.", "source": "node/server.js:736"},
+    {"what": "An event monster: the event is over, or the monster was defeated.", "source": "node/server_functions.js:2497-2510"},
+    {"what": "Goo Brawl: it is about to start, it has begun, it is over.", "source": "node/server_functions.js:2557, 2564, 3041"}
+  ]
+}

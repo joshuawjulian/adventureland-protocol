@@ -1,0 +1,117 @@
+{
+  "event": "merrit_status",
+  "to": "you: only the socket of the character",
+  "payload": {"type": "MerritStatus | MerritStatusError", "confirm": {"code": ["node/logic/market_patron_runtime.js:65-71", "node/logic/market_patron_runtime.js:72-88", "node/logic/market_patron_runtime.js:231", "node/logic/market_patron_runtime.js:276-284", "node/logic/market_patron_runtime.js:317-323", "node/server.js:9213-9216"]}},
+  "variants": [
+    {
+      "name": "Status",
+      "type": "MerritStatus",
+      "when": "The Merrit loop, every 15 s while your stand is open; and after a gift. `reasons` is empty when a visit can come.",
+      "example": {"reasons": [{"code": "warming", "remaining_ms": 84210}], "next_at": 1791105324210, "last": null, "server_now": 1791105240000},
+      "source": "node/logic/market_patron_runtime.js:276-284",
+      "confirm": {"code": ["node/logic/market_patron_runtime.js:273-284", "node/logic/market_patron_runtime.js:42-64", "node/logic/market_patron_runtime.js:228-231", "node/logic/market_patron_runtime.js:65-71"]}
+    },
+    {
+      "name": "Info",
+      "type": "MerritStatus",
+      "has": ["account_last"],
+      "when": "The reply to `interaction` with `type: \"merrit_info\"`. It adds `account_last`. The server ignores a second request within 3 s.",
+      "reply_to": ["interaction"],
+      "example": {
+        "reasons": [
+          {"code": "listing"},
+          {"code": "cooldown", "remaining_ms": 1520400}
+        ],
+        "next_at": 1791106760400,
+        "last": null,
+        "server_now": 1791105240000,
+        "account_last": {
+          "id": "pQ7rT2vW9xY3zA5bC8dE1fG4hJ6kL0mN",
+          "at": 1791101360400,
+          "character": "CH_5818821692620800",
+          "name": "Merchant",
+          "item": "marketparcel",
+          "quantity": 1,
+          "shells": 0,
+          "reason": "Your shop stayed stocked for two minutes and left the neighbors room.",
+          "reason_phrase": "server.merrit.receipt",
+          "reason_phrase_args": {}
+        }
+      },
+      "source": "node/logic/market_patron_runtime.js:72-83",
+      "confirm": {"code": ["node/logic/market_patron_runtime.js:72-83", "node/logic/market_patron_runtime.js:65-71", "node/server.js:11052-11055"]}
+    },
+    {
+      "name": "Stand",
+      "type": "MerritStatus",
+      "has": ["stand_opened"],
+      "when": "The `merchant` handler opened or closed the stand, or changed the item. It adds `stand_opened`.",
+      "reply_to": ["merchant"],
+      "example": {"reasons": [{"code": "warming", "remaining_ms": 120000}], "next_at": 1791105360000, "last": null, "server_now": 1791105240000, "stand_opened": true},
+      "source": "node/server.js:9213-9216",
+      "confirm": {"code": ["node/server.js:9197-9217", "node/logic/market_patron_runtime.js:65-71"]}
+    },
+    {
+      "name": "Unreachable",
+      "type": "MerritStatus",
+      "when": "Merrit chose you but found no path to your stand. `reasons` is only `[{code: \"unreachable\"}]`; `next_at`, `last` and `server_now` are of the real status (you qualified, so `next_at` is usually in the past). The next try comes after 30 s.",
+      "example": {"reasons": [{"code": "unreachable"}], "next_at": 1791105180000, "last": null, "server_now": 1791105240000},
+      "source": "node/logic/market_patron_runtime.js:317-323",
+      "confirm": {"code": ["node/logic/market_patron_runtime.js:317-323", "node/logic/market_patron_runtime.js:65-71"]}
+    },
+    {
+      "name": "Error",
+      "type": "MerritStatusError",
+      "when": "The reply to `merrit_info` when the read of the account fails.",
+      "reply_to": ["interaction"],
+      "example": {"reasons": [{"code": "unavailable"}]},
+      "source": "node/logic/market_patron_runtime.js:86",
+      "confirm": {"code": ["node/logic/market_patron_runtime.js:84-87"]}
+    }
+  ],
+  "types": {
+    "MerritStatus": {
+      "summary": "Why Merrit, the market patron NPC, does not visit your stand now, and when the next visit can come.",
+      "fields": [
+        {"name": "reasons", "type": "MerritStatusReason[]", "optional": false, "description": "Each condition that blocks a visit now. Empty when a visit can come."},
+        {"name": "next_at", "type": "number", "optional": false, "description": "The earliest time of the next visit, in ms since the Unix epoch. It is the larger of the end of the cooldown and the end of `warming`. `0` when the server knows neither."},
+        {"name": "last", "type": "MerritStatusReceipt | null", "optional": false, "description": "The receipt of the last gift to this character (`player.p.merrit_receipt`), or `null` (node/logic/market_patron_runtime.js:62)."},
+        {"name": "server_now", "type": "number", "optional": false, "description": "The time of the server when it built the status, in ms since the Unix epoch."},
+        {"name": "account_last", "type": "MerritStatusReceipt | null", "optional": true, "description": "Only in the reply to `merrit_info`: the last gift to any character of the account (`owner.info.merrit`), or `null` (node/logic/market_patron_runtime.js:77, 82)."},
+        {"name": "stand_opened", "type": "boolean", "optional": true, "description": "Only after the `merchant` handler: `true` when the stand is open now."}
+      ],
+      "example": {"reasons": [{"code": "warming", "remaining_ms": 84210}], "next_at": 1791105324210, "last": null, "server_now": 1791105240000},
+      "source": "node/logic/market_patron_runtime.js:65-71",
+      "confirm": {"code": ["node/logic/market_patron_runtime.js:42-71", "node/logic/market_patron_runtime.js:82", "node/server.js:9215"]}
+    },
+    "MerritStatusError": {
+      "summary": "The `merrit_status` that the server sends when it cannot read the account.",
+      "fields": [
+        {"name": "reasons", "type": "MerritStatusReason[]", "optional": false, "description": "Always `[{code: \"unavailable\"}]`."}
+      ],
+      "example": {"reasons": [{"code": "unavailable"}]},
+      "source": "node/logic/market_patron_runtime.js:86",
+      "confirm": {"code": ["node/logic/market_patron_runtime.js:86"]}
+    },
+    "MerritStatusReason": {
+      "summary": "One condition that blocks a visit of Merrit.",
+      "description": "The server adds the codes in this order: `npc`, `stand_close` and `stand_front` (one per blocker), `area`, `closed`, `listing`. Then `warming`, only when the list is empty. Then `cooldown` and `inventory`. `unreachable` and `unavailable` replace the list. The distances come from `G.npcs.citizen22.market` (node/logic/market_patron.js:29-68).",
+      "fields": [
+        {"name": "code", "type": "\"npc\" | \"stand_close\" | \"stand_front\" | \"area\" | \"closed\" | \"listing\" | \"warming\" | \"cooldown\" | \"inventory\" | \"unreachable\" | \"unavailable\"", "optional": false, "description": "`npc`: a fixed NPC is within `npc_clearance`. `stand_close`: an older stand is within `stand_clearance`. `stand_front`: an older stand is in front (within `front_width` sideways and `front_clearance` up or down). `area`: the stand is not in a market area of `main`. `closed`: no open stand (or dead, moving, disconnected, in the bank). `listing`: no item on the stand that qualifies. `warming`: the stand has not stayed in place for `settle_ms`. `cooldown`: the account got a gift less than `hour_ms` ago. `inventory`: no space for a `marketparcel`. `unreachable`: Merrit found no path. `unavailable`: the server could not read the account."},
+        {"name": "name", "type": "string", "optional": true, "description": "Only for `npc`, `stand_close` and `stand_front`: the name of the NPC or of the character with the other stand."},
+        {"name": "distance", "type": "number", "optional": true, "description": "Only for `npc`, `stand_close` and `stand_front`: the distance to that NPC or stand."},
+        {"name": "remaining_ms", "type": "Milliseconds", "optional": true, "description": "Only for `warming` and `cooldown`: the time until that condition ends."}
+      ],
+      "example": {"code": "stand_close", "name": "Merchant2", "distance": 7.2},
+      "source": "node/logic/market_patron.js:29-68",
+      "confirm": {"code": ["node/logic/market_patron.js:29-47", "node/logic/market_patron.js:52-69", "node/logic/market_patron_runtime.js:58-60", "node/logic/market_patron_runtime.js:86", "node/logic/market_patron_runtime.js:322"]}
+    }
+  },
+  "senders": [
+    {"what": "The Merrit loop: every 15 s to each character in the instance with an open stand.", "source": "node/logic/market_patron_runtime.js:276-284"},
+    {"what": "`market_patron_info`: the `interaction` handler with `type: \"merrit_info\"`.", "source": "node/logic/market_patron_runtime.js:72-88"},
+    {"what": "The `merchant` handler, when the stand or its item changes.", "source": "node/server.js:9213-9216"},
+    {"what": "`market_patron_finish`: right after `merrit_gift`.", "source": "node/logic/market_patron_runtime.js:231"},
+    {"what": "The Merrit loop: no path to the chosen stand.", "source": "node/logic/market_patron_runtime.js:317-323"}
+  ]
+}

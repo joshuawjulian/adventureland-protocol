@@ -1,0 +1,175 @@
+{
+  "event": "say",
+  "source": "node/server.js:5092-5125",
+  "request": {
+    "fields": [
+      {"name": "message", "type": "string", "optional": false, "coerce": "`typeof message !== \"string\"` fails with `invalid`. Then `strip_string(message).substr(0, 1200)`: the server removes control characters and combining marks (node/server_functions.js:5654-5662)", "description": "The chat text. It must not be empty after the server cleans it."},
+      {"name": "party", "type": "any", "optional": true, "coerce": "tested as true or false", "description": "Selects the path. If truthy, the message goes to your party, and the server ignores `name`. If falsy, `name` selects a private message, and no `name` a public message."},
+      {"name": "code", "type": "any", "optional": true, "coerce": "tested as true or false", "description": "If truthy, the message counts as sent from code: it needs 15 s since your last message."}
+    ],
+    "others": "ignored",
+    "example": {"message": "hello"}, "confirm": {"code": ["node/server.js:5097-5099", "node/server.js:5109", "node/server.js:5115-5116", "node/server_functions.js:5654-5664"]}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The message went out. For a private message, the reply does not wait for the delivery to another server.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"say\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "say"},
+      "source": "node/server.js:5124", "confirm": {"code": ["node/server.js:5124", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character, or your character has the `mute` condition.", "code": "muted", "source": "node/server.js:5094-5096", "confirm": {"code": ["node/server.js:5093-5096", "node/server_functions.js:3393-3419"]}},
+      {"when": "The payload is `null`, or `message` is not a string.", "code": "invalid", "source": "node/server.js:5097", "confirm": {"code": ["node/server.js:5097", "node/server_functions.js:3393-3419"]}},
+      {"when": "`code` is truthy and your last message was less than 15 s ago.", "code": "chat_slowdown", "source": "node/server.js:5099-5101", "confirm": {"code": ["node/server.js:5099-5101", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your last message was less than 400 ms ago.", "code": "chat_slowdown", "source": "node/server.js:5102-5104", "confirm": {"code": ["node/server.js:5102-5104", "node/server_functions.js:3393-3419"]}},
+      {"when": "The message is empty after the server cleans it.", "code": "invalid", "source": "node/server.js:5105-5107", "confirm": {"code": ["node/server.js:5098", "node/server.js:5105-5107", "node/server_functions.js:3393-3419"]}},
+      {"branch": true, "when": "The server records the time of the message (`last_say`), then runs the checks of the variant. Each failure here also counts for the 400 ms limit.", "source": "node/server.js:5108"}
+    ]
+  },
+  "also": [
+    {"event": "player", "to": "you", "when": "Your character had the `typing` condition. The server removes it, before the `game_response`.", "summary": "Your character without `s.typing`.", "source": "node/server.js:5120-5123", "confirm": {"code": ["node/server.js:5120-5123", "node/server.js:4550-4594"]}}
+  ],
+  "variants": {
+    "key": "party",
+    "list": [
+      {
+        "value": true,
+        "name": "Party",
+        "when": "`party` is truthy: a party message.",
+        "request": {
+          "fields": [],
+          "example": {"message": "pull now", "party": true}, "confirm": {"code": ["node/server.js:5109-5113"]}
+        },
+        "failures": {
+          "rows": [
+            {"when": "You are not in a party. The server records the time of the message before this check, so it counts for the 400 ms limit.", "code": "not_in_a_party", "source": "node/server.js:5108-5112", "confirm": {"code": ["node/server.js:5108-5112", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "partym",
+            "to": "party",
+            "when": "Each member of your party on this server, you too.",
+            "fields": [
+              {"name": "owner", "type": "CharacterName", "optional": false, "description": "The sender."},
+              {"name": "message", "type": "string", "optional": false, "description": "The cleaned message."},
+              {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the sender (the name)."},
+              {"name": "p", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"owner": "MyMage", "message": "pull now", "id": "MyMage", "p": true},
+            "source": "node/server.js:5112", "confirm": {"code": ["node/server.js:5113", "node/server_functions.js:3553-3570"]}
+          }
+        ],
+        "order": [
+          "`partym` to each member",
+          "`player` to you, only if you had the `typing` condition",
+          "`game_response` `data` to you"
+        ]
+      },
+      {
+        "name": "Private",
+        "match": "`party` is falsy and `name` is truthy",
+        "when": "A private message to the character `name`.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "CharacterName", "optional": false, "coerce": "tested as true or false, then used as a name", "description": "The character that gets the message. It can be on another server."}
+          ],
+          "example": {"message": "hello", "name": "SomePlayer"}, "confirm": {"code": ["node/server.js:5115-5116", "node/logic/chat.js:75-76"]}
+        },
+        "responses": [
+          {
+            "name": "Private copy",
+            "event": "pm",
+            "when": "A private message (`name`): at once, before the `game_response`. `xserver: true` when the target is not on this server.",
+            "fields": [
+              {"name": "owner", "type": "CharacterName", "optional": false, "description": "You, the sender."},
+              {"name": "to", "type": "CharacterName", "optional": false, "description": "The `name` of the request."},
+              {"name": "message", "type": "string", "optional": false, "description": "The cleaned message."},
+              {"name": "id", "type": "CharacterName", "optional": false, "description": "Your id (your name)."},
+              {"name": "xserver", "type": "true", "optional": true, "description": "The target is not on this server."}
+            ],
+            "example": {"owner": "MyMage", "to": "SomePlayer", "message": "hello", "id": "MyMage", "xserver": true},
+            "source": "node/logic/chat.js:76-84", "confirm": {"code": ["node/logic/chat.js:75-84"]}
+          },
+          {
+            "name": "Private failed",
+            "event": "pm",
+            "when": "Later, after the `game_response`: no character with the name `name` exists. The message went nowhere.",
+            "extends": "LocalizedText",
+            "fields": [
+              {"name": "owner", "type": "CharacterName", "optional": false, "description": "You, the sender."},
+              {"name": "to", "type": "CharacterName", "optional": false, "description": "The `name` of the request."},
+              {"name": "id", "type": "CharacterName", "optional": false, "description": "Your id (your name)."},
+              {"name": "xserver", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"owner": "MyMage", "to": "Nobody", "id": "MyMage", "xserver": true, "message": "(FAILED)", "phrase": "server.pm.delivery_failed", "phrase_args": {}},
+            "source": "node/logic/chat.js:86-96", "confirm": {"code": ["node/logic/chat.js:86-97", "languages/index.js:256-258"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "`name` is your own character.", "code": "invalid", "source": "node/server.js:5115", "confirm": {"code": ["node/server.js:5115", "node/server_functions.js:3393-3419"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "pm",
+            "to": "the target of a private message",
+            "when": "The target is on this server: at once. On another server: that server sends it, with `xserver: true` and `id` set to the sender name.",
+            "example": {"owner": "MyMage", "message": "hello", "id": "MyMage"},
+            "summary": "`{owner, message, id}`.",
+            "source": "node/logic/chat.js:85, 102-107", "confirm": {"code": ["node/logic/chat.js:85", "node/logic/chat.js:99-110"], "note": "From another server the payload also has `xserver: true` (node/logic/chat.js:106)"}
+          }
+        ],
+        "order": [
+          "`pm` to you, then `pm` to the target if it is on this server",
+          "`player` to you, only if you had the `typing` condition",
+          "`game_response` `data` to you",
+          "later: a second `pm` with `message: \"(FAILED)\"` to you if the character does not exist"
+        ],
+        "source": "node/server.js:5114-5119; node/logic/chat.js:75-110"
+      },
+      {
+        "name": "Public",
+        "match": "`party` and `name` are falsy",
+        "when": "A public message to everyone on the server.",
+        "request": {
+          "fields": [],
+          "example": {"message": "hello"}, "confirm": {"code": ["node/server.js:5114-5116", "node/logic/chat.js:114-115"]}
+        },
+        "also": [
+          {
+            "event": "chat_log",
+            "to": "everyone on the server (you too)",
+            "when": "Before the `game_response`.",
+            "fields": [
+              {"name": "owner", "type": "CharacterName", "optional": false, "description": "The sender."},
+              {"name": "message", "type": "string", "optional": false, "description": "The cleaned message."},
+              {"name": "id", "type": "CharacterName", "optional": false, "description": "The id of the sender (the name)."},
+              {"name": "p", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"owner": "MyMage", "message": "hello", "id": "MyMage", "p": true},
+            "source": "node/logic/chat.js:115", "confirm": {"code": ["node/logic/chat.js:115"]}
+          }
+        ],
+        "order": [
+          "`chat_log` to everyone",
+          "`player` to you, only if you had the `typing` condition",
+          "`game_response` `data` to you"
+        ],
+        "source": "node/logic/chat.js:114-116"
+      }
+    ]
+  }
+}

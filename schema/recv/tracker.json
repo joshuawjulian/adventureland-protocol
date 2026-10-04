@@ -1,0 +1,36 @@
+{
+  "event": "tracker",
+  "to": "you: only the socket that sent the request",
+  "payload": {
+    "fields": [
+      {"name": "monsters", "type": "Record<string, integer>", "optional": false, "description": "Monster type to the kills of this character (`player.p.stats.monsters`)."},
+      {"name": "monsters_diff", "type": "Record<string, number>", "optional": false, "description": "Monster type to a score correction (`player.p.stats.monsters_diff`). Each kill adds `score - 1` from `calculate_monster_score` (node/server.js:2662-2714), so the value can be negative and can have a fraction. The tracker count is `monsters + monsters_diff`."},
+      {"name": "exchanges", "type": "Record<string, integer>", "optional": false, "description": "Drop table name to the exchanges of this character (`player.p.stats.exchanges`). For an item with levels (upgrade or compound), the name has the level as a suffix, for example `\"armorbox0\"`."},
+      {"name": "maps", "type": "Record<string, DropRow[]>", "optional": false, "description": "Map name to the drop table of the map (`D.drops.maps`). It also has the keys `global` and `global_static`."},
+      {"name": "tables", "type": "Record<string, DropRow[]>", "optional": false, "description": "Table name to drop table: each exchange table (`G.items[name].e`), and each table that an `\"open\"` entry of any table in this payload names. Upgradable and compoundable items have one table for each level: `<name><level>`."},
+      {"name": "max", "type": "TrackerMax", "optional": false, "description": "The best values of all characters of the account (`player.max_stats`)."},
+      {"name": "monsters_home_server", "type": "Record<string, DropRow[]>", "optional": false, "description": "Monster type to the extra drops on the home server (`D.drops.monsters_home_server`). This is a drop table, not a kill count."},
+      {"name": "drops", "type": "Record<string, DropRow[]>", "optional": false, "description": "Monster type to the drop table of the monster (`D.drops.monsters`), for every monster."},
+      {"name": "drops_home", "type": "Record<string, DropRow[]>", "optional": false, "description": "The same object as `monsters_home_server`."},
+      {"name": "global", "type": "DropRow[]", "optional": true, "description": "The global drop table (`D.drops.maps.global`): every kill rolls it. Present when the table exists. The live `drops.js` has it."},
+      {"name": "global_static", "type": "DropRow[]", "optional": true, "description": "The second global table (`D.drops.maps.global_static`). Present when the table exists, even when it is empty."}
+    ],
+    "confirm": {"code": ["node/server.js:5440-5522", "node/server.js:1462-1469", "node/server.js:11663-11677", "node/server.js:11757", "node/server_functions.js:4481-4489"], "note": "`maps`, `tables`, `drops` and the global tables are `D.drops`, from design/drops.js; every row in that file has one of the forms of `DropRow`."}
+  },
+  "example": {
+    "monsters": {"goo": 4120, "bee": 812},
+    "monsters_diff": {"goo": -96.8, "bee": 0},
+    "exchanges": {"gem0": 14},
+    "maps": {"winterland": [[0.0001, "wattire"], [0.0005, "open", "statring"]], "global": [[0.0006666666666666666, "anniversarygift"]], "global_static": []},
+    "tables": {"statring": [[1, "intring"], [1, "vitring"], [1, "dexring"], [1, "strring"]]},
+    "max": {"monsters": {"goo": [9480, "Wizard"]}, "level": 72},
+    "monsters_home_server": {"franky": [[1, "bandages", 10], [0.005, "ectoplasm"]]},
+    "drops": {"goo": [[1.25e-07, "shells", 50], [0.001, "gslime"]]},
+    "drops_home": {"franky": [[1, "bandages", 10], [0.005, "ectoplasm"]]},
+    "global": [[0.0006666666666666666, "anniversarygift"]],
+    "global_static": []
+  },
+  "senders": [
+    {"what": "The `tracker` handler. It sends nothing when the character has no `tracker` and no `supercomputer` in the inventory.", "source": "node/server.js:5440-5522"}
+  ]
+}

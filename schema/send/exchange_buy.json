@@ -1,0 +1,78 @@
+{
+  "event": "exchange_buy",
+  "source": "node/server.js:6682-6740",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"2\"` also works. Any other value reads an empty slot", "description": "The slot of the stack of tokens (an item of type `token`: `funtoken`, `monstertoken`, `pvptoken` or `friendtoken`)."},
+      {"name": "name", "type": "string", "optional": false, "description": "What to buy: a key of `G.tokens[token]`. The key is an `ItemName`, or `<item>-<data>`: then the new item is `<item>` with `data: \"<data>\"` (for example `\"cxjar-xgravestone2\"`)."},
+      {"name": "q", "type": "integer", "optional": false, "coerce": "compared with `!=` to the quantity of the stack, so `\"140\"` also matches 140", "description": "A safety check: the quantity of the token stack now. If it does not match, the server refuses. This stops a second buy on a stack that changed."}
+    ],
+    "others": "ignored",
+    "example": {"num": 2, "name": "rabbitsfoot", "q": 140},
+    "confirm": {"code": ["node/server.js:6685", "node/server.js:6695", "node/server.js:6702", "node/server.js:6712-6735"], "note": "The handler reads `num`, `name` and `q`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. The server removes the price in tokens and adds the item. A price below 1 means that 1 token buys `parseInt(1 / price)` units.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"exchange_buy\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot that got the item."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its `exchange_buy` code event."}
+      ],
+      "example": {"num": 9, "cevent": true, "success": true, "response": "data", "place": "exchange_buy"},
+      "source": "node/server.js:6739",
+      "confirm": {"code": ["node/server.js:6718", "node/server.js:6734", "node/server.js:6739", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "exchange_buy",
+    "rows": [
+      {"when": "No character. The handler reads `player.items` before it checks `player`, and throws.", "replies": [
+        {"event": "game_error", "example": "ERROR!", "note": "the shared error step"}
+      ], "source": "node/server.js:6684-6686",
+ "confirm": {"code": ["node/server.js:6684-6685", "node/server.js:4947-4966"], "note": "`player.items` on `undefined` throws; the wrapper adds 16 to the call cost and sends `game_error` `\"ERROR!\"` (or `limitdcreport` and a disconnect over the limit)"}},
+      {"when": "The character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:6687-6689", "confirm": {"code": ["node/server.js:6687-6689", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot is empty, or the item is not of type `token`.", "code": "invalid", "source": "node/server.js:6690-6692", "confirm": {"code": ["node/server.js:6686", "node/server.js:6690-6692", "node/server_functions.js:3393-3419"]}},
+      {"when": "`name` is not a key of `G.tokens[token]`.", "code": "invalid", "source": "node/server.js:6695-6697", "confirm": {"code": ["node/server.js:6695-6697", "node/server_functions.js:3393-3419"]}},
+      {"when": "The token stack has the lock `l`.", "code": "item_locked", "source": "node/server.js:6698-6700", "confirm": {"code": ["node/server.js:6698-6700", "node/server_functions.js:3393-3419"]}},
+      {"when": "`q` is not the quantity of the stack.", "code": "safety_check", "source": "node/server.js:6702-6704", "confirm": {"code": ["node/server.js:6702-6704", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are more than `B.sell_dist` (400 px) from the NPC of the token on `main`: `G.items[token].npc` (`monsterhunter` for `monstertoken`), else `<token>s`. A character with a `computer` passes this check.", "code": "distance", "source": "node/server.js:6693, 6705-6707", "confirm": {"code": ["node/server.js:6693", "node/server.js:6705-6707", "node/server.js:220", "node/server_functions.js:3393-3419"]}},
+      {"when": "The stack has fewer tokens than the price.", "code": "exchange_notenough", "source": "node/server.js:6708-6710", "confirm": {"code": ["node/server.js:6708-6710", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item does not fit in the inventory, and the token stack does not become empty.", "code": "inventory_full", "source": "node/server.js:6714-6716, 6730-6732", "confirm": {"code": ["node/server.js:6712-6716", "node/server.js:6730-6732", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "upgrade",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds the token NPC.",
+      "fields": [
+        {"name": "type", "type": "string", "optional": false, "description": "The token name plus `s`, for example `\"funtokens\"` or `\"monstertokens\"`."},
+        {"name": "success", "type": "1", "optional": false, "description": "Always 1."}
+      ],
+      "example": {"type": "funtokens", "success": 1},
+      "source": "node/server.js:6737",
+      "confirm": {"code": ["node/server.js:6693", "node/server.js:6737", "node/server_functions.js:3744-3791"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true`. `items` and `esize` show the purchase.",
+      "source": "node/server.js:6738",
+      "confirm": {"code": ["node/server.js:6738", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`upgrade` to clients near the NPC",
+    "`player` to you",
+    "`game_response` `data` to you"
+  ]
+}

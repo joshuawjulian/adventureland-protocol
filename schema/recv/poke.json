@@ -1,0 +1,14 @@
+{
+  "event": "poke",
+  "to": "everyone near the character that poked (`xy_emit`): players and observers",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "any", "optional": true, "description": "The `name` of the request, unchanged. The server does not check it, so it can be any value, also a name that is not in view. Absent when the request has no `name` (the value is `undefined`, which JSON leaves out)."},
+      {"name": "level", "type": "1 | 2 | 3 | 4", "optional": false, "description": "The strength, from the level of the `poker` gloves: 1 below +8, 2 at +8, 3 at +9, 4 at +10 and more."},
+      {"name": "who", "type": "CharacterName", "optional": false, "description": "The character that poked."}
+    ],
+    "confirm": {"code": ["node/server.js:9554-9572", "node/server_functions.js:3744-3790"]}
+  },
+  "example": {"name": "Ranger", "level": 2, "who": "Wizard"},
+  "senders": [{"what": "The `poke` handler: the character wears the `poker` gloves and poked fewer than 50 times in this session", "source": "node/server.js:9554-9572"}]
+}

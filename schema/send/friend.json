@@ -1,0 +1,384 @@
+{
+  "event": "friend",
+  "source": "node/server.js:12027-12190",
+  "request": {
+    "fields": [
+      {"name": "event", "type": "\"request\" | \"accept\" | \"unfriend\"", "optional": false, "coerce": "compared with `==`", "description": "The action. Another value gets only the `in_progress` reply."}
+    ],
+    "others": "ignored",
+    "example": {"event": "unfriend"},
+    "confirm": {"code": ["node/server.js:12033", "node/server.js:12045", "node/server.js:12118", "node/server.js:12189"], "note": "Only `event` is read here; each variant reads its own fields"}
+  },
+  "responses": [
+    {
+      "name": "In progress",
+      "event": "game_response",
+      "code": "data",
+      "when": "At once, for `accept` (when the request exists), for `unfriend`, and for an unknown `event`. The database change of `accept` and `unfriend` runs after this reply. It does not carry `request_id`.",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"friend\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the change is not done yet."},
+        {"name": "in_progress", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": false, "in_progress": true, "response": "data", "place": "friend"},
+      "source": "node/server.js:12189",
+      "confirm": {"code": ["node/server.js:12189", "node/server_functions.js:3421-3446"], "note": "`success_response` keeps `success: false` (it only sets `true` when `success !== false`)"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "friend",
+    "intro": "The `accept` and `unfriend` failures marked \"Later\" come after the `in_progress` reply, when the database work ends. They have no `place`, and `friend_failed` also has no `failed`. If you disconnect first, the server sends nothing.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12029-12031", "confirm": {"code": ["node/server.js:12029-12031"]}}
+    ]
+  },
+  "variants": {
+    "key": "event",
+    "list": [
+      {
+        "value": "request",
+        "when": "Asks a character on this server to be friends. The server keeps the request until the other character accepts it.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "CharacterName", "optional": false, "coerce": "none: `data.name || \"\"`, used as a key of `name_to_id`", "description": "The exact name of a character online on this server."}
+          ],
+          "example": {"event": "request", "name": "Ranger"},
+          "confirm": {"code": ["node/server.js:12034"]}
+        },
+        "responses": [
+          {
+            "name": "Request sent",
+            "event": "game_response",
+            "code": "friend_rsent",
+            "when": "The request is stored, and the other character got `friend` `{event: \"request\"}`.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"friend_rsent\"", "optional": false, "description": "The code."},
+              {"name": "place", "type": "\"friend\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"success": true, "response": "friend_rsent", "place": "friend"},
+            "source": "node/server.js:12041-12043",
+            "confirm": {"code": ["node/server.js:12041-12043", "node/server_functions.js:3421-3446"]}
+          },
+          {
+            "name": "Already friends",
+            "event": "game_response",
+            "code": "friend_already",
+            "when": "The account of the other character is in your `friends` already, or it is your own account. Nothing changes. The reply has `success: true`, not `failed`.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {"name": "response", "type": "\"friend_already\"", "optional": false, "description": "The code."},
+              {"name": "place", "type": "\"friend\"", "optional": false, "description": "The request."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+            ],
+            "example": {"success": true, "response": "friend_already", "place": "friend"},
+            "source": "node/server.js:12038-12040",
+            "confirm": {"code": ["node/server.js:12038-12040", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "No character with that `name` is online on this server.", "code": "friend_rleft", "source": "node/server.js:12034-12037", "confirm": {"code": ["node/server.js:12034-12037", "node/server_functions.js:3393-3419"]}},
+            {"when": "The account of the other character is in your `friends` already, or it is your own account. Nothing changes.", "see": "Already friends", "source": "node/server.js:12038-12040", "confirm": {"code": ["node/server.js:12038-12040", "node/server_functions.js:3421-3446"]}}
+          ]
+        },
+        "also": [
+          {
+            "event": "friend",
+            "to": "the other character",
+            "when": "Success, before your `friend_rsent`.",
+            "fields": [
+              {"name": "event", "type": "\"request\"", "optional": false, "description": "A friend request."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "Your name. Send it back as `name` of `accept`."}
+            ],
+            "example": {"event": "request", "name": "Wizard"},
+            "source": "node/server.js:12042",
+            "confirm": {"code": ["node/server.js:12042"]}
+          }
+        ],
+        "order": ["`friend` `{event: \"request\"}` to the other character", "`game_response` `friend_rsent` to you"]
+      },
+      {
+        "value": "accept",
+        "when": "Accepts a friend request that `name` sent to you. The server adds each account to the `friends` of the other, after the `in_progress` reply.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "CharacterName", "optional": false, "coerce": "none: part of the key `name + \"-\" + your name` of the open requests", "description": "The exact name of the character that sent the request (the `name` of the `friend` `{event: \"request\"}` event)."},
+            {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. With it, the server sends `friend_complete` on success and copies `request_id`, `name` and `cevent` into the later failures. Without it, the success has no reply to you, and the server does not update the `friends` of your character itself: the `friend` `{event: \"new\"}` event carries the change."}
+          ],
+          "example": {"event": "accept", "name": "Ranger", "request_id": "r7"},
+          "confirm": {"code": ["node/server.js:12046-12058", "node/server.js:12101-12107"]}
+        },
+        "responses": [
+          {
+            "name": "Friend complete",
+            "event": "game_response",
+            "code": "friend_complete",
+            "when": "Later: both accounts have the other in `friends`. Only with `request_id`.",
+            "with_request_id": {
+              "fields": [
+                {"name": "response", "type": "\"friend_complete\"", "optional": false, "description": "The code. There is no `place`."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "friends", "type": "string[]", "optional": false, "description": "The new friend list of your account: account ids."},
+                {"name": "name", "type": "any", "optional": false, "description": "The `name` from the request."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` from the request."},
+                {"name": "cevent", "type": "\"friend_complete\"", "optional": false, "description": "Tells the official client to fire its code event."}
+              ],
+              "example": {"response": "friend_complete", "success": true, "friends": ["US_5818821692620800"], "name": "Ranger", "request_id": "r7", "cevent": "friend_complete"}
+            },
+            "without_request_id": {"none": true},
+            "source": "node/server.js:12046-12055, 12102-12107",
+            "confirm": {"code": ["node/server.js:12046-12055", "node/server.js:12101-12107"], "note": "Without `request_id` the success sends nothing to you (node/server.js:12102)"}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {"when": "No open request from `name` to you. A request is open from `request` until the first `accept` of it.", "code": "friend_expired", "source": "node/server.js:12056-12058, 12116", "confirm": {"code": ["node/server.js:12056-12058", "node/server.js:12116", "node/server_functions.js:3393-3419"]}},
+            {
+              "when": "Later: an account is not in the database.",
+              "code": "friend_failed",
+              "with_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"nouser\"", "optional": false, "description": "Why."},
+                  {"name": "name", "type": "any", "optional": false, "description": "The `name` from the request.", "example": "Ranger"},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` from the request.", "example": "r7"},
+                  {"name": "cevent", "type": "\"friend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+                ]
+              },
+              "without_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"nouser\"", "optional": false, "description": "Why."}
+                ]
+              },
+              "source": "node/server.js:12063-12067",
+              "confirm": {"code": ["node/server.js:12063-12067", "node/server.js:12046-12055"]}
+            },
+            {
+              "when": "Later: an account has `server` set (a character of it is in the bank).",
+              "code": "friend_failed",
+              "with_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"bank\"", "optional": false, "description": "Why."},
+                  {"name": "name", "type": "any", "optional": false, "description": "The `name` from the request.", "example": "Ranger"},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` from the request.", "example": "r7"},
+                  {"name": "cevent", "type": "\"friend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+                ]
+              },
+              "without_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"bank\"", "optional": false, "description": "Why."}
+                ]
+              },
+              "source": "node/server.js:12068-12072",
+              "confirm": {"code": ["node/server.js:12068-12072", "node/server.js:12046-12055"]}
+            },
+            {
+              "when": "Later: an account has 100 friends or more.",
+              "code": "friend_failed",
+              "with_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"100limit\"", "optional": false, "description": "Why."},
+                  {"name": "name", "type": "any", "optional": false, "description": "The `name` from the request.", "example": "Ranger"},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` from the request.", "example": "r7"},
+                  {"name": "cevent", "type": "\"friend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+                ]
+              },
+              "without_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"100limit\"", "optional": false, "description": "Why."}
+                ]
+              },
+              "source": "node/server.js:12073-12077",
+              "confirm": {"code": ["node/server.js:12073-12077", "node/server.js:12046-12055"]}
+            },
+            {
+              "when": "Later: the database transaction fails.",
+              "code": "friend_failed",
+              "with_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"unknown\"", "optional": false, "description": "Why."},
+                  {"name": "name", "type": "any", "optional": false, "description": "The `name` from the request.", "example": "Ranger"},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` from the request.", "example": "r7"},
+                  {"name": "cevent", "type": "\"friend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+                ]
+              },
+              "without_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"unknown\"", "optional": false, "description": "Why."}
+                ]
+              },
+              "source": "node/server.js:12095-12099",
+              "confirm": {"code": ["node/server.js:12095-12099", "node/server.js:12046-12055"]}
+            },
+            {
+              "when": "Later: an error in the database work. The reason has a space, unlike the `coms_failure` of `unfriend`.",
+              "code": "friend_failed",
+              "with_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"coms failure\"", "optional": false, "description": "Why."},
+                  {"name": "name", "type": "any", "optional": false, "description": "The `name` from the request.", "example": "Ranger"},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` from the request.", "example": "r7"},
+                  {"name": "cevent", "type": "\"friend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+                ]
+              },
+              "without_request_id": {
+                "form": "plain",
+                "extra": [
+                  {"name": "reason", "type": "\"coms failure\"", "optional": false, "description": "Why."}
+                ]
+              },
+              "source": "node/server.js:12110-12114",
+              "confirm": {"code": ["node/server.js:12110-12114", "node/server.js:12046-12055"]}
+            }
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "Later, with `request_id` only, before `friend_complete`.", "summary": "Your state (a `redata` resend) with the new `friends`.", "source": "node/server.js:12105", "confirm": {"code": ["node/server.js:12102-12105", "node/server.js:4550-4594"]}},
+          {
+            "name": "New friend",
+            "event": "friend",
+            "to": "every online character of both accounts, on any server, you included",
+            "when": "Later, on success. Each character also gets `player`.",
+            "fields": [
+              {"name": "event", "type": "\"new\"", "optional": false, "description": "A new friend."},
+              {"name": "name", "type": "string", "optional": false, "description": "The name of the account on the other side."},
+              {"name": "friends", "type": "string[]", "optional": false, "description": "The new friend list of the account of the receiver: account ids."}
+            ],
+            "example": {"event": "new", "name": "Ranger", "friends": ["US_5818821692620800"]},
+            "source": "node/server.js:12108-12109, 770-785",
+            "confirm": {"code": ["node/server.js:12108-12109", "adventure_functions.js:1498-1531", "node/server.js:770-785"], "note": "`name` is `R.e2.name` / `R.e1.name`: the name of the other account"}
+          }
+        ],
+        "order": [
+          "`game_response` `data` with `in_progress: true` to you",
+          "later, with `request_id`: `player`, then `game_response` `friend_complete` to you",
+          "later: `friend` `{event: \"new\"}` and `player` to every online character of both accounts"
+        ]
+      },
+      {
+        "value": "unfriend",
+        "when": "Ends a friendship, after the `in_progress` reply.",
+        "request": {
+          "fields": [
+            {"name": "name", "type": "string", "optional": true, "coerce": "`\"\" + (name || \"\")`, then lower case without spaces for the character search", "description": "A character name or an account id. The server looks for a character with that name. If there is none, it looks for an account with that id."},
+            {"name": "request_id", "type": "any", "optional": true, "description": "The server copies it into the later reply."}
+          ],
+          "example": {"event": "unfriend", "name": "Ranger", "request_id": "r8"},
+          "confirm": {"code": ["node/server.js:12119-12133", "node/server.js:12137-12139"]}
+        },
+        "responses": [
+          {
+            "name": "Unfriend complete",
+            "event": "game_response",
+            "code": "unfriend_complete",
+            "when": "Later: neither account has the other in `friends` now (also when they were not friends).",
+            "fields": [
+              {"name": "response", "type": "\"unfriend_complete\"", "optional": false, "description": "The code. There is no `place`."},
+              {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+              {"name": "friends", "type": "string[]", "optional": false, "description": "The new friend list of your account: account ids."},
+              {"name": "name", "type": "any", "optional": true, "description": "The `name` from the request, unchanged. Absent when the request has no `name`."},
+              {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request. Absent when the request has none."},
+              {"name": "cevent", "type": "\"unfriend_complete\"", "optional": false, "description": "Tells the official client to fire its code event."}
+            ],
+            "example": {"response": "unfriend_complete", "name": "Ranger", "request_id": "r8", "cevent": "unfriend_complete", "success": true, "friends": []},
+            "source": "node/server.js:12119-12133, 12174-12179",
+            "confirm": {"code": ["node/server.js:12119-12133", "node/server.js:12174-12179"], "note": "`name` and `request_id` are copied as they are; JSON drops them when undefined"}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "Later: your account, or the character or account that `name` gives, is not in the database.",
+              "code": "unfriend_failed",
+              "form": "plain",
+              "extra": [
+                {"name": "name", "type": "any", "optional": true, "description": "The `name` from the request.", "example": "Ranger"},
+                {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request.", "example": "r8"},
+                {"name": "cevent", "type": "\"unfriend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"nouser\"", "optional": false, "description": "Why."}
+              ],
+              "source": "node/server.js:12136-12143",
+              "confirm": {"code": ["node/server.js:12136-12143", "node/server.js:12119-12133"]}
+            },
+            {
+              "when": "Later: an account has `server` set (a character of it is in the bank).",
+              "code": "unfriend_failed",
+              "form": "plain",
+              "extra": [
+                {"name": "name", "type": "any", "optional": true, "description": "The `name` from the request.", "example": "Ranger"},
+                {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request.", "example": "r8"},
+                {"name": "cevent", "type": "\"unfriend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"bank\"", "optional": false, "description": "Why."}
+              ],
+              "source": "node/server.js:12144-12148",
+              "confirm": {"code": ["node/server.js:12144-12148", "node/server.js:12119-12133"]}
+            },
+            {
+              "when": "Later: the database transaction fails.",
+              "code": "unfriend_failed",
+              "form": "plain",
+              "extra": [
+                {"name": "name", "type": "any", "optional": true, "description": "The `name` from the request.", "example": "Ranger"},
+                {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request.", "example": "r8"},
+                {"name": "cevent", "type": "\"unfriend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"unknown\"", "optional": false, "description": "Why."}
+              ],
+              "source": "node/server.js:12168-12172",
+              "confirm": {"code": ["node/server.js:12168-12172", "node/server.js:12119-12133"]}
+            },
+            {
+              "when": "Later: an error in the database work.",
+              "code": "unfriend_failed",
+              "form": "plain",
+              "extra": [
+                {"name": "name", "type": "any", "optional": true, "description": "The `name` from the request.", "example": "Ranger"},
+                {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` from the request.", "example": "r8"},
+                {"name": "cevent", "type": "\"unfriend_failed\"", "optional": false, "description": "Tells the official client to fire its code event."},
+                {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "reason", "type": "\"coms_failure\"", "optional": false, "description": "Why."}
+              ],
+              "source": "node/server.js:12182-12186",
+              "confirm": {"code": ["node/server.js:12182-12186", "node/server.js:12119-12133"]}
+            }
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "Later, on success, before `unfriend_complete`.", "summary": "Your state (a `redata` resend) with the new `friends`.", "source": "node/server.js:12177", "confirm": {"code": ["node/server.js:12174-12177", "node/server.js:4550-4594"]}},
+          {
+            "name": "Lost friend",
+            "event": "friend",
+            "to": "every online character of both accounts, on any server, you included",
+            "when": "Later, on success. Each character also gets `player`.",
+            "fields": [
+              {"name": "event", "type": "\"lost\"", "optional": false, "description": "A friendship ended."},
+              {"name": "friends", "type": "string[]", "optional": false, "description": "The new friend list of the account of the receiver: account ids."}
+            ],
+            "example": {"event": "lost", "friends": []},
+            "source": "node/server.js:12180-12181, 787-801",
+            "confirm": {"code": ["node/server.js:12180-12181", "adventure_functions.js:1498-1531", "node/server.js:787-801"]}
+          }
+        ],
+        "order": [
+          "`game_response` `data` with `in_progress: true` to you",
+          "later: `player`, then `game_response` `unfriend_complete` to you",
+          "later: `friend` `{event: \"lost\"}` and `player` to every online character of both accounts"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "event": "cruise",
+  "source": "node/server.js:5575-5583",
+  "request": {"type": "number", "note": "The speed limit in px per second. The server reads it as `parseInt(payload)`, so a numeric string works too (`\"50px\"` gives 50). `0`, a missing payload (it becomes `{}`) or any value that gives `NaN` removes the limit. There is no range check: a negative value gives the minimum speed, 5 (`round(max(5, speed))`, node/server.js:1761-1762).", "example": 50, "confirm": {"code": ["node/server.js:4893-4895", "node/server.js:5575", "node/server.js:5580", "node/server.js:1761-1762"]}},
+  "responses": [
+    {"name": "Update", "event": "player", "when": "Always when you have a character, before the `game_response`.", "summary": "Your character (`u+cid`). The server recalculates `speed` as `min(speed, cruise || 200000)`.", "example": {"id": "Merlin", "speed": 50, "cid": 419}, "example_trimmed": true, "source": "node/server.js:5581, 1761", "confirm": {"code": ["node/server.js:5580-5581", "node/server.js:1761-1762", "node/server.js:4550-4594"]}},
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "cruise",
+      "when": "Always when you have a character.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"cruise\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"cruise\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "speed", "type": "integer | null", "optional": false, "description": "The stored value, `parseInt(payload)`. `NaN` arrives as `null` in JSON."}
+      ],
+      "example": {"speed": 50, "success": true, "response": "cruise", "place": "cruise"},
+      "source": "node/server.js:5582", "confirm": {"code": ["node/server.js:5582", "node/server_functions.js:3421-3446", "node/msgpack_parser.js:51"], "note": "`NaN` arrives as `null` with both encoders"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5577-5579", "confirm": {"code": ["node/server.js:5576-5579"]}}
+    ]
+  },
+  "order": ["`player` to you", "`game_response` `cruise` to you"]
+}

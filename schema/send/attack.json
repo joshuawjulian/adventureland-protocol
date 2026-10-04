@@ -1,0 +1,125 @@
+{
+  "event": "attack",
+  "source": "node/server.js:11003-11005",
+  "request": {
+    "fields": [
+      {"name": "id", "type": "EntityId", "optional": false, "description": "The target: a monster id or a character name. A missing id, or your own name, fails with `no_target`."}
+    ],
+    "others": "ignored: the handler calls `skill` with `{name: \"attack\", id}` only",
+    "example": {"id": "48213"}, "confirm": {"code": ["node/server.js:11003-11005"], "note": "The handler passes only `id` on to `skill`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass and the projectile starts. The object is the `Action` plus `response` and `place`. It has no `success` field.",
+      "extends": "Action",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"attack\"", "optional": false, "description": "The request."}
+      ],
+      "example": {"attacker": "Wizard", "target": "48213", "type": "attack", "source": "attack", "x": 512.4, "y": -96, "eta": 241, "m": 0, "pid": "Xk3pQa", "projectile": "magic", "damage": 182, "response": "data", "place": "attack"},
+      "source": "node/server.js:3609-3612, 10995-10996",
+      "confirm": {"code": ["node/server.js:3547-3557", "node/server.js:3564-3601", "node/server.js:3609-3612", "node/server.js:10102-10104", "node/server.js:10995-10996"], "note": "The Action replaces `resolve`, so there is no `success`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "attack",
+    "intro": "The checks of the `skill` envelope run first, then the checks of `commence_attack`. A failure of `commence_attack` ends with one `data` reply that has a `reason`; some send a short `game_response` before it.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9766-9768", "confirm": {"code": ["node/server.js:9766-9768"]}},
+      {"when": "You are disabled: dead (`rip`), or `stunned`, `fingered`, `stoned`, `deepfreezed` or `sleeping`. Silence and the `konami` skin do not stop `attack`.", "code": "disabled", "source": "node/server.js:9780-9782", "confirm": {"code": ["node/server.js:9780-9782", "js/old_common_functions.js:768-771", "node/server_functions.js:3393-3419"]}},
+      {"when": "The attack is on cooldown. The cooldown is `attack_ms` (`round(1000 / frequency)`, node/server.js:1627) plus any `penalty_cd`, up to 10,000 ms.", "code": "cooldown", "extra": [
+        {"name": "skill", "type": "\"attack\"", "optional": false, "description": "The skill."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The `id` from the request.", "example": "48213"},
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The time left.", "example": 312}
+      ], "source": "node/server.js:9863-9869", "confirm": {"code": ["node/server.js:9778", "node/server.js:9853-9869", "node/server_functions.js:3463", "node/server_functions.js:3393-3419"]}},
+      {"when": "The map is `safe`.", "code": "skill_cant_safe", "source": "node/server.js:9894-9896", "confirm": {"code": ["node/server.js:9893-9896", "node/server_functions.js:3393-3419"]}},
+      {"when": "`id` is missing or `null`.", "code": "no_target", "source": "node/server.js:9900-9902", "confirm": {"code": ["node/server.js:9899-9902", "node/server_functions.js:3393-3419"]}},
+      {"when": "`id` is your own name.", "code": "no_target", "source": "node/server.js:9910-9914", "confirm": {"code": ["node/server.js:9910-9915", "node/server_functions.js:3393-3419"]}},
+      {"when": "No monster with that id is in your instance, and no character has that name. Or the target is invisible, or more than `B.max_vision` (1,000 px) from you.", "replies": [
+        {"event": "disappear", "example": {"id": "48213", "place": "attack", "reason": "not_there"}, "note": "no `game_response`"}
+      ], "source": "node/server.js:9916-9925", "confirm": {"code": ["node/server.js:9916-9925"]}},
+      {"when": "The target is farther than `range + xrange`. `xrange` is a leeway of up to 25 px; an attack that uses it lowers it.", "code": "too_far", "extra": [
+        {"name": "dist", "type": "number", "optional": false, "description": "The distance to the target in px.", "example": 241.7},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The id of the target.", "example": "48213"}
+      ], "source": "node/server.js:10029-10031", "confirm": {"code": ["node/server.js:10001-10031", "node/server.js:11785", "node/server_functions.js:3393-3419"]}},
+      {"when": "`commence_attack`: your instance or the instance of the target is paused.", "code": "data", "extra": [
+        {"name": "reason", "type": "\"cave_paused\"", "optional": false, "description": "Why."}
+      ], "source": "node/server.js:3160-3161", "confirm": {"code": ["node/server.js:3160-3161", "node/server.js:10102-10108", "node/server.js:10990-10994"], "note": "The skill handler adds `response: \"data\"` to the returned object"}},
+      {"when": "`commence_attack`: you or the target is a cave actor, and the cave rules say that the target is not hostile.", "code": "data", "extra": [
+        {"name": "reason", "type": "\"friendly_target\"", "optional": false, "description": "Why."},
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}
+      ], "source": "node/server.js:3163-3164", "confirm": {"code": ["node/server.js:3163-3164", "node/server.js:10102-10108", "node/server.js:10990-10994"]}},
+      {"when": "`commence_attack`: you are a merchant without a `dartgun` in `mainhand`.", "replies": [
+        {"code": "attack_failed", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}]},
+        {"code": "data", "extra": [{"name": "reason", "type": "\"merchant\"", "optional": false, "description": "Why."}, {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}]}
+      ], "source": "node/server.js:3209-3216", "confirm": {"code": ["node/server.js:3209-3216", "node/server.js:10102-10108", "node/server.js:10990-10994"]}},
+      {"when": "`commence_attack`: `mode.pvp_level_gap` is on (only on the `HARDCORE` server), the target is a character, and your levels differ by more than 10.", "replies": [
+        {"code": "attack_failed", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}, {"name": "reason", "type": "\"level\"", "optional": false, "description": "Why."}]},
+        {"code": "data", "extra": [{"name": "reason", "type": "\"level_gap\"", "optional": false, "description": "Why."}, {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}]}
+      ], "source": "node/server.js:3217-3226", "confirm": {"code": ["node/server.js:3217-3226", "node/server.js:10102-10108", "node/server.js:10990-10994"]}},
+      {"when": "`commence_attack`: the target is a character that is not in a PvP area (`is_in_pvp`), or the target is an NPC.", "replies": [
+        {"code": "attack_failed", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}]},
+        {"code": "data", "extra": [{"name": "reason", "type": "\"no_pvp\"", "optional": false, "description": "Why."}, {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}]}
+      ], "source": "node/server.js:3279-3282", "confirm": {"code": ["node/server.js:3279-3282", "node/server.js:10102-10108", "node/server.js:10990-10994"]}},
+      {"when": "`commence_attack`: your `mp` is less than your `mp_cost`.", "replies": [
+        {"code": "no_mp", "form": "plain"},
+        {"code": "data", "extra": [{"name": "reason", "type": "\"no_mp\"", "optional": false, "description": "Why."}, {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "48213"}]}
+      ], "source": "node/server.js:3337-3340", "confirm": {"code": ["node/server.js:3301-3311", "node/server.js:3337-3340", "node/server.js:10102-10108", "node/server.js:10990-10994"]}},
+      {"when": "`commence_attack`: you are on a `safe` map; or the map is `duelland` and you or the target is not in the duel; or `mode.friendly_fire` is off (it is on, node/server.js:286) and the target is in your party or guild.", "replies": [
+        {"code": "friendly", "form": "plain", "extra": [{"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}]},
+        {"code": "data", "extra": [{"name": "reason", "type": "\"friendly\"", "optional": false, "description": "Why."}, {"name": "id", "type": "EntityId", "optional": false, "description": "The target.", "example": "Ranger"}]}
+      ], "source": "node/server.js:3445-3456", "confirm": {"code": ["node/server.js:3445-3456", "node/server.js:286", "node/server.js:10102-10108", "node/server.js:10990-10994"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "action",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds you, and the target.",
+      "type": "Action",
+      "example": {"attacker": "Wizard", "target": "48213", "type": "attack", "source": "attack", "x": 512.4, "y": -96, "eta": 241, "m": 0, "pid": "Xk3pQa", "projectile": "magic", "damage": 182},
+      "source": "node/server.js:3603",
+      "confirm": {"code": ["node/server.js:3547-3557", "node/server.js:3564-3601", "node/server.js:3603", "node/server_functions.js:3744-3791"], "note": "Sent before `response` and `place` are added (node/server.js:3609-3610)"}
+    },
+    {
+      "event": "skill_timeout",
+      "to": "you",
+      "when": "Success: the cooldown starts. Also before `action` for `invis` when the attack ends your invisibility.",
+      "fields": [
+        {"name": "name", "type": "\"attack\"", "optional": false, "description": "The skill whose cooldown starts."},
+        {"name": "ms", "type": "Milliseconds", "optional": false, "description": "The cooldown: `attack_ms` plus `penalty`."},
+        {"name": "penalty", "type": "Milliseconds", "optional": false, "description": "`penalty_cd`, up to 10,000."}
+      ],
+      "example": {"name": "attack", "ms": 625, "penalty": 0},
+      "source": "node/server_functions.js:3464-3468",
+      "confirm": {"code": ["node/server.js:9778", "node/server.js:10984-10986", "node/server_functions.js:3448-3468"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, after `skill_timeout`. It has `reopen: true` for a merchant (gold changed). A failure sends it too when the attack removed your `invincible` condition.",
+      "summary": "Your new `mp`, `target`, and empty `c` (the attack stops your channeled actions).",
+      "source": "node/server.js:10987-10989",
+      "confirm": {"code": ["node/server.js:3465-3467", "node/server.js:9995-9998", "node/server.js:10987-10989", "node/server.js:4550-4594"]}
+    },
+    {
+      "event": "hit",
+      "to": "nearby",
+      "when": "Later: when the projectile arrives, after `eta` ms (at once for an instant projectile).",
+      "summary": "The result of the hit. Look for `pid` of the `Action`.",
+      "source": "node/server.js:4342-4344",
+      "confirm": {"code": ["node/server.js:3588-3589", "node/server.js:16307-16328", "node/server.js:3707-3714", "node/server.js:3803-3808", "node/server.js:3815-3852", "node/server.js:4342-4344"], "note": "`complete_attack` can also return without any `hit` (node/server.js:3708-3714)"}
+    }
+  ],
+  "order": [
+    "`action` to clients nearby (you included)",
+    "`skill_timeout` `{name: \"attack\"}` to you",
+    "`player` to you",
+    "`game_response` (the `Action` with `response: \"data\"`) to you",
+    "later, `hit` when the projectile arrives"
+  ]
+}

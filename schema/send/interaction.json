@@ -1,0 +1,2368 @@
+{
+  "event": "interaction",
+  "source": "node/server.js:11009-11170",
+  "request": {
+    "fields": [
+      {
+        "name": "type",
+        "type": "\"cave\" | \"cavalry\" | \"merrit_info\" | \"citizen_route\" | \"newyear_tree\" | \"redorb\" | \"blueorb\" | \"greenorb\" | \"yelloworb\" | \"the_lever\" | \"dailytask\"",
+        "optional": true,
+        "coerce": "`===` for `cave` and `cavalry`, `==` for the others",
+        "description": "The thing to interact with. It selects the variant. Leave it out for a konami `key`. Any other value (or none) with no `key` gets no reply."
+      },
+      {
+        "name": "request_id",
+        "type": "any",
+        "optional": true,
+        "description": "Changes some replies: see each variant. The cave and cavalry replies always copy it. With it, `citizen_route`, `newyear_tree` and `the_lever` also send a `data` reply on success, and their `distance` failure (except for `citizen_route`) is an object."
+      }
+    ],
+    "others": "ignored, except the fields of the variant. The whole payload can also be the string `\"the_lever\"` (the variant **Lever (bare)**)",
+    "example": {
+      "type": "newyear_tree",
+      "request_id": "tree-1"
+    },
+    "confirm": {
+      "code": [
+        "node/server.js:11009-11011",
+        "node/server.js:11028",
+        "node/server.js:11051-11052",
+        "node/server.js:11056",
+        "node/server.js:11096",
+        "node/server.js:11115",
+        "node/server.js:11128",
+        "node/server.js:11141",
+        "node/server.js:11147"
+      ],
+      "note": "`data.type` picks the branch; `request_id` is read once, and a falsy one counts as none"
+    }
+  },
+  "variants": {
+    "key": "type",
+    "intro": "`cave` and `cavalry` match with `===`, the others with `==`. An unknown `type` (or none) without `key` gets no reply.",
+    "list": [
+      {
+        "value": "cave",
+        "when": "The Cave of Many Dreams: `action` selects what to do. The reply always comes as one `game_response` `data` with `interaction: \"cave\"`, after the async work.",
+        "request": {
+          "fields": [
+            {
+              "name": "action",
+              "type": "\"enter\" | \"info\" | \"exit\" | \"state\" | \"talk\" | \"vote\" | \"buy\"",
+              "optional": true,
+              "coerce": "`===`",
+              "description": "What to do. `enter` opens a run for you and your party (or joins your run again). `info` reads the daily visit state. The others need an open run. A missing or unknown value fails with `invalid_interaction` (after the run check)."
+            },
+            {
+              "name": "room",
+              "type": "string",
+              "optional": true,
+              "coerce": "`===` against the room ids",
+              "description": "`talk` and `buy`: the id of the room."
+            },
+            {
+              "name": "actor",
+              "type": "string",
+              "optional": true,
+              "coerce": "`===`, so a number never matches",
+              "description": "`talk`: the id of the actor to talk to. Without it, the server takes the nearest actor that can talk."
+            },
+            {
+              "name": "choice",
+              "type": "string",
+              "optional": true,
+              "coerce": "`===` against the vote id",
+              "description": "`vote`: the id of the open vote (`choice.id` in the cave state)."
+            },
+            {
+              "name": "option",
+              "type": "string",
+              "optional": true,
+              "coerce": "`===` against the option ids",
+              "description": "`vote`: the id of the option that you vote for."
+            }
+          ],
+          "note": "`room`, `actor`, `choice` and `option` count only for the `action` that their description names. The format has no variants inside a variant, so the types do not tie them to `action`.",
+          "example": {
+            "type": "cave",
+            "action": "vote",
+            "choice": "9f2c4e1a7b3d5f6e8a0c2b4d:3",
+            "option": "help",
+            "request_id": "c-2"
+          },
+          "confirm": {
+            "code": [
+              "node/server.js:11028-11029",
+              "node/logic/cave_of_many_dreams.js:1888-1969"
+            ],
+            "note": "`action`, `room`, `actor`, `choice`, `option` are compared with `===` in `cave_interaction`"
+          }
+        },
+        "responses": [
+          {
+            "name": "Cave entered",
+            "event": "game_response",
+            "code": "data",
+            "when": "`action: \"enter\"`: a new run opened for you and your party, or you joined your run again. The reply comes after the async work, so other events can arrive first.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cave\"",
+                "optional": false,
+                "description": "Always `\"cave\"`."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "run",
+                "type": "string",
+                "optional": false,
+                "description": "The key of the run (24 hex characters)."
+              },
+              {
+                "name": "expires",
+                "type": "number",
+                "optional": false,
+                "description": "When the run ends, in ms since 1970. A new run lasts 24 minutes."
+              },
+              {
+                "name": "level",
+                "type": "integer",
+                "optional": false,
+                "description": "The level of the run, the highest level in the party."
+              },
+              {
+                "name": "resumed",
+                "type": "true",
+                "description": "You joined your run again after a disconnect.",
+                "optional": true
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cave",
+              "request_id": "c-1",
+              "success": true,
+              "run": "9f2c4e1a7b3d5f6e8a0c2b4d",
+              "expires": 1791101440000,
+              "level": 72
+            },
+            "source": "node/server.js:11028-11037; node/logic/cave_of_many_dreams.js:1889; node/logic/generated_maps.js:346, 564",
+            "confirm": {
+              "code": [
+                "node/server.js:11028-11050",
+                "node/logic/cave_of_many_dreams.js:1889",
+                "node/logic/generated_maps.js:454-564",
+                "node/logic/generated_maps.js:295-346"
+              ]
+            }
+          },
+          {
+            "name": "Cave visit",
+            "event": "game_response",
+            "code": "data",
+            "when": "`action: \"info\"`: the daily visit state. It works without a run.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cave\"",
+                "optional": false,
+                "description": "Always `\"cave\"`."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "visit",
+                "type": "CaveVisitInfo",
+                "optional": false,
+                "description": "The daily visit state."
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cave",
+              "request_id": "c-1",
+              "success": true,
+              "visit": {
+                "available": true,
+                "resets": 1791158400000,
+                "home": "EUI",
+                "server_time": 1791100000000
+              }
+            },
+            "source": "node/server.js:11028-11037; node/logic/cave_of_many_dreams.js:1890; node/logic/generated_maps.js:632-657",
+            "confirm": {
+              "code": [
+                "node/server.js:11028-11050",
+                "node/logic/cave_of_many_dreams.js:1890",
+                "node/logic/generated_maps.js:632-657"
+              ],
+              "live_needed": "`resume` and `unlimited` depend on the run and the database state of the account."
+            }
+          },
+          {
+            "name": "Cave exited",
+            "event": "game_response",
+            "code": "data",
+            "when": "`action: \"exit\"`: you left the run. The server settles the purse of the run first.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cave\"",
+                "optional": false,
+                "description": "Always `\"cave\"`."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "exited",
+                "type": "true",
+                "optional": false,
+                "description": "You left the run."
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cave",
+              "request_id": "c-1",
+              "success": true,
+              "exited": true
+            },
+            "source": "node/server.js:11028-11037; node/logic/cave_of_many_dreams.js:1895-1899",
+            "confirm": {
+              "code": [
+                "node/server.js:11028-11050",
+                "node/logic/cave_of_many_dreams.js:1891-1899",
+                "node/logic/generated_maps.js:230-241"
+              ]
+            }
+          },
+          {
+            "name": "Cave state",
+            "event": "game_response",
+            "code": "data",
+            "when": "`action: \"state\"`. Also `talk` to an encounter (the server opens its vote), and `talk` while the run is paused (the state of the vote, not a chat).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cave\"",
+                "optional": false,
+                "description": "Always `\"cave\"`."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "state",
+                "type": "CaveState",
+                "optional": false,
+                "description": "The snapshot of the run (`cave_snapshot`), the same object as `state` in the [`cave`](#recv-cave) event."
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cave",
+              "request_id": "c-1",
+              "success": true,
+              "state": {
+                "run": "5f2c9a0e4b7d13a8c6e2f901",
+                "expires": 1791160240000,
+                "server_time": 1791159411520,
+                "remaining_ms": 828480,
+                "paused": false,
+                "paused_at": null,
+                "rewards": [
+                  {
+                    "where": "purse",
+                    "gold": 2000,
+                    "amber": 1,
+                    "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0",
+                    "x": 704,
+                    "y": 912,
+                    "id": 7
+                  },
+                  {
+                    "item": {
+                      "name": "scroll1",
+                      "q": 1,
+                      "p": "cavefound"
+                    },
+                    "recipient": "Wizard",
+                    "where": "inventory",
+                    "id": 9,
+                    "slot": 12
+                  }
+                ],
+                "level": 72,
+                "floor": 0,
+                "gold": 4000,
+                "amber": 2,
+                "limits": {
+                  "gold": 60000,
+                  "amber": 36,
+                  "gold_spawned": 6000,
+                  "amber_spawned": 3
+                },
+                "supplies": [
+                  "lamp"
+                ],
+                "roster": [
+                  {
+                    "name": "Wizard",
+                    "left": false,
+                    "disconnected": false
+                  },
+                  {
+                    "name": "Healer",
+                    "left": false,
+                    "disconnected": true
+                  }
+                ],
+                "doors": [
+                  {
+                    "id": 0,
+                    "x": 320,
+                    "y": 480,
+                    "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0",
+                    "to": "main",
+                    "down": false,
+                    "locked": false
+                  },
+                  {
+                    "id": 1,
+                    "x": 1888,
+                    "y": 1312,
+                    "map": "zone_5f2c9a0e4b7d13a8c6e2f901_0",
+                    "to": "zone_5f2c9a0e4b7d13a8c6e2f901_1",
+                    "down": true,
+                    "locked": true
+                  }
+                ],
+                "objectives": [
+                  {
+                    "id": "0:0",
+                    "x": 880,
+                    "y": 736,
+                    "done": true,
+                    "floor": 0,
+                    "kind": "fight",
+                    "required": true,
+                    "name": "Guard camp",
+                    "name_message": {
+                      "phrase": "server.cave.guard_camp"
+                    }
+                  },
+                  {
+                    "id": "0:farm:14",
+                    "x": 1240,
+                    "y": 400,
+                    "done": false,
+                    "floor": 0,
+                    "kind": "farm",
+                    "required": false,
+                    "waves": 1,
+                    "name": "Bat Roost",
+                    "name_message": {
+                      "phrase": "event.dreams.camp.0.1.name"
+                    }
+                  }
+                ],
+                "choice": null,
+                "hunts": [],
+                "practice": []
+              }
+            },
+            "source": "node/server.js:11028-11037; node/logic/cave_of_many_dreams.js:1900-1906, 1935-1940",
+            "confirm": {
+              "code": [
+                "node/server.js:11028-11050",
+                "node/logic/cave_of_many_dreams.js:1900-1906",
+                "node/logic/cave_of_many_dreams.js:1935-1940"
+              ],
+              "live_needed": "The snapshot (`cave_snapshot`) is built from the live state of the run."
+            }
+          },
+          {
+            "name": "Cave chat",
+            "event": "game_response",
+            "code": "data",
+            "when": "`action: \"talk\"` to a traveler (a `citizen` room). The traveler stops for 4 s and faces you.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cave\"",
+                "optional": false,
+                "description": "Always `\"cave\"`."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "chat",
+                "type": "CaveChat",
+                "optional": false,
+                "description": "What the traveler says."
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cave",
+              "request_id": "c-1",
+              "success": true,
+              "chat": {
+                "name": "Pip",
+                "skin": "mbody3f",
+                "cx": {
+                  "head": "fmakeup02",
+                  "hair": "hairdo105",
+                  "back": "backpacks201"
+                },
+                "text": "Excuse me! Heavy bag.",
+                "text_message": {
+                  "phrase": "event.dreams.traveler.Pip.says.0"
+                }
+              }
+            },
+            "source": "node/server.js:11028-11037; node/logic/cave_of_many_dreams.js:1916-1934",
+            "confirm": {
+              "code": [
+                "node/server.js:11028-11050",
+                "node/logic/cave_of_many_dreams.js:1907-1934"
+              ],
+              "live_needed": "`skin`, `cx` and the line come from the traveler that the run picked."
+            }
+          },
+          {
+            "name": "Cave voted",
+            "event": "game_response",
+            "code": "data",
+            "when": "`action: \"vote\"`: the server counted your vote, or you voted for `option` already (then the reply has no `result`).",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cave\"",
+                "optional": false,
+                "description": "Always `\"cave\"`."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "choice",
+                "type": "string",
+                "optional": false,
+                "description": "The id of the vote: `<run>:<serial>`."
+              },
+              {
+                "name": "vote",
+                "type": "string",
+                "optional": false,
+                "description": "Your option."
+              },
+              {
+                "name": "resolved",
+                "type": "boolean",
+                "optional": false,
+                "description": "`true` when the vote has a result."
+              },
+              {
+                "name": "result",
+                "type": "string",
+                "description": "The id of the option that won (`\"fallback\"` when none won), when the vote is resolved. Not sent when you vote again for the same option.",
+                "optional": true
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cave",
+              "request_id": "c-1",
+              "success": true,
+              "choice": "9f2c4e1a7b3d5f6e8a0c2b4d:3",
+              "vote": "help",
+              "resolved": false
+            },
+            "source": "node/server.js:11028-11037; node/logic/cave_of_many_dreams.js:1944-1956",
+            "confirm": {
+              "code": [
+                "node/server.js:11028-11050",
+                "node/logic/cave_of_many_dreams.js:1943-1956",
+                "node/logic/cave_of_many_dreams.js:741-765",
+                "node/logic/cave_of_many_dreams.js:816-833"
+              ]
+            }
+          },
+          {
+            "name": "Cave bought",
+            "event": "game_response",
+            "code": "data",
+            "when": "`action: \"buy\"`: the item of the room's merchant went to a member of the run. The server takes the price from the gold of the run.",
+            "extends": "GameResponseSuccess",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cave\"",
+                "optional": false,
+                "description": "Always `\"cave\"`."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "recipient",
+                "type": "CharacterName",
+                "optional": false,
+                "description": "The member that got the item."
+              },
+              {
+                "name": "item",
+                "type": "ItemName",
+                "optional": false,
+                "description": "The item."
+              },
+              {
+                "name": "gold",
+                "type": "number",
+                "optional": false,
+                "description": "The price, taken from the gold of the run."
+              },
+              {
+                "name": "currency",
+                "type": "\"cave_gold\"",
+                "optional": false,
+                "description": "Always `\"cave_gold\"`."
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cave",
+              "request_id": "c-1",
+              "success": true,
+              "recipient": "Priest",
+              "item": "hpot1",
+              "gold": 1200,
+              "currency": "cave_gold"
+            },
+            "source": "node/server.js:11028-11037; node/logic/cave_of_many_dreams.js:1957-1967",
+            "confirm": {
+              "code": [
+                "node/server.js:11028-11050",
+                "node/logic/cave_of_many_dreams.js:1957-1967",
+                "node/logic/cave_of_many_dreams.js:571-575"
+              ]
+            }
+          }
+        ],
+        "failures": {
+          "intro": "Every failure is `{response: \"data\", place: \"interaction\", interaction: \"cave\", request_id, failed: true, reason}`: the server catches the error of the action and sends its message as `reason`. Only the checks of the action in `action` run.",
+          "rows": [
+            {
+              "when": "`enter`: the run cannot open or you cannot join it again. `reason` is the message of the error: one of the values in the type, or the message of another error.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"cave_closed\" | \"cant_enter\" | \"party_too_large\" | \"bring_party_to_keeper\" | \"already_inside\" | \"cave_other_server\" | \"already_opening\" | \"zone_busy\" | \"daily_opening_used\" | \"character_already_entering\" | \"party_changed\" | \"admission_expired\" | \"transport_failed\" | \"invalid_home_server\" | string",
+                  "optional": false,
+                  "description": "Why. `cant_enter`: you are dead, not on `main`, or cannot walk. `bring_party_to_keeper`: a member is not within 160 px of the keeper at (816, 1200) on `main`, is in a fight, or uses an old client. `party_too_large`: more than 3 members.",
+                  "example": "bring_party_to_keeper"
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/generated_maps.js:295-353, 431-570, 588-594",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1889",
+                  "node/logic/generated_maps.js:295-299",
+                  "node/logic/generated_maps.js:431-453",
+                  "node/logic/generated_maps.js:454-570",
+                  "node/logic/generated_maps.js:588-594"
+                ],
+                "note": "Any other error of the async work arrives as its message"
+              }
+            },
+            {
+              "when": "An action other than `enter` and `info`: you have no open run, you left it, or it expired.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"cave_closed\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1894",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1891-1894"
+                ]
+              }
+            },
+            {
+              "when": "`talk`: you are dead (and the run is not paused).",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"defeated\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1907",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1902-1907"
+                ]
+              }
+            },
+            {
+              "when": "`talk`: no actor that can talk is in `room` on your map, or it is more than 160 px from you.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"distance\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1908-1915",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1908-1915"
+                ]
+              }
+            },
+            {
+              "when": "`buy` or an unknown action: you are dead.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"defeated\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1942",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1942"
+                ]
+              }
+            },
+            {
+              "when": "`vote`: no open vote, `choice` is not its id, or you are not a voter. If you voted for `option` already, the server sends the vote again as a success instead.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"stale_choice\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1945-1947",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1943-1946"
+                ]
+              }
+            },
+            {
+              "when": "`vote`: the vote has a result, or its time ended.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"vote_closed\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1948-1949",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1947-1949",
+                  "node/logic/cave_of_many_dreams.js:816-824"
+                ]
+              }
+            },
+            {
+              "when": "`vote`: `option` is not an option of the vote.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"invalid_reply\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1950",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1950"
+                ]
+              }
+            },
+            {
+              "when": "`vote`: you voted for another option already.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"already_voted\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1951",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1951"
+                ]
+              }
+            },
+            {
+              "when": "`buy`: the room has no stock, it is sold, or its merchant is dead.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"sold_out\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1959",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1957-1959"
+                ]
+              }
+            },
+            {
+              "when": "`buy`: you are not on the map of the room, or more than 160 px from its merchant.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"distance\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1960",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1960"
+                ]
+              }
+            },
+            {
+              "when": "`buy`: the gold of the run is less than the price.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"gold_not_enough\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1961",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1961"
+                ]
+              }
+            },
+            {
+              "when": "An unknown `action` (or none).",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cave\"",
+                  "optional": false,
+                  "description": "Always `\"cave\"`."
+                },
+                {
+                  "name": "reason",
+                  "type": "\"invalid_interaction\"",
+                  "optional": false,
+                  "description": "Why."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request, when it had one.",
+                  "example": "c-1"
+                }
+              ],
+              "source": "node/logic/cave_of_many_dreams.js:1969",
+              "confirm": {
+                "code": [
+                  "node/server.js:11028-11050",
+                  "node/logic/cave_of_many_dreams.js:1969"
+                ]
+              }
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "cave",
+            "to": "you, or the members of the run",
+            "when": "`cave` `talk` sends `{type: \"chat\", state, chat}` (a traveler) or `{type: \"choice\", state}` to you before the reply. `exit` sends `{type: \"ended\", reason: \"exit\", state}` to you. `enter`, `vote` and `buy` publish a new state to the members of the run.",
+            "summary": "See the [`cave`](#recv-cave) entry.",
+            "source": "node/logic/cave_of_many_dreams.js:1869-1886, 1904, 1933, 1939, 1954, 1966; node/logic/generated_maps.js:236, 345, 563",
+            "confirm": {
+              "code": [
+                "node/logic/cave_of_many_dreams.js:1869-1886",
+                "node/logic/cave_of_many_dreams.js:1902-1906",
+                "node/logic/cave_of_many_dreams.js:1933",
+                "node/logic/cave_of_many_dreams.js:1937-1939",
+                "node/logic/cave_of_many_dreams.js:1954",
+                "node/logic/cave_of_many_dreams.js:1966",
+                "node/logic/generated_maps.js:236",
+                "node/logic/generated_maps.js:345",
+                "node/logic/generated_maps.js:563"
+              ]
+            }
+          },
+          {
+            "event": "new_map",
+            "to": "you and your party",
+            "when": "`cave` `enter` succeeds: the server moves each member to the first floor (or you to your saved place when you join again), before the reply. `exit` moves you out.",
+            "summary": "The new map. See the [`new_map`](#recv-new_map) entry.",
+            "source": "node/logic/generated_maps.js:239, 334, 562",
+            "confirm": {
+              "code": [
+                "node/logic/generated_maps.js:222-229",
+                "node/logic/generated_maps.js:239",
+                "node/logic/generated_maps.js:334",
+                "node/logic/generated_maps.js:562",
+                "node/server.js:4640-4660"
+              ],
+              "live_needed": "`new_map` is built by `transport_player_to`; its fields depend on the floor map of the run."
+            }
+          },
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "`cave` `enter` fails after the enter animation started.",
+            "fields": [
+              {
+                "name": "type",
+                "type": "\"cave_enter\"",
+                "optional": false,
+                "description": "The kind of `ui` event."
+              },
+              {
+                "name": "key",
+                "type": "string",
+                "optional": false,
+                "description": "The key of the run."
+              },
+              {
+                "name": "cancel",
+                "type": "true",
+                "optional": false,
+                "description": "The enter stopped."
+              }
+            ],
+            "example": {
+              "type": "cave_enter",
+              "key": "9f2c4e1a7b3d5f6e8a0c2b4d",
+              "cancel": true
+            },
+            "source": "node/logic/generated_maps.js:350, 567",
+            "confirm": {
+              "code": [
+                "node/logic/generated_maps.js:348-351",
+                "node/logic/generated_maps.js:565-568",
+                "node/server_functions.js:3744-3791"
+              ]
+            }
+          },
+          {
+            "event": "player",
+            "to": "you and your party",
+            "when": "`cave` `enter`: when the enter animation starts (before the 1.8 s wait), each member gets its own state. `buy` also sends you your state, before the new `cave` state.",
+            "summary": "Your character, stopped for the enter animation; for `buy`, after the item went out.",
+            "source": "node/logic/cave_of_many_dreams.js:2-13, 1965",
+            "confirm": {
+              "code": [
+                "node/logic/cave_of_many_dreams.js:2-13",
+                "node/logic/cave_of_many_dreams.js:1965",
+                "node/server.js:4550-4594"
+              ]
+            }
+          },
+          {
+            "event": "ui",
+            "to": "nearby",
+            "when": "`cave` `enter`: the enter animation starts (a new run, or joining your run again), before the 1.8 s wait.",
+            "fields": [
+              {
+                "name": "type",
+                "type": "\"cave_enter\"",
+                "optional": false,
+                "description": "The kind of `ui` event."
+              },
+              {
+                "name": "names",
+                "type": "CharacterName[]",
+                "optional": false,
+                "description": "The members that enter."
+              },
+              {
+                "name": "duration",
+                "type": "Milliseconds",
+                "optional": false,
+                "description": "The length of the animation: 1800."
+              },
+              {
+                "name": "key",
+                "type": "string",
+                "optional": false,
+                "description": "The key of the run."
+              }
+            ],
+            "example": {
+              "type": "cave_enter",
+              "names": [
+                "Wizard",
+                "Priest"
+              ],
+              "duration": 1800,
+              "key": "9f2c4e1a7b3d5f6e8a0c2b4d"
+            },
+            "source": "node/logic/cave_of_many_dreams.js:16",
+            "confirm": {
+              "code": [
+                "node/logic/cave_of_many_dreams.js:2-16",
+                "node/server_functions.js:3744-3791"
+              ]
+            }
+          }
+        ],
+        "order": {
+          "enter": [
+            "`player` to each member, and `ui` `cave_enter` to clients nearby (the animation)",
+            "`new_map` to each member (the first floor), or to you (your saved place)",
+            "`cave` state to the members of the run",
+            "`game_response` `data` (**Cave entered**) to you"
+          ],
+          "info, state, vote, buy": [
+            "for `buy`: `player` to you",
+            "for `vote` and `buy`: `cave` state to the members of the run",
+            "`game_response` `data` to you"
+          ],
+          "talk": [
+            "`cave` `chat` or `choice` to you",
+            "`game_response` `data` (**Cave chat** or **Cave state**) to you"
+          ],
+          "exit": [
+            "`cave` `ended` and `new_map` to you",
+            "`game_response` `data` (**Cave exited**) to you"
+          ]
+        },
+        "source": "node/server.js:11028-11048; node/logic/cave_of_many_dreams.js:1888-1970"
+      },
+      {
+        "value": "cavalry",
+        "when": "Calls the cavalry to your fight. You need a `tracker` in your inventory.",
+        "request": {
+          "confirm": {
+            "code": [
+              "node/server.js:11051",
+              "node/logic/cavalry.js:190-191"
+            ],
+            "note": "The branch reads only `type` (and `request_id`)"
+          }
+        },
+        "responses": [
+          {
+            "name": "Cavalry",
+            "event": "game_response",
+            "code": "data",
+            "when": "The call succeeds. The server always sends one object: this one, or the failure with `failed: true` and `reason`.",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"data\"",
+                "optional": false,
+                "description": "Always `\"data\"`."
+              },
+              {
+                "name": "place",
+                "type": "\"interaction\"",
+                "optional": false,
+                "description": "The request."
+              },
+              {
+                "name": "interaction",
+                "type": "\"cavalry\"",
+                "optional": false,
+                "description": "Always `\"cavalry\"`."
+              },
+              {
+                "name": "request_id",
+                "type": "any",
+                "optional": true,
+                "description": "The `request_id` of the request, when it had one."
+              },
+              {
+                "name": "success",
+                "type": "true",
+                "optional": false,
+                "description": "Always `true` on this reply."
+              },
+              {
+                "name": "queued",
+                "type": "boolean",
+                "optional": false,
+                "description": "`true` when no cavalry member is free now, so the call waits."
+              },
+              {
+                "name": "assigned",
+                "type": "integer",
+                "optional": false,
+                "description": "The cavalry members that go to your fight now."
+              },
+              {
+                "name": "next_call",
+                "type": "number",
+                "optional": true,
+                "description": "When the account can call again, in ms since 1970."
+              },
+              {
+                "name": "cooldown_ms",
+                "type": "Milliseconds",
+                "optional": true,
+                "description": "`next_call` minus now, at least 0. Present when `next_call` is."
+              },
+              {
+                "name": "phrase",
+                "type": "string",
+                "optional": false,
+                "description": "`\"interface.cavalry.queued\"` or `\"interface.cavalry.coming\"`."
+              },
+              {
+                "name": "phrase_args",
+                "type": "object",
+                "optional": false,
+                "description": "The values for the phrase: `{}` here."
+              },
+              {
+                "name": "message",
+                "type": "string",
+                "optional": false,
+                "description": "The English text of the phrase."
+              }
+            ],
+            "example": {
+              "response": "data",
+              "place": "interaction",
+              "interaction": "cavalry",
+              "success": true,
+              "queued": false,
+              "assigned": 2,
+              "next_call": 1791101800000,
+              "cooldown_ms": 1800000,
+              "phrase": "interface.cavalry.coming",
+              "phrase_args": {},
+              "message": "Cavalry is on the way!"
+            },
+            "source": "node/logic/cavalry.js:190-240",
+            "confirm": {
+              "code": [
+                "node/server.js:11051",
+                "node/logic/cavalry.js:190-240"
+              ],
+              "live_needed": "`assigned`, `next_call` and the English `message` depend on the live cavalry state and the language files."
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The call fails. `unavailable`: cavalry is off, you have no account, a call of your account is in progress, or an error. `tracker`: no `tracker` item in your inventory. `location`: no instance, or a generated map. `cooldown`: the account called less than its cooldown ago. `no_monsters`: no eligible monster near you. `guarded`: a level-80+ player is within 150 px of the monsters.",
+              "code": "data",
+              "extra": [
+                {
+                  "name": "interaction",
+                  "type": "\"cavalry\"",
+                  "optional": false,
+                  "description": "Always `\"cavalry\"`."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": true,
+                  "description": "The `request_id` of the request.",
+                  "example": "cav-1"
+                },
+                {
+                  "name": "reason",
+                  "type": "\"unavailable\" | \"tracker\" | \"location\" | \"cooldown\" | \"no_monsters\" | \"guarded\"",
+                  "optional": false,
+                  "description": "Why.",
+                  "example": "cooldown"
+                },
+                {
+                  "name": "next_call",
+                  "type": "number",
+                  "optional": true,
+                  "description": "`cooldown`: when the account can call again, in ms since 1970.",
+                  "example": 1791101800000
+                },
+                {
+                  "name": "cooldown_ms",
+                  "type": "Milliseconds",
+                  "optional": true,
+                  "description": "`next_call` minus now.",
+                  "example": 1260000
+                },
+                {
+                  "name": "phrase",
+                  "type": "string",
+                  "optional": false,
+                  "description": "`\"interface.cavalry.<reason>\"`, or `\"interface.cavalry.not_threatened\"` for some `no_monsters`.",
+                  "example": "interface.cavalry.cooldown"
+                },
+                {
+                  "name": "phrase_args",
+                  "type": "object",
+                  "optional": false,
+                  "description": "`{minutes}` for `cooldown`, `{level}` for `not_threatened`, else `{}`.",
+                  "example": {
+                    "minutes": "21"
+                  }
+                },
+                {
+                  "name": "message",
+                  "type": "string",
+                  "optional": false,
+                  "description": "The English text of the phrase.",
+                  "example": "Cavalry can answer again in 21 min."
+                }
+              ],
+              "source": "node/logic/cavalry.js:190-240",
+              "confirm": {
+                "code": [
+                  "node/logic/cavalry.js:190-240"
+                ],
+                "live_needed": "Which `reason` and phrase come back depends on the live cavalry state; the `phrase_args` of `not_threatened` come from the error of `cavalry_reserve`."
+              }
+            }
+          ]
+        },
+        "order": [
+          "`game_response` `data` with `interaction: \"cavalry\"` to you"
+        ],
+        "source": "node/server.js:11050; node/logic/cavalry.js:190-240"
+      },
+      {
+        "value": "merrit_info",
+        "when": "Reads the status of the market patron (Merrit) for you.",
+        "request": {
+          "confirm": {
+            "code": [
+              "node/server.js:11052-11055"
+            ],
+            "note": "The branch reads only `type` (and `request_id`)"
+          }
+        },
+        "responses": [
+          {
+            "name": "Market patron",
+            "event": "merrit_status",
+            "when": "Your last `merrit_info` is more than 3 s ago. The reply comes after a database read. If the read fails, the payload is `{reasons: [{code: \"unavailable\"}]}`.",
+            "summary": "The status of the market patron for you (`market_patron_public_status`), with `account_last`: the last receipt of the account, or `null`.",
+            "example": {
+              "reasons": [
+                {
+                  "code": "cooldown",
+                  "remaining_ms": 1834000
+                }
+              ],
+              "next_at": 1791107074000,
+              "last": null,
+              "server_now": 1791105240000,
+              "account_last": {
+                "id": "pQ7rT2vW9xY3zA5bC8dE1fG4hJ6kL0mN",
+                "at": 1791103474000,
+                "character": "CH_5818821692620800",
+                "name": "Merchant",
+                "item": "marketparcel",
+                "quantity": 1,
+                "shells": 0,
+                "reason": "Your shop stayed stocked for two minutes and left the neighbors room.",
+                "reason_phrase": "server.merrit.receipt",
+                "reason_phrase_args": {}
+              }
+            },
+            "source": "node/logic/market_patron_runtime.js:72-88",
+            "confirm": {
+              "code": [
+                "node/server.js:11052-11055",
+                "node/logic/market_patron_runtime.js:65-88"
+              ],
+              "live_needed": "The status fields come from `market_patron_status`, and `account_last` is a stored receipt from the database."
+            }
+          }
+        ],
+        "order": [
+          "`merrit_status` to you, after a database read"
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "Your last `merrit_info` is less than 3 s ago.",
+              "replies": [],
+              "source": "node/logic/market_patron_runtime.js:73",
+              "confirm": {
+                "code": [
+                  "node/logic/market_patron_runtime.js:72-74"
+                ]
+              }
+            }
+          ]
+        },
+        "source": "node/server.js:11051-11054; node/logic/market_patron_runtime.js:72-88"
+      },
+      {
+        "value": "citizen_route",
+        "when": "Asks Rook (`citizen17`) on `desertland` for the way to an NPC. At most 1 request per 10 s.",
+        "request": {
+          "fields": [
+            {
+              "name": "destination",
+              "type": "\"transporter\" | \"locksmith\" | \"scrollsmith\"",
+              "optional": false,
+              "description": "The NPC on `desertland` that Rook shows the way to. A missing or other value fails with `distance`."
+            }
+          ],
+          "example": {
+            "type": "citizen_route",
+            "destination": "locksmith",
+            "request_id": "rook-1"
+          },
+          "confirm": {
+            "code": [
+              "node/server.js:11056-11069"
+            ]
+          }
+        },
+        "responses": [
+          {
+            "name": "Route",
+            "event": "citizen",
+            "when": "The route is valid. Rook walks 24 px toward the NPC (when he is not walking already).",
+            "fields": [
+              {
+                "name": "type",
+                "type": "\"route_marks\"",
+                "optional": false,
+                "description": "The kind of `citizen` event."
+              },
+              {
+                "name": "destination",
+                "type": "\"transporter\" | \"locksmith\" | \"scrollsmith\"",
+                "optional": false,
+                "description": "The `destination` of the request."
+              },
+              {
+                "name": "from",
+                "type": "[number, number]",
+                "optional": false,
+                "description": "The position of Rook now: `[x, y]`."
+              },
+              {
+                "name": "to",
+                "type": "[number, number]",
+                "optional": false,
+                "description": "The position of the NPC on `desertland` from G: `[x, y]`."
+              }
+            ],
+            "example": {
+              "type": "route_marks",
+              "destination": "locksmith",
+              "from": [
+                48,
+                24
+              ],
+              "to": [
+                316,
+                -270
+              ]
+            },
+            "source": "node/server.js:11074-11079, 11086-11094",
+            "confirm": {
+              "code": [
+                "node/server.js:11073-11079",
+                "node/server.js:15331-15339"
+              ]
+            }
+          },
+          {
+            "name": "Route done",
+            "event": "game_response",
+            "code": "data",
+            "when": "Sent last, only when the request has `request_id`.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {
+                  "name": "response",
+                  "type": "\"data\"",
+                  "optional": false,
+                  "description": "Always `\"data\"`."
+                },
+                {
+                  "name": "place",
+                  "type": "\"interaction\"",
+                  "optional": false,
+                  "description": "The request."
+                },
+                {
+                  "name": "success",
+                  "type": "true",
+                  "optional": false,
+                  "description": "Always `true`."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": false,
+                  "description": "The `request_id` of the request."
+                },
+                {
+                  "name": "interaction",
+                  "type": "\"citizen_route\"",
+                  "optional": false,
+                  "description": "The `type` of the request."
+                },
+                {
+                  "name": "destination",
+                  "type": "\"transporter\" | \"locksmith\" | \"scrollsmith\"",
+                  "optional": false,
+                  "description": "The `destination` of the request."
+                }
+              ],
+              "example": {
+                "request_id": "rook-1",
+                "interaction": "citizen_route",
+                "destination": "locksmith",
+                "success": true,
+                "response": "data",
+                "place": "interaction"
+              }
+            },
+            "without_request_id": {
+              "none": true
+            },
+            "source": "node/server.js:11016-11023, 11095",
+            "confirm": {
+              "code": [
+                "node/server.js:11016-11023",
+                "node/server.js:11095",
+                "node/server_functions.js:3421-3446"
+              ]
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "You are not on `desertland`, Rook (`citizen17`) is not in your instance or is more than 160 px from you, or `destination` is not valid. The reply is the bare string, also with `request_id`.",
+              "code": "distance",
+              "form": "bare",
+              "source": "node/server.js:11057-11069",
+              "confirm": {
+                "code": [
+                  "node/server.js:11057-11069",
+                  "node/server.js:15324-15339"
+                ]
+              }
+            },
+            {
+              "when": "Your last `citizen_route` is less than 10 s ago.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {
+                    "message": "Rook is still reading the sands.",
+                    "phrase": "server.game_log.rook_is_still_reading_the_sands",
+                    "phrase_args": {}
+                  }
+                }
+              ],
+              "source": "node/server.js:11070-11072",
+              "confirm": {
+                "code": [
+                  "node/server.js:11070-11072",
+                  "languages/index.js:256-258"
+                ]
+              }
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "game_log",
+            "to": "you",
+            "when": "`citizen_route` succeeds, after `citizen`.",
+            "type": "LocalizedText",
+            "example": {
+              "message": "Rook marks the first steps toward Smith.",
+              "phrase": "server.game_log.rook_marks_the_first_steps_toward",
+              "phrase_args": {
+                "G": "Smith"
+              }
+            },
+            "source": "node/server.js:11080-11085",
+            "confirm": {
+              "code": [
+                "node/server.js:11080-11085",
+                "languages/index.js:256-258"
+              ]
+            }
+          }
+        ],
+        "order": [
+          "`citizen` `route_marks` to you",
+          "`game_log` to you",
+          "with `request_id`: `game_response` `data` (**Route done**) to you"
+        ],
+        "source": "node/server.js:11055-11095"
+      },
+      {
+        "value": "newyear_tree",
+        "when": "The new-year tree: gives `holidayspirit`, and a `funtoken` when you did not have the condition.",
+        "request": {
+          "confirm": {
+            "code": [
+              "node/server.js:11096-11105"
+            ],
+            "note": "The branch reads only `type` (and `request_id`)"
+          }
+        },
+        "responses": [
+          {
+            "name": "Tree condition",
+            "event": "player",
+            "when": "The tree gave you `holidayspirit`. Before the **Tree done** reply.",
+            "summary": "Your state with `holidayspirit` in `s` (24 h, `G.conditions.holidayspirit.duration`), and `hitchhikers` with the `game_response` `{response: \"condition\", name: \"holidayspirit\", cevent: true, duration}` of `add_condition`. With `reopen: true` when the tree gave you a `funtoken`.",
+            "example": {
+              "id": "Merlin",
+              "s": {
+                "holidayspirit": {
+                  "ms": 86400000
+                }
+              },
+              "cid": 419,
+              "reopen": true
+            },
+            "example_trimmed": true,
+            "source": "node/server.js:11112-11113",
+            "confirm": {
+              "code": [
+                "node/server.js:11106-11113",
+                "node/server_functions.js:3236-3350",
+                "node/server.js:4550-4594"
+              ],
+              "note": "`add_condition` puts a `condition` reply in `hitchhikers`"
+            }
+          },
+          {
+            "name": "Tree done",
+            "event": "game_response",
+            "code": "data",
+            "when": "Sent last, only when the request has `request_id`.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {
+                  "name": "response",
+                  "type": "\"data\"",
+                  "optional": false,
+                  "description": "Always `\"data\"`."
+                },
+                {
+                  "name": "place",
+                  "type": "\"interaction\"",
+                  "optional": false,
+                  "description": "The request."
+                },
+                {
+                  "name": "success",
+                  "type": "true",
+                  "optional": false,
+                  "description": "Always `true`."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": false,
+                  "description": "The `request_id` of the request."
+                },
+                {
+                  "name": "interaction",
+                  "type": "\"newyear_tree\"",
+                  "optional": false,
+                  "description": "The `type` of the request."
+                },
+                {
+                  "name": "received_token",
+                  "type": "boolean",
+                  "optional": false,
+                  "description": "`true` when you got a `funtoken`. You get one when you did not have `holidayspirit` and you have a free slot."
+                }
+              ],
+              "example": {
+                "request_id": "tree-1",
+                "interaction": "newyear_tree",
+                "received_token": true,
+                "success": true,
+                "response": "data",
+                "place": "interaction"
+              }
+            },
+            "without_request_id": {
+              "none": true
+            },
+            "source": "node/server.js:11016-11023, 11114",
+            "confirm": {
+              "code": [
+                "node/server.js:11016-11023",
+                "node/server.js:11114",
+                "node/server_functions.js:3421-3446"
+              ]
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "Your map has no `newyear_tree` ref, or you are more than 300 px from it. G 17478 has no `newyear_tree` ref on any map.",
+              "code": "distance",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {
+                    "name": "request_id",
+                    "type": "any",
+                    "optional": false,
+                    "description": "The `request_id` of the request.",
+                    "example": "tree-1"
+                  },
+                  {
+                    "name": "interaction",
+                    "type": "\"newyear_tree\"",
+                    "optional": false,
+                    "description": "The `type` of the request."
+                  }
+                ]
+              },
+              "without_request_id": {
+                "form": "bare"
+              },
+              "source": "node/server.js:11096-11104",
+              "confirm": {
+                "code": [
+                  "node/server.js:11012-11015",
+                  "node/server.js:11098-11105",
+                  "node/server_functions.js:3393-3419"
+                ]
+              }
+            }
+          ]
+        },
+        "order": [
+          "`player` to you",
+          "with `request_id`: `game_response` `data` (**Tree done**) to you"
+        ],
+        "source": "node/server.js:11096-11114"
+      },
+      {
+        "value": [
+          "redorb",
+          "blueorb",
+          "greenorb",
+          "yelloworb"
+        ],
+        "name": "orb",
+        "when": "An orb: removes the other orb conditions and adds this one. No `game_response` on success.",
+        "request": {
+          "confirm": {
+            "code": [
+              "node/server.js:11115-11122"
+            ],
+            "note": "The branch reads only `type` (and `request_id`)"
+          }
+        },
+        "responses": [
+          {
+            "name": "Orb condition",
+            "event": "player",
+            "when": "Success. It is the only reply, also with `request_id`.",
+            "summary": "Your state without the four orb conditions in `s`. The server then calls `add_condition` with the orb, but G 17478 has no orb in `G.conditions`, so it adds nothing (node/server_functions.js:3237-3240).",
+            "example": {
+              "id": "Merlin",
+              "s": {},
+              "cid": 419
+            },
+            "example_trimmed": true,
+            "source": "node/server.js:11122-11127",
+            "confirm": {
+              "code": [
+                "node/server.js:11123-11127",
+                "node/server_functions.js:3236-3240",
+                "node/server.js:4550-4594"
+              ]
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "Your map has no ref for that orb, or you are more than 40 px from it. G 17478 has no orb ref on any map. The reply is the bare string, also with `request_id`.",
+              "code": "distance",
+              "form": "bare",
+              "source": "node/server.js:11115-11121",
+              "confirm": {
+                "code": [
+                  "node/server.js:11116-11122"
+                ]
+              }
+            }
+          ]
+        },
+        "order": [
+          "`player` to you"
+        ],
+        "source": "node/server.js:11115-11127"
+      },
+      {
+        "value": "the_lever",
+        "when": "The lever on `resort_e`: takes you to `resort` (a `magiport` of 300 ms).",
+        "request": {
+          "confirm": {
+            "code": [
+              "node/server.js:11128-11132"
+            ],
+            "note": "The branch reads only `type` (and `request_id`)"
+          }
+        },
+        "responses": [
+          {
+            "name": "Lever condition",
+            "event": "player",
+            "when": "Success: `s.magiport` (300 ms) to `resort` starts. Before the **Lever done** reply.",
+            "summary": "Your state with `magiport` in `s`.",
+            "example": {
+              "id": "Merlin",
+              "s": {
+                "magiport": {
+                  "ms": 300,
+                  "x": -12,
+                  "y": 88,
+                  "f": "Merlin",
+                  "in": "resort",
+                  "map": "resort"
+                }
+              },
+              "cid": 419
+            },
+            "example_trimmed": true,
+            "source": "node/server.js:11132-11139",
+            "confirm": {
+              "code": [
+                "node/server.js:11133-11139",
+                "node/server.js:4550-4594"
+              ]
+            }
+          },
+          {
+            "name": "Lever done",
+            "event": "game_response",
+            "code": "data",
+            "when": "Sent last, only when the request has `request_id`.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {
+                  "name": "response",
+                  "type": "\"data\"",
+                  "optional": false,
+                  "description": "Always `\"data\"`."
+                },
+                {
+                  "name": "place",
+                  "type": "\"interaction\"",
+                  "optional": false,
+                  "description": "The request."
+                },
+                {
+                  "name": "success",
+                  "type": "true",
+                  "optional": false,
+                  "description": "Always `true`."
+                },
+                {
+                  "name": "request_id",
+                  "type": "any",
+                  "optional": false,
+                  "description": "The `request_id` of the request."
+                },
+                {
+                  "name": "interaction",
+                  "type": "\"the_lever\"",
+                  "optional": false,
+                  "description": "The `type` of the request."
+                },
+                {
+                  "name": "in_progress",
+                  "type": "true",
+                  "optional": false,
+                  "description": "The `magiport` condition (300 ms) to `resort` started."
+                },
+                {
+                  "name": "destination",
+                  "type": "\"resort\"",
+                  "optional": false,
+                  "description": "Always `\"resort\"`."
+                }
+              ],
+              "example": {
+                "request_id": "lever-1",
+                "interaction": "the_lever",
+                "in_progress": true,
+                "destination": "resort",
+                "success": true,
+                "response": "data",
+                "place": "interaction"
+              }
+            },
+            "without_request_id": {
+              "none": true
+            },
+            "source": "node/server.js:11016-11023, 11140",
+            "confirm": {
+              "code": [
+                "node/server.js:11016-11023",
+                "node/server.js:11140",
+                "node/server_functions.js:3421-3446"
+              ]
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "You are not on `resort_e`.",
+              "code": "distance",
+              "with_request_id": {
+                "form": "failure",
+                "extra": [
+                  {
+                    "name": "request_id",
+                    "type": "any",
+                    "optional": false,
+                    "description": "The `request_id` of the request.",
+                    "example": "lever-1"
+                  },
+                  {
+                    "name": "interaction",
+                    "type": "\"the_lever\"",
+                    "optional": false,
+                    "description": "The `type` of the request."
+                  }
+                ]
+              },
+              "without_request_id": {
+                "form": "bare"
+              },
+              "source": "node/server.js:11128-11131",
+              "confirm": {
+                "code": [
+                  "node/server.js:11012-11015",
+                  "node/server.js:11129-11132",
+                  "node/server_functions.js:3393-3419"
+                ]
+              }
+            }
+          ]
+        },
+        "order": [
+          "`player` to you",
+          "with `request_id`: `game_response` `data` (**Lever done**) to you"
+        ],
+        "source": "node/server.js:11128-11140"
+      },
+      {
+        "name": "Lever (bare)",
+        "request": {
+          "type": "\"the_lever\"",
+          "example": "the_lever",
+          "confirm": {
+            "code": [
+              "node/server.js:11011",
+              "node/server.js:11128"
+            ],
+            "note": "`data == \"the_lever\"`; a string has no `request_id`"
+          }
+        },
+        "same_as": "the_lever",
+        "when": "The payload is the bare string `\"the_lever\"` (`data == \"the_lever\"`). It has no `request_id`, so the forms without `request_id` apply.",
+        "source": "node/server.js:11128"
+      },
+      {
+        "value": "dailytask",
+        "when": "The daily task board: starts a 1 hour monster hunt for goo. G 17478 has no `dailytask` ref, so it always fails with `distance`.",
+        "request": {
+          "confirm": {
+            "code": [
+              "node/server.js:11141-11143"
+            ],
+            "note": "The branch reads only `type` (and `request_id`)"
+          }
+        },
+        "responses": [
+          {
+            "name": "Daily task",
+            "event": "game_response",
+            "code": "monsterhunt",
+            "when": "You are within 150 px of `G.maps.main.ref.dailytask`. The server sets `p.monsterhunt` to goo for 1 hour.",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"monsterhunt\"",
+                "optional": false,
+                "description": "The code. There is no `place`."
+              },
+              {
+                "name": "monster",
+                "type": "\"goo\"",
+                "optional": false,
+                "description": "The monster of the hunt."
+              }
+            ],
+            "example": {
+              "response": "monsterhunt",
+              "monster": "goo"
+            },
+            "source": "node/server.js:11141-11146",
+            "confirm": {
+              "code": [
+                "node/server.js:11141-11146"
+              ],
+              "live_needed": "G 17478 has no `G.maps.main.ref.dailytask`, so this reply cannot happen with that G."
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "`G.maps.main.ref.dailytask` is missing (as in G 17478), or you are more than 150 px from it. The reply is the bare string, also with `request_id`.",
+              "code": "distance",
+              "form": "bare",
+              "source": "node/server.js:11141-11143",
+              "confirm": {
+                "code": [
+                  "node/server.js:11141-11144"
+                ]
+              }
+            }
+          ]
+        },
+        "order": [
+          "`game_response` `monsterhunt` to you"
+        ],
+        "source": "node/server.js:11141-11146"
+      },
+      {
+        "name": "Konami",
+        "match": "`key`, and no known `type`",
+        "when": "The end of the konami sequence. Send `move` with `key` `u`, `u`, `d`, `d`, `l`, `r`, `l`, `r`, then this event with `key: \"B\"`, then with `key: \"A\"`.",
+        "request": {
+          "fields": [
+            {
+              "name": "key",
+              "type": "\"A\" | \"B\"",
+              "optional": false,
+              "coerce": "`==`",
+              "description": "The konami key. The server reads it only when `player.konami` exists (a [`move`](#send-move) with `key` makes it). `B` adds to the list; `A` checks it."
+            }
+          ],
+          "example": {
+            "key": "A"
+          },
+          "confirm": {
+            "code": [
+              "node/server.js:11147-11150"
+            ]
+          }
+        },
+        "responses": [
+          {
+            "name": "Konami B",
+            "kind": "none",
+            "when": "`key: \"B\"`, and the list has fewer than 20 entries: the server adds `B` to `player.konami` and sends nothing.",
+            "source": "node/server.js:11148-11149",
+            "confirm": {
+              "code": [
+                "node/server.js:11147-11149"
+              ]
+            }
+          },
+          {
+            "name": "Konami",
+            "event": "game_response",
+            "code": "target_lock",
+            "when": "`key: \"A\"` and `player.konami` holds `uuddlrlrB`. Your temporary skin becomes `konami` (you get `player` first). The monster is `p.target_lock`. The server picks a new one when it has none, or the last pick is more than 15 days old.",
+            "fields": [
+              {
+                "name": "response",
+                "type": "\"target_lock\"",
+                "optional": false,
+                "description": "The code. There is no `place`."
+              },
+              {
+                "name": "monster",
+                "type": "string",
+                "optional": false,
+                "description": "A key of `G.monsters`: a monster that is not special, not stationary, and has `c`."
+              }
+            ],
+            "example": {
+              "response": "target_lock",
+              "monster": "crab"
+            },
+            "source": "node/server.js:11147-11164",
+            "confirm": {
+              "code": [
+                "node/server.js:11150-11164",
+                "node/server.js:4550-4594"
+              ],
+              "note": "The monster is picked from G at run time"
+            }
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "`key` is `B` and the list has 20 entries, `key` is neither `A` nor `B`, or no `player.konami`.",
+              "replies": [],
+              "source": "node/server.js:11147-11149",
+              "confirm": {
+                "code": [
+                  "node/server.js:11147-11150"
+                ]
+              }
+            },
+            {
+              "when": "`A`, and `player.konami` is not `uuddlrlrB`. The server clears the list.",
+              "replies": [],
+              "source": "node/server.js:11165-11167",
+              "confirm": {
+                "code": [
+                  "node/server.js:11150-11151",
+                  "node/server.js:11165-11167"
+                ]
+              }
+            }
+          ]
+        },
+        "order": {
+          "A": [
+            "`player` to you",
+            "`game_response` `target_lock` to you"
+          ],
+          "B": [
+            "nothing"
+          ]
+        },
+        "source": "node/server.js:11147-11168"
+      }
+    ]
+  },
+  "failures": {
+    "event": "game_response",
+    "place": "interaction",
+    "rows": [
+      {
+        "when": "No character.",
+        "code": "invalid",
+        "with_request_id": {
+          "form": "failure",
+          "extra": [
+            {
+              "name": "request_id",
+              "type": "any",
+              "optional": false,
+              "description": "The `request_id` of the request.",
+              "example": "tree-1"
+            },
+            {
+              "name": "interaction",
+              "type": "any",
+              "optional": true,
+              "description": "The `type` of the request, as sent. Absent when the request had no `type`.",
+              "example": "newyear_tree"
+            }
+          ]
+        },
+        "without_request_id": {
+          "none": true
+        },
+        "source": "node/server.js:11011-11015, 11024-11027",
+        "confirm": {
+          "code": [
+            "node/server.js:11011-11015",
+            "node/server.js:11024-11027",
+            "node/server_functions.js:3393-3419"
+          ],
+          "note": "Without `request_id` the handler returns and sends nothing; live, a socket with no character got no reply"
+        }
+      }
+    ]
+  }
+}

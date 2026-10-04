@@ -1,0 +1,21 @@
+{
+  "event": "whistle",
+  "source": "node/server.js:12897-12908",
+  "request": {
+    "fields": [],
+    "note": "No payload. The handler reads no field.",
+    "confirm": {"code": ["node/server.js:12897-12908"], "note": "The handler never reads `data`"}
+  },
+  "responses": [],
+  "failures": {
+    "event": "game_response",
+    "place": "whistle",
+    "intro": "**Server bug:** the handler does not declare `player`. The name resolves to the `var player` of the connection function (node/server.js:4991). That variable is set only when the socket connected with a `secret` handshake query and some character was online. Then it is the last character that the loop read, which can be a different character.",
+    "rows": [
+      {"when": "The variable `player` is `undefined`: the socket connected without a `secret` query (the usual case), or no character was online then. `player.monster` throws.", "replies": [
+        {"event": "game_error", "example": "ERROR!", "note": "the wrapper error, +16 call cost"}
+      ], "source": "node/server.js:12898, 4989-4991", "confirm": {"code": ["node/server.js:12898", "node/server.js:4859", "node/server.js:4989-4991", "node/server.js:4947-4966"], "note": "`var player` at 4991 is scoped to the connection function (4859); the handler has no `var player` of its own"}},
+      {"when": "`player` is a character with no `monster`. That is always true, because `pet` never makes one.", "replies": [], "source": "node/server.js:12898-12900", "confirm": {"code": ["node/server.js:12898-12900", "node/server.js:12886-12895"]}}
+    ]
+  }
+}

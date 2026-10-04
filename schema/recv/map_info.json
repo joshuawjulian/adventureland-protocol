@@ -1,0 +1,13 @@
+{
+  "event": "map_info",
+  "to": "the players in the duel instance (`instance_emit`; on a hardcore server, every player)",
+  "payload": {
+    "extends": "MapInfoDuel",
+    "fields": [],
+    "confirm": {"code": ["node/server_functions.js:2898-3011", "node/server_functions.js:3540-3551", "node/server.js:12238-12246", "node/server.js:12338-12345", "node/server.js:1075-1092"], "note": "`instance_emit` reaches the players of the instance only, not its observers (on HARDCORE it is `broadcast`)."}
+  },
+  "example": {"seconds": 42, "active": false, "A": [{"skin": "mranger", "level": 70, "type": "ranger", "x": -120, "y": 10, "in": "Xk2Lm9QwPz4RtY7bNc1D", "map": "duelland", "name": "Ranger", "hp": 3400, "max_hp": 3400, "cx": {"hat": "hat221"}, "active": true}], "B": [{"skin": "mwarrior", "level": 68, "type": "warrior", "x": 120, "y": 10, "in": "Xk2Lm9QwPz4RtY7bNc1D", "map": "duelland", "name": "Warrior", "hp": 5200, "max_hp": 5200, "cx": {}, "active": true}], "id": "Xk2Lm9QwPz4RtY7bNc1D"},
+  "senders": [
+    {"what": "The event loop (`event_loop`, every 1 s): once per pass for each duel that did not end in this pass", "source": "node/server_functions.js:3011"}
+  ]
+}

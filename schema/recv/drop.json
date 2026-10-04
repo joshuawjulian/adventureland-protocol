@@ -1,0 +1,25 @@
+{
+  "event": "drop",
+  "to": "the killer only, or each party member in the same instance (`party_emit` with `instance`). A cave chest goes to its maker and to each run member on that floor",
+  "payload": {
+    "fields": [
+      {"name": "id", "type": "string", "optional": false, "description": "The chest id: 30 random characters (`randomStr(30)`). Send it with `open_chest`."},
+      {"name": "x", "type": "number", "optional": false, "description": "The x position of the chest."},
+      {"name": "y", "type": "number", "optional": false, "description": "The y position of the chest. A PvP chest is 10 below the dead character."},
+      {"name": "map", "type": "MapName", "optional": false, "description": "The map of the chest."},
+      {"name": "chest", "type": "string", "optional": false, "description": "The sprite of the chest. `drop_something`: `\"chest3\"`, `\"chest4\"` (gold x10), `\"chest5\"` (gold x50) or `\"chest6\"` (items). `\"chest8\"`: PvP or hardcore loot. `\"chestp\"`: an `essenceoflife`. `\"cavechest\"`: a cave chest. Default `\"chest1\"`."},
+      {"name": "items", "type": "integer", "optional": false, "description": "The number of item stacks in the chest. A PvP chest counts its PvP items (`pvp_items`)."},
+      {"name": "owners", "type": "string[]", "optional": true, "description": "The account ids (`owner`) that can open the chest: one per account in the party. Absent only on a cave chest that a run member did not make (`cave_send_chest`)."},
+      {"name": "party", "type": "CharacterName", "optional": true, "description": "The party name (the name of the leader). Only on a party chest."}
+    ],
+    "confirm": {"code": ["node/server.js:2238-2274", "node/server.js:2381-2398", "node/server.js:2436-2486", "node/server.js:2488-2496", "node/server.js:2526-2564", "node/server.js:2566-2574", "node/server.js:2602-2640", "node/logic/cave_of_many_dreams.js:505-529", "node/server_functions.js:3553-3575"], "note": "Every emit of `drop` builds the object literally; only the cave form has no `owners`"}
+  },
+  "example": {"x": -112.4, "y": 1438.2, "items": 1, "chest": "chest6", "id": "Wq8XbT2mK9fLzP4nRcV7yH1sJ3dE6g", "party": "Warrior", "map": "main", "owners": ["5818821692620800"]},
+  "senders": [
+    {"what": "`drop_something`: a monster kill (`issue_monster_award`, each member of a cooperative kill, cavalry `drop_on_hit`).", "source": "node/server.js:2454-2486"},
+    {"what": "`drop_something_hardcore`: a PvP kill on a hardcore server. No chest when the dead character loses no item.", "source": "node/server.js:2532-2564"},
+    {"what": "`drop_something_pvp`: a PvP kill. No chest when the dead character loses no item.", "source": "node/server.js:2608-2640"},
+    {"what": "`drop_one_thing`: the first heal of a ghost (`essenceoflife`), and the `mainframe` command `give spares`. Also a reserved encouragement chest (full inventory), and the maker of a cave chest.", "source": "node/server.js:2238-2274"},
+    {"what": "`cave_send_chest`: a cave chest, to the other run members on the floor. Also each chest of a floor, to a member who enters that floor.", "source": "node/logic/cave_of_many_dreams.js:527-529"}
+  ]
+}

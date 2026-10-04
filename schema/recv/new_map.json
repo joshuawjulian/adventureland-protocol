@@ -1,0 +1,10 @@
+{
+  "event": "new_map",
+  "to": "you: only the socket of the character or the observer that moved",
+  "payload": {"extends": "NewMapData", "confirm": {"code": ["node/server.js:4614-4638", "node/server.js:4640-4758"], "note": "The two emits are the only senders. The player form also lists `eval: EV`, but `EV` is only assigned in a dead `if (0 && ...)` block, so it is `undefined` and never sent"}},
+  "example": {"name": "winterland", "in": "winterland", "x": -8, "y": -337, "direction": 0, "effect": 1, "info": {}, "m": 14, "entities": {"players": [], "monsters": [], "type": "all", "in": "winterland", "map": "winterland"}},
+  "senders": [
+    {"what": "`transport_player_to`. Requests: `transport`, `enter`, `leave`, `respawn`, `join`, `duel`. Timers: the end of `town`, `magiport` and `blink`. Penalties: jail (`gm`, a `move` line violation), the red zone of `move`. Server loops: event sign-ups, the end of an instance, cave doors, bank entry and exit", "source": "node/server.js:4640-4758"},
+    {"what": "`transport_observer_to`: the `o:home` handler, the broadcast camera, the observer loop (every 13.2 s) and the end of an instance", "source": "node/server.js:4614-4638"}
+  ]
+}

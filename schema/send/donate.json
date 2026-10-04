@@ -1,0 +1,86 @@
+{
+  "event": "donate",
+  "source": "node/server.js:8629-8679",
+  "request": {
+    "fields": [
+      {"name": "gold", "type": "integer", "optional": true, "default": 1, "coerce": "`max(1, min(parseInt(gold) || 0, 1000000000))`: a string works, a fraction goes away", "description": "The gold to give to the gold pool of the server (`S.gold`)."},
+      {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. The server then also checks that you are near Lost and Found, and the replies are objects with `request_id`."}
+    ],
+    "others": "ignored",
+    "example": {"gold": 1000000},
+    "confirm": {"code": ["node/server.js:8634", "node/server.js:8637", "node/server.js:8640"], "note": "The handler reads `gold` and `request_id`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "codes": ["donate_thx", "donate_gum", "donate_low"],
+      "when": "All checks pass. The server moves the gold to `S.gold`. The code depends on the amount (the same rule in both forms): `donate_thx` for 1,000,000 or more, `donate_gum` for 100,000 to 999,999, `donate_low` for less than 100,000.",
+      "with_request_id": {
+        "fields": [
+          {"name": "response", "type": "\"donate_thx\" | \"donate_gum\" | \"donate_low\"", "optional": false, "description": "The code: `donate_thx`: 1,000,000 or more; it sets `player.donation`, which opens Lost and Found until you log out. `donate_gum`: 100,000 to 999,999; you get a `gum`. `donate_low`: less than 100,000."},
+          {"name": "gold", "type": "integer", "optional": false, "description": "The gold that you gave."},
+          {"name": "xprate", "type": "number", "optional": false, "description": "The XP that a merchant gets for each gold: 4.8 while `S.gold` (before this donation) is below 500,000,000, 4 up to 1,000,000,000, else 3.2. Other classes get no XP."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "place", "type": "\"donate\"", "optional": false, "description": "The request."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"}
+        ],
+        "example": {"response": "donate_gum", "gold": 250000, "xprate": 4.8, "success": true, "place": "donate", "request_id": "r1"}
+      },
+      "without_request_id": {
+        "fields": [
+          {"name": "response", "type": "\"donate_thx\" | \"donate_gum\" | \"donate_low\"", "optional": false, "description": "The code: `donate_thx`: 1,000,000 or more; it sets `player.donation`, which opens Lost and Found until you log out. `donate_gum`: 100,000 to 999,999; you get a `gum`. `donate_low`: less than 100,000."},
+          {"name": "gold", "type": "integer", "optional": false, "description": "The gold that you gave."},
+          {"name": "xprate", "type": "number", "optional": false, "description": "The XP that a merchant gets for each gold: 4.8 while `S.gold` (before this donation) is below 500,000,000, 4 up to 1,000,000,000, else 3.2. Other classes get no XP."}
+        ],
+        "example": {"response": "donate_thx", "gold": 1000000, "xprate": 4.8}
+      },
+      "source": "node/server.js:8646-8650, 8669-8678",
+      "confirm": {"code": ["node/server.js:8646-8659", "node/server.js:8669-8678"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "donate",
+    "rows": [
+      {
+        "when": "No character, or the character is in the bank.",
+        "code": "cant_in_bank",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"}
+          ]
+        },
+        "without_request_id": {"form": "plain", "note": "no `place` and no `failed`"},
+        "source": "node/server.js:8633-8636",
+        "confirm": {"code": ["node/server.js:8633-8636", "node/server_functions.js:3385-3391", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "With `request_id` only: you are more than 500 px from the `lostandfound` NPC on `woffice`.",
+        "code": "distance",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"}
+        ],
+        "source": "node/server.js:8637-8639",
+        "confirm": {"code": ["node/server.js:8637-8639", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The amount is more than your gold.",
+        "code": "gold_not_enough",
+        "with_request_id": {
+          "extra": [
+            {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`.", "example": "r1"},
+            {"name": "gold", "type": "integer", "optional": false, "description": "The amount after the clamp.", "example": 5000000}
+          ]
+        },
+        "without_request_id": {"form": "bare"},
+        "source": "node/server.js:8641-8645",
+        "confirm": {"code": ["node/server.js:8640-8645", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {"event": "player", "to": "you", "when": "Success, before the `game_response`.", "summary": "Your state with `reopen: true`: less `gold`, more `xp` for a merchant, and the `gum` in `items` for `donate_gum`.", "source": "node/server.js:8668", "confirm": {"code": ["node/server.js:8652", "node/server.js:8660-8668", "node/server.js:4550-4594"]}}
+  ],
+  "order": ["`player` to you", "`game_response` `donate_thx`, `donate_gum` or `donate_low` to you"]
+}

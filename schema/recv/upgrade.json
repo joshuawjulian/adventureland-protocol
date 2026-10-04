@@ -1,0 +1,19 @@
+{
+  "event": "upgrade",
+  "to": "every character and observer that has the NPC (or the character, see `senders`) in view (`xy_emit`); the actor only when the NPC is in its view, which is not sure with a `computer`",
+  "payload": {
+    "fields": [
+      {"name": "type", "type": "\"upgrade\" | \"compound\" | \"exchange\" | \"poof\" | string", "optional": false, "description": "The animation. `\"exchange\"` for the exchange NPC. `\"poof\"` for the statue in spookytown. `<token>s` (for example `\"monstertokens\"`) for a token exchange: always the token name plus `s`, also when the NPC has another name."},
+      {"name": "success", "type": "0 | 1", "optional": false, "description": "`1` for a success, `0` for a failure. Only `upgrade` and `compound` send `0`."}
+    ],
+    "confirm": {"code": ["node/server.js:14937", "node/server.js:14955", "node/server.js:14852", "node/server.js:14876", "node/server.js:14818-14824", "node/server.js:6693", "node/server.js:6737", "node/server.js:8703-8733", "node/server_functions.js:3747-3790"]}
+  },
+  "example": {"type": "upgrade", "success": 1},
+  "senders": [
+    {"what": "The end of an `upgrade` timer, at the upgrade NPC. Without a `main` instance, at the character.", "source": "node/server.js:14937, 14955"},
+    {"what": "The end of a `compound` timer, at the compound NPC.", "source": "node/server.js:14852, 14876"},
+    {"what": "The end of an `exchange` timer, at the exchange NPC. Not for an item with a quest (`qs`): that one sends `game_response` `<quest>_success`.", "source": "node/server.js:14820-14824"},
+    {"what": "The `exchange_buy` handler, at the NPC of the token.", "source": "node/server.js:6737"},
+    {"what": "The `destroy` handler with `statue`, within `B.sell_dist` of the statue: every time, not only when the rare roll makes the item level 13 (the emit is after that `if`).", "source": "node/server.js:8703-8733"}
+  ]
+}

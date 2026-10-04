@@ -1,0 +1,30 @@
+{
+  "event": "send_updates",
+  "source": "node/server.js:5020-5027",
+  "request": {"fields": [], "note": "No payload. The handler does not read `data`, so any payload (also `null`) works.", "confirm": {"code": ["node/server.js:5020-5027"], "note": "The handler takes no argument"}},
+  "responses": [
+    {
+      "name": "Gone",
+      "event": "disappear",
+      "when": "First, one for each entity that the socket saw before and does not see now. The observer and the character each get their own set.",
+      "fields": [
+        {"name": "id", "type": "EntityId", "optional": false, "description": "The entity that left the view."},
+        {"name": "outside", "type": "true", "optional": false, "description": "Always `true`: the entity is out of view, it did not die."}
+      ],
+      "example": {"id": "48213", "outside": true},
+      "source": "node/server_functions.js:3696-3698", "confirm": {"code": ["node/server.js:5021-5026", "node/server_functions.js:3678-3679", "node/server_functions.js:3698-3700"]}
+    },
+    {
+      "name": "Snapshot",
+      "event": "entities",
+      "when": "Then one full snapshot, for the observer of the socket (if any), then one for the character (if any). With neither, the server sends nothing.",
+      "type": "EntitiesFrame",
+      "example": {"players": [{"hp": 2420, "max_hp": 2900, "mp": 1180, "max_mp": 1460, "xp": 2850310, "attack": 288, "heal": 0, "frequency": 1.12, "speed": 55, "range": 200, "armor": 70, "resistance": 40, "level": 50, "rip": false, "afk": "code", "s": {}, "c": {}, "q": {}, "age": 12, "pdps": 0, "id": "Ranger", "x": 10, "y": -40, "cid": 5, "guild": null, "controller": "", "skin": "mranger", "cx": {}, "slots": {"ring1": null, "ring2": null, "earring1": null, "earring2": null, "belt": null, "mainhand": {"name": "bow", "level": 7}, "offhand": {"name": "quiver", "level": 2}, "helmet": {"name": "helmet", "level": 6}, "chest": {"name": "coat", "level": 6}, "pants": {"name": "pants", "level": 6}, "shoes": {"name": "shoes", "level": 6}, "gloves": {"name": "gloves", "level": 6}, "amulet": null, "orb": null, "elixir": null, "cape": null}, "ctype": "ranger", "owner": ""}], "monsters": [{"id": "48213", "type": "goo", "x": 120, "y": 300, "cid": 3, "s": {}}], "type": "all", "in": "main", "map": "main"},
+      "source": "node/server_functions.js:3675-3705", "confirm": {"code": ["node/server.js:5021-5026", "node/server_functions.js:3675-3707"], "note": "Sent only when the instance of the observer exists (node/server_functions.js:3707)"}
+    }
+  ],
+  "order": [
+    "`disappear` `{id, outside: true}` for each entity that left the view of the observer, then `entities` for the observer",
+    "the same for the character: `disappear` events, then `entities`"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "event": "merchant",
+  "source": "node/server.js:9185-9219",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": true, "coerce": "none: used as a key, `player.items[num]`, when it is not `undefined`. A number or a numeric string works; `null` or any other value gives `invalid`", "description": "The slot of a stand item: an item with `G.items[name].stand` (`stand0`, `stand1`, `computer` and `supercomputer` in G 17478). The server opens the stand with it. Any class can open a stand."},
+      {"name": "close", "type": "any", "optional": true, "coerce": "tested as true or false", "description": "A true value closes the stand. With `num`, the server closes the stand and then opens it again with `num`."}
+    ],
+    "others": "ignored",
+    "example": {"num": 12}, "confirm": {"code": ["node/server.js:9190-9193", "node/server.js:9197", "node/server.js:9205-9207"], "note": "The handler reads only `num` and `close`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "Always after the checks. With no `num` and no `close`, an open stand closes, and with no open stand nothing changes. If `num` is the stand item that is open now and `close` is not set, nothing changes and only this reply comes.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"merchant\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "merchant"},
+      "source": "node/server.js:9193, 9218", "confirm": {"code": ["node/server.js:9193", "node/server.js:9218", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "merchant",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:9187-9189", "confirm": {"code": ["node/server.js:9186-9189"]}},
+      {"when": "`num` is present, and that slot is empty or does not hold a stand item.", "code": "invalid", "source": "node/server.js:9190-9192", "confirm": {"code": ["node/server.js:9190-9192", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "The stand opened, closed or changed, or `num` is present. Before `merrit_status`.",
+      "summary": "Your state without `reopen`. `stand` is the `stand` value of the item (`\"stand0\"`, `\"stand1\"` or `\"cstand\"`), or `false`. `slots` has the open trade slots. Clients nearby see the change in the next `entities` (`u`).",
+      "source": "node/server.js:9209-9212", "confirm": {"code": ["node/server.js:9209-9212", "node/server.js:4550-4594"]}
+    },
+    {
+      "event": "merrit_status",
+      "to": "you",
+      "when": "Same as `player`, after it.",
+      "type": "MerritStatus",
+      "example": {"reasons": [{"code": "listing"}], "next_at": 0, "last": null, "server_now": 1791100800000, "stand_opened": true},
+      "source": "node/server.js:9213-9216, node/logic/market_patron_runtime.js:42-71", "confirm": {"code": ["node/server.js:9213-9216", "node/logic/market_patron_runtime.js:42-71", "node/logic/market_patron.js:29-67"], "note": "`stand_opened` is the `extra` of `market_patron_public_status`; the `reasons` come from node/logic/market_patron.js:29-67"}
+    }
+  ],
+  "order": [
+    "`player` to you (only when something changed, or `num` is present)",
+    "`merrit_status` to you (same condition)",
+    "`game_response` `data` to you"
+  ]
+}

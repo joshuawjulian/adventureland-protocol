@@ -1,0 +1,67 @@
+{
+  "event": "destroy",
+  "source": "node/server.js:8680-8736",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": true, "default": 0, "coerce": "`max(0, parseInt(num) || 0)`: a string works; a missing value, `NaN` and a negative value become slot 0", "description": "The slot of the item."},
+      {"name": "q", "type": "integer", "optional": true, "default": 1, "coerce": "`min(max(parseInt(q) || 0, 1), q_of_stack || 1)`", "description": "How many units of the stack to destroy."},
+      {"name": "statue", "type": "boolean", "optional": true, "description": "Any truthy value: use the poof statue in `spookytown`. It has an effect only when you are within `B.sell_dist` (400 px) of it."}
+    ],
+    "others": "ignored",
+    "example": {"num": 9, "q": 1, "statue": true},
+    "confirm": {"code": ["node/server.js:8683", "node/server.js:8689", "node/server.js:8703"], "note": "The handler reads `num`, `q` and `statue`"}
+  },
+  "responses": [
+    {"name": "Success", "event": "game_response", "code": "destroyed", "when": "All checks pass. The server removes `q` units. An item at level 13 stays: the server does not remove it, but sends this reply.", "extends": "GameResponseSuccess", "fields": [{"name": "response", "type": "\"destroyed\"", "optional": false, "description": "The code."}, {"name": "place", "type": "\"destroy\"", "optional": false, "description": "The request."}, {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}, {"name": "name", "type": "ItemName", "optional": false, "description": "The item."}, {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after the conversion."}, {"name": "cevent", "type": "\"destroy\"", "optional": false, "description": "Tells the official client to fire its `destroy` code event."}], "example": {"name": "wbook0", "num": 9, "cevent": "destroy", "success": true, "response": "destroyed", "place": "destroy"}, "source": "node/server.js:8735", "confirm": {"code": ["node/server.js:8699-8702", "node/server.js:8735", "node/server_functions.js:3421-3446"]}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "destroy",
+    "rows": [
+      {
+        "when": "No character. The handler reads `player.items` and does not check `player`, so it throws.",
+        "replies": [{"event": "game_error", "example": "ERROR!", "note": "the shared error step"}],
+        "source": "node/server.js:8681-8684",
+        "confirm": {"code": ["node/server.js:8681-8684", "node/server.js:4947-4966"]}
+      },
+      {"when": "The slot `num` is empty.", "code": "no_item", "extra": [{"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after the conversion.", "example": 9}], "source": "node/server.js:8684-8686", "confirm": {"code": ["node/server.js:8684-8686", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item is a placeholder: an upgrade or compound runs on the slot.", "code": "item_placeholder", "extra": [{"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after the conversion.", "example": 9}], "source": "node/server.js:8690-8692", "confirm": {"code": ["node/server.js:8690-8692", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the lock `l`.", "code": "item_locked", "extra": [{"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after the conversion.", "example": 9}], "source": "node/server.js:8693-8695", "confirm": {"code": ["node/server.js:8693-8695", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item has the flag `b`.", "code": "item_blocked", "extra": [{"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` after the conversion.", "example": 9}], "source": "node/server.js:8696-8698", "confirm": {"code": ["node/server.js:8696-8698", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "server_message",
+      "to": "everyone",
+      "when": "`statue` near poof, and the roll gives the item back at level 13, unless you are `stealth` or the item has `silent`.",
+      "type": "ItemAnnouncement",
+      "example": {"message": "Wizard received a Staff +13", "phrase": "server.item.named_received.a", "phrase_args": {"player": "Wizard", "item": "Staff +13", "quantity": 1}, "color": "#85C76B", "item": {"name": "staff", "level": 13}, "type": "server_usuccess", "name": "Wizard"},
+      "source": "node/server.js:8709-8731",
+      "confirm": {"code": ["node/server.js:8709-8731", "node/server_functions.js:4576-4589", "languages/index.js:256-258", "node/server_functions.js:3495-3496"]}
+    },
+    {
+      "event": "upgrade",
+      "to": "nearby",
+      "when": "`statue` near poof. Every client whose view holds the statue.",
+      "fields": [{"name": "type", "type": "\"poof\"", "optional": false, "description": "The statue."}, {"name": "success", "type": "1", "optional": false, "description": "Always 1."}],
+      "example": {"type": "poof", "success": 1},
+      "source": "node/server.js:8732",
+      "confirm": {"code": ["node/server.js:8703", "node/server.js:8732", "node/server_functions.js:3744-3791"]}
+    },
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true`. After a `shadowstone` at the statue or a level-13 roll, the server also recalculates your stats.",
+      "source": "node/server.js:8734",
+      "confirm": {"code": ["node/server.js:8682", "node/server.js:8705-8713", "node/server.js:8734", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`server_message` to everyone, only for a level-13 roll",
+    "`upgrade` to clients near the statue, only with `statue`",
+    "`player` to you",
+    "`game_response` `destroyed` to you"
+  ]
+}

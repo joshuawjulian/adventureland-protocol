@@ -1,0 +1,138 @@
+{
+  "event": "mail_take_item",
+  "source": "node/server.js:5599-5707",
+  "request": {
+    "fields": [
+      {"name": "id", "type": "string", "optional": false, "coerce": "a database id: `get(id)`", "description": "The id of the mail, `\"ML_\"` and 50 random characters (from the mail list of the account)."},
+      {"name": "request_id", "type": "any", "optional": true, "description": "Copied unchanged into every reply. Not tested as true or false: any value except `undefined` appears."}
+    ],
+    "others": "ignored",
+    "example": {"id": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234", "request_id": 1}, "confirm": {"code": ["node/server.js:5601", "node/server.js:5607-5608", "node/server.js:5639"]}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "mail_item_taken",
+      "when": "The claim succeeded: the server marked the mail as taken in a transaction and added the attachment. It comes after a `player` update with `reopen`. The claim is asynchronous.",
+      "fields": [
+        {"name": "response", "type": "\"mail_item_taken\"", "optional": false, "description": "The code. The object has no `place`."},
+        {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request."},
+        {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "item", "type": "ItemInstance", "optional": true, "description": "The item (`cache_item`). Absent for a gold attachment."},
+        {"name": "gold", "type": "integer", "optional": true, "description": "Only for a gold attachment: the gold. Only award mail of the Cave of Many Dreams carries gold, at most `G.events.dreams.gold_limit`."},
+        {"name": "cevent", "type": "\"mail_item_taken\"", "optional": false, "description": "Tells the official client to fire its code event."}
+      ],
+      "example": {"response": "mail_item_taken", "id": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234", "request_id": 1, "success": true, "item": {"name": "blade", "level": 7}, "cevent": "mail_item_taken"},
+      "source": "node/server.js:5602-5614, 5686-5689, 5698-5703", "confirm": {"code": ["node/server.js:5602-5614", "node/server.js:5679-5689", "node/server.js:5697-5703", "node/server_functions.js:4234-4261"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "intro": "Every reply is `{response, id, request_id, failed: true, reason}` (plus `cevent` for `mail_take_item_failed`). The handler does not use `fail_response`, so no reply has `place`. A reply goes out only while your character is online.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5626-5628", "confirm": {"code": ["node/server.js:5626-5628"]}},
+      {
+        "when": "`mode.prevent_external` is on (the `HARDCORE` and `TEST` servers).",
+        "code": "not_in_this_server",
+        "form": "plain",
+        "extra": [
+          {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request.", "example": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234"},
+          {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request.", "example": 1},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "reason", "type": "\"not_in_this_server\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:5629-5631", "confirm": {"code": ["node/server.js:5629-5631", "node/server.js:5602-5614", "node/server.js:297", "node/server.js:382", "node/server.js:393"]}
+      },
+      {
+        "when": "No mail has this `id`.",
+        "code": "mail_item_already_taken",
+        "form": "plain",
+        "extra": [
+          {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request.", "example": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234"},
+          {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request.", "example": 1},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "reason", "type": "\"invalid_mail\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:5640", "confirm": {"code": ["node/server.js:5639-5640", "node/server.js:5602-5614"]}
+      },
+      {
+        "when": "Transaction: the mail is not for your account, or it is for another character of the account. Or the transaction failed with an error (`exception`) and nobody took the mail. `claim_failed` is the fallback when `tx` gives no reason; `tx` always gives one.",
+        "code": "mail_take_item_failed",
+        "form": "plain",
+        "extra": [
+          {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request.", "example": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234"},
+          {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request.", "example": 1},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "reason", "type": "\"not_owner\" | \"wrong_character\" | \"exception\" | \"claim_failed\"", "optional": false, "description": "Why.", "example": "not_owner"},
+          {"name": "cevent", "type": "\"mail_take_item_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+        ],
+        "source": "node/server.js:5644-5646, 5655-5663", "confirm": {"code": ["node/server.js:5644-5646", "node/server.js:5655-5663", "node/server.js:5602-5614", "common:mongodb_functions.js:71-74", "common:mongodb_functions.js:88-95"]}
+      },
+      {
+        "when": "Transaction: the mail has no item, or somebody took it already (also after an `exception` when somebody took the mail now).",
+        "code": "mail_item_already_taken",
+        "form": "plain",
+        "extra": [
+          {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request.", "example": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234"},
+          {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request.", "example": 1},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "reason", "type": "\"no_item\" | \"already_taken\"", "optional": false, "description": "Why.", "example": "already_taken"}
+        ],
+        "source": "node/server.js:5645-5647, 5655-5661", "confirm": {"code": ["node/server.js:5645-5647", "node/server.js:5655-5662", "node/server.js:5602-5614", "common:mongodb_functions.js:71-74", "common:mongodb_functions.js:88-95"]}
+      },
+      {
+        "when": "The attachment is not a valid item and not valid gold. The handler calls `ex(\"invalid_item\")` outside a transaction, where `ex` does not exist; the `catch` releases the claim.",
+        "code": "mail_take_item_failed",
+        "form": "plain",
+        "extra": [
+          {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request.", "example": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234"},
+          {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request.", "example": 1},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "reason", "type": "\"coms_failure\"", "optional": false, "description": "Why."},
+          {"name": "cevent", "type": "\"mail_take_item_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+        ],
+        "source": "node/server.js:5672, 5690-5704", "confirm": {"code": ["node/server.js:5666-5672", "node/server.js:5690-5704", "node/server.js:5602-5614"], "note": "No global `ex` exists in the server code, so the call throws a `ReferenceError`"}
+      },
+      {
+        "when": "Your inventory has no space for the item (`can_add_item`). The server releases the claim, so you can try again. If your character left, the server releases the claim and sends nothing.",
+        "code": "inv_size",
+        "form": "plain",
+        "extra": [
+          {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request.", "example": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234"},
+          {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request.", "example": 1},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "reason", "type": "\"inv_size\"", "optional": false, "description": "Why."}
+        ],
+        "source": "node/server.js:5673-5678", "confirm": {"code": ["node/server.js:5673-5678", "node/server.js:5602-5614"]}
+      },
+      {
+        "when": "Any other error before the attachment reached you.",
+        "code": "mail_take_item_failed",
+        "form": "plain",
+        "extra": [
+          {"name": "id", "type": "string", "optional": false, "description": "The `id` of the request.", "example": "ML_k3Jx9QpLm2vT8wYz0aBcDeFgHiJkLmNoPqRsTuVwXyZ01234"},
+          {"name": "request_id", "type": "any", "optional": true, "description": "The `request_id` of the request.", "example": 1},
+          {"name": "failed", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "reason", "type": "\"coms_failure\"", "optional": false, "description": "Why."},
+          {"name": "cevent", "type": "\"mail_take_item_failed\"", "optional": false, "description": "Tells the official client to fire its code event."}
+        ],
+        "source": "node/server.js:5690-5704", "confirm": {"code": ["node/server.js:5690-5704", "node/server.js:5602-5614"]}
+      }
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your character with `reopen: true`: the item in `items`, or more `gold`. The server adds the item without a `server_message`.",
+      "source": "node/server.js:5685", "confirm": {"code": ["node/server.js:5685", "node/server.js:4550-4594"]}
+    }
+  ],
+  "order": [
+    "`player` with `reopen` to you",
+    "`game_response` `mail_item_taken` to you"
+  ]
+}

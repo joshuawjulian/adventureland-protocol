@@ -1,0 +1,275 @@
+{
+  "event": "gm",
+  "source": "node/server.js:5282-5394",
+  "request": {
+    "fields": [
+      {"name": "action", "type": "\"mute\" | \"jail\" | \"ban\" | \"invincible\" | \"jump\" | \"mjump\" | \"jump_list\" | \"server_info\"", "optional": false, "coerce": "compared with `==`; another value does nothing", "description": "The command. It selects the variant."}
+    ],
+    "others": "ignored. The handler reads `id` for every `action` (`players[id_to_id[data.id]]`), but only `mute`, `jail` and `jump` use the result",
+    "example": {"action": "jump_list"}, "confirm": {"code": ["node/server.js:5287-5288"]}
+  },
+  "failures": {
+    "event": "game_log",
+    "intro": "There is no `game_response`. Errors are `game_log` events with a `LocalizedText`.",
+    "rows": [
+      {"when": "No character, or your `role` is not `\"gm\"`.", "replies": [], "source": "node/server.js:5284-5286", "confirm": {"code": ["node/server.js:5283-5286"]}}
+    ]
+  },
+  "variants": {
+    "key": "action",
+    "intro": "GMs only: a character whose `role` is not `\"gm\"` gets no reply for any `action`.",
+    "list": [
+      {
+        "value": "mute",
+        "when": "Mutes the target for 48 h, or unmutes it.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`players[id_to_id[id]]`: an online character on this server", "description": "The target character."}
+          ],
+          "example": {"action": "mute", "id": "SomePlayer"}, "confirm": {"code": ["node/server.js:5287-5290"]}
+        },
+        "responses": [
+          {
+            "name": "Muted",
+            "event": "game_chat",
+            "when": "The target had no `mute` condition. The server gives it `mute` for 48 h.",
+            "type": "LocalizedText",
+            "example": {"message": "Muted SomePlayer", "phrase": "server.game_chat.muted", "phrase_args": {"target": "SomePlayer"}},
+            "source": "node/server.js:5296-5301", "confirm": {"code": ["node/server.js:5296-5301", "languages/index.js:256-258"]}
+          },
+          {
+            "name": "Unmuted",
+            "event": "game_chat",
+            "when": "The target had `mute`. The server sets its time to 0.",
+            "type": "LocalizedText",
+            "example": {"message": "Unmuted SomePlayer", "phrase": "server.game_chat.unmuted", "phrase_args": {"target": "SomePlayer"}},
+            "source": "node/server.js:5302-5307", "confirm": {"code": ["node/server.js:5302-5307", "languages/index.js:256-258"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No online character has the name `id`.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "Player not found: SomePlayer", "phrase": "server.game_log.player_not_found", "phrase_args": {"id": "SomePlayer"}}
+                }
+              ],
+              "source": "node/server.js:5290-5295", "confirm": {"code": ["node/server.js:5290-5295", "languages/index.js:256-258"]}
+            }
+          ]
+        },
+        "order": ["`game_chat` to you"],
+        "source": "node/server.js:5289-5308"
+      },
+      {
+        "value": "jail",
+        "when": "Moves the target to `jail`.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`players[id_to_id[id]]`: an online character on this server", "description": "The target character."}
+          ],
+          "example": {"action": "jail", "id": "SomePlayer"}, "confirm": {"code": ["node/server.js:5287", "node/server.js:5309-5316"]}
+        },
+        "responses": [
+          {"name": "Jailed", "kind": "none", "when": "The target exists. You get no reply; the target moves (see **Also sent**).", "source": "node/server.js:5316", "confirm": {"code": ["node/server.js:5316", "node/server.js:4640-4647"], "note": "`transport_player_to` sends nothing to the GM"}}
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No online character has the name `id`.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "Player not found: SomePlayer", "phrase": "server.game_log.player_not_found", "phrase_args": {"id": "SomePlayer"}}
+                }
+              ],
+              "source": "node/server.js:5310-5315", "confirm": {"code": ["node/server.js:5310-5315", "languages/index.js:256-258"]}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "new_map",
+            "to": "the target",
+            "when": "The server moves the target to `jail` (`transport_player_to`). The target also gets `player`, and clients near it get `disappear`.",
+            "type": "NewMapData",
+            "example": {
+              "name": "jail",
+              "in": "jail",
+              "x": -79,
+              "y": -153,
+              "effect": 0,
+              "info": {},
+              "m": 12,
+              "entities": {"players": [], "monsters": [], "type": "all", "in": "jail", "map": "jail"}
+            },
+            "source": "node/server.js:5316, 4744-4755", "confirm": {"code": ["node/server.js:5316", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"], "note": "`direction` is left out when the spawn has none (the `jail` spawn has none); `eval` is always `undefined`, so it is not sent"}
+          }
+        ],
+        "order": ["`disappear` to clients near the target", "`new_map` to the target", "`player` to the target"],
+        "source": "node/server.js:5309-5316"
+      },
+      {
+        "value": "ban",
+        "when": "Blocks the account of the character `id` for 21 days (`block_account(id, 21, \"GM Ban\", true)`), and disconnects its characters on every server. `toggle` is `true`: if the account is blocked now, the call unblocks it instead.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "passed as is to `block_account`, which looks it up with `get_character(id)`", "description": "A character name, online or not. The server blocks (or unblocks) its account."}
+          ],
+          "example": {"action": "ban", "id": "SomePlayer"}, "confirm": {"code": ["node/server.js:5320"]}
+        },
+        "responses": [
+          {
+            "name": "Ban",
+            "event": "game_log",
+            "when": "Later, when `block_account` ends. The text is `\"Ban: <result>\"`. `result` is `\"no character\"`, `\"no owner\"`, `\"un-blocked <account id>\"` or `\"blocked <account id> for 21 days\"`. `block_account` always returns a string, so the `\"Ban: No result\"` form (`server.admin.ban_no_result`) does not occur.",
+            "type": "LocalizedText",
+            "example": {"message": "Ban: blocked 5818821692620800 for 21 days", "phrase": "server.admin.ban_result", "phrase_args": {"result": "blocked 5818821692620800 for 21 days"}},
+            "source": "node/server.js:5320-5326", "confirm": {"code": ["node/server.js:5320-5326", "adventure_functions.js:1561-1586", "languages/index.js:256-258", "languages/en/server.js:14"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "`block_account` throws (later).",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "Ban error: Error: not found", "phrase": "server.game_log.ban_error", "phrase_args": {"e": "Error: not found"}}
+                }
+              ],
+              "source": "node/server.js:5327-5329", "confirm": {"code": ["node/server.js:5327-5329", "languages/index.js:256-258"]}
+            }
+          ]
+        },
+        "order": ["later: `game_log` to you"],
+        "source": "node/server.js:5317-5330"
+      },
+      {
+        "value": "invincible",
+        "when": "Gives you the `invincible` condition for 24 h.",
+        "request": {"fields": [], "example": {"action": "invincible"}, "confirm": {"code": ["node/server.js:5331-5333"]}},
+        "responses": [
+          {"name": "Invincible", "event": "player", "when": "Always.", "summary": "Your character (`u+cid`) with the new condition in `s`.", "example": {"id": "Merlin", "s": {"invincible": {"ms": 86400000}}, "cid": 419}, "example_trimmed": true, "source": "node/server.js:5331-5333", "confirm": {"code": ["node/server.js:5331-5333", "node/server.js:4550-4594"]}}
+        ],
+        "order": ["`player` to you"]
+      },
+      {
+        "value": "jump",
+        "when": "Moves you next to an online character.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`players[id_to_id[id]]`: an online character on this server", "description": "The character to jump to."}
+          ],
+          "example": {"action": "jump", "id": "SomePlayer"}, "confirm": {"code": ["node/server.js:5287", "node/server.js:5334-5341"]}
+        },
+        "responses": [
+          {"name": "Jump", "event": "player", "when": "You get a 400 ms `magiport` condition to a safe spot near the target (8 px left, 6 px up). When it ends, the server moves you.", "summary": "Your character (`u+cid`) with the new condition in `s`.", "example": {"id": "Merlin", "s": {"magiport": {"ms": 400, "x": 92, "y": 194, "f": "SomePlayer", "in": "main", "map": "main"}}, "cid": 419}, "example_trimmed": true, "source": "node/server.js:5340-5350", "confirm": {"code": ["node/server.js:5341-5350", "node/server.js:4550-4594"]}}
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No online character has the name `id`.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "Player not found: SomePlayer", "phrase": "server.game_log.player_not_found", "phrase_args": {"id": "SomePlayer"}}
+                }
+              ],
+              "source": "node/server.js:5335-5339", "confirm": {"code": ["node/server.js:5335-5340", "languages/index.js:256-258"]}
+            },
+            {
+              "when": "No safe spot near the target (`safe_xy_nearby`).",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "No safe spot near: SomePlayer", "phrase": "server.game_log.no_safe_spot_near", "phrase_args": {"id": "SomePlayer"}}
+                }
+              ],
+              "source": "node/server.js:5351-5356", "confirm": {"code": ["node/server.js:5351-5356", "languages/index.js:256-258"]}
+            }
+          ]
+        },
+        "order": ["`player` to you", "400 ms later: the move to the target (`new_map`)"],
+        "source": "node/server.js:5334-5357"
+      },
+      {
+        "value": "mjump",
+        "when": "Moves you next to the first live monster of a type.",
+        "request": {
+          "fields": [
+            {"name": "monster", "type": "string", "optional": false, "coerce": "`get_monsters(monster)[0]`", "description": "A monster type (a key of `G.monsters`), for example `\"goo\"`. The server takes the first live monster of that type."}
+          ],
+          "example": {"action": "mjump", "monster": "goo"}, "confirm": {"code": ["node/server.js:5358", "node/server_functions.js:3203-3214"]}
+        },
+        "responses": [
+          {"name": "Monster jump", "event": "player", "when": "You get a 400 ms `magiport` condition to a safe spot near the monster. When it ends, the server moves you.", "summary": "Your character (`u+cid`) with the new condition in `s`.", "example": {"id": "Merlin", "s": {"magiport": {"ms": 400, "x": -58, "y": 714, "in": "main", "map": "main"}}, "cid": 419}, "example_trimmed": true, "source": "node/server.js:5364-5374", "confirm": {"code": ["node/server.js:5365-5374", "node/server.js:4550-4594"], "note": "`f` is `monster.name`, which only some monsters have (node/server.js:13466); without it `f` is not sent"}}
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "No live monster of that type.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "Monster not found: goo", "phrase": "server.game_log.monster_not_found", "phrase_args": {"monster": "goo"}}
+                }
+              ],
+              "source": "node/server.js:5358-5363", "confirm": {"code": ["node/server.js:5358-5364", "languages/index.js:256-258"]}
+            },
+            {
+              "when": "No safe spot near the monster.",
+              "replies": [
+                {
+                  "event": "game_log",
+                  "example": {"message": "No safe spot near: goo", "phrase": "server.game_log.no_safe_spot_near_2", "phrase_args": {"monster": "goo"}}
+                }
+              ],
+              "source": "node/server.js:5375-5380", "confirm": {"code": ["node/server.js:5375-5380", "languages/index.js:256-258"]}
+            }
+          ]
+        },
+        "order": ["`player` to you", "400 ms later: the move to the monster (`new_map`)"],
+        "source": "node/server.js:5357-5380"
+      },
+      {
+        "value": "jump_list",
+        "when": "Lists the characters online on this server.",
+        "request": {"fields": [], "example": {"action": "jump_list"}, "confirm": {"code": ["node/server.js:5381-5386"]}},
+        "responses": [
+          {
+            "name": "Jump list",
+            "event": "gm",
+            "when": "Always.",
+            "fields": [
+              {"name": "action", "type": "\"jump_list\"", "optional": false, "description": "The command."},
+              {"name": "ids", "type": "CharacterName[]", "optional": false, "description": "The names of all characters online on this server."}
+            ],
+            "example": {"action": "jump_list", "ids": ["MyMage", "SomePlayer"]},
+            "source": "node/server.js:5381-5386", "confirm": {"code": ["node/server.js:5381-5386"]}
+          }
+        ],
+        "order": ["`gm` `jump_list` to you"]
+      },
+      {
+        "value": "server_info",
+        "when": "Builds a list of `{name, owner, ip}`, but sends nothing: its `emit` is a comment.",
+        "request": {"fields": [], "example": {"action": "server_info"}, "confirm": {"code": ["node/server.js:5387-5393"]}},
+        "responses": [
+          {"name": "Server info", "kind": "none", "when": "Always.", "source": "node/server.js:5387-5393", "confirm": {"code": ["node/server.js:5387-5393"]}}
+        ]
+      },
+      {
+        "other": true,
+        "name": "Other",
+        "when": "Any other value does nothing.",
+        "request": {"fields": [], "example": {"action": "kick"}, "confirm": {"code": ["node/server.js:5289-5393"]}},
+        "responses": [
+          {"name": "Ignored", "kind": "none", "when": "Any other `action`.", "source": "node/server.js:5287-5394", "confirm": {"code": ["node/server.js:5289-5393"]}}
+        ]
+      }
+    ]
+  }
+}

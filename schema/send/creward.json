@@ -1,0 +1,55 @@
+{
+  "event": "creward",
+  "source": "node/server.js:5231-5247",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "string", "optional": false, "coerce": "tested as true or false, then used as a key of `G.classes[player.type].rewards`", "description": "The class reward. No class in G version 17478 has `rewards`, so no value works (see Notes)."}
+    ],
+    "others": "ignored",
+    "example": {"name": "reward_name"}, "confirm": {"code": ["node/server.js:5232", "node/server.js:5241-5245"]}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "reward_received",
+      "when": "Not reachable with G version 17478. If a class had `rewards`, the server would give the `reward` through `exchange` and send this.",
+      "fields": [
+        {"name": "response", "type": "\"reward_received\"", "optional": false, "description": "The code. The object has no `place` and no `success`."},
+        {"name": "rewards", "type": "string[]", "optional": false, "description": "The class rewards that the character claimed (`player.p.rewards`)."}
+      ],
+      "example": {"response": "reward_received", "rewards": ["reward_name"]},
+      "source": "node/server.js:5246", "confirm": {"code": ["node/server.js:5244-5246"], "note": "Unreachable while no class in G has `rewards`"}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "intro": "The handler uses a `player` variable that it does not declare: the variable of the connection function (node/server.js:4989-4991). Only a socket that connected with a `secret` query sets it, and it holds the last character of the loop, not your character.",
+    "rows": [
+      {
+        "when": "The socket connected without a `secret` query (`player` is `undefined`), or `name` is missing.",
+        "replies": [],
+        "source": "node/server.js:5232-5234", "confirm": {"code": ["node/server.js:4989-4991", "node/server.js:5232-5234"]}
+      },
+      {
+        "when": "`G.classes[player.type].rewards` is `undefined` (every class in G version 17478). Reading `[name]` on it throws, and the wrapper adds 16 call-cost.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "a bare string"}
+        ],
+        "source": "node/server.js:5232, 4947-4966", "confirm": {"code": ["node/server.js:5232", "node/server.js:4947-4966"]}
+      },
+      {
+        "when": "Not verified, or no `auth_id`.",
+        "code": "reward_notverified",
+        "form": "bare",
+        "source": "node/server.js:5235-5237", "confirm": {"code": ["node/server.js:5235-5237"], "note": "Unreachable while no class in G has `rewards`"}
+      },
+      {
+        "when": "The character has the reward already.",
+        "code": "reward_already",
+        "form": "bare",
+        "source": "node/server.js:5241-5243", "confirm": {"code": ["node/server.js:5238-5243"], "note": "Unreachable while no class in G has `rewards`"}
+      }
+    ]
+  }
+}

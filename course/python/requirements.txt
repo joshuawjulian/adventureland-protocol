@@ -1,0 +1,5 @@
+# The packages of the Python course project, at exact versions (docs/COURSE.md, "Pinned versions").
+# Install them in a virtual environment:
+#   python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+httpx==0.27.2      # HTTP: the login, the server list, the game data (G)
+websockets==13.1   # the WebSocket under AlSocket

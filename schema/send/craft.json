@@ -1,0 +1,74 @@
+{
+  "event": "craft",
+  "source": "node/server.js:6514-6616",
+  "request": {
+    "fields": [
+      {"name": "items", "type": "[any, InventoryIndex][]", "optional": false, "coerce": "`Number.isInteger` on each `[1]`, with no conversion. The string `\"3\"` fails with `invalid`", "description": "The ingredients, 1 to 9 entries. Each entry is an array. The server reads only `[1]`, the inventory slot. `[0]` has no effect: the official client puts the cell of the crafting grid there. Two entries must not have the same slot."}
+    ],
+    "others": "ignored",
+    "example": {"items": [[0, 3], [1, 7]]},
+    "confirm": {"code": ["node/server.js:6527-6537", "node/server.js:6538-6556"], "note": "The handler reads only `items`, and of each entry only `[1]`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "craft",
+      "when": "All checks pass. The server takes the gold, removes the ingredients and adds the result.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"craft\"", "optional": false, "description": "The code."},
+        {"name": "place", "type": "\"craft\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "The slot that got the result."},
+        {"name": "name", "type": "ItemName", "optional": false, "description": "The result. It is `G.craft[recipe].output.name` when the recipe has an `output`, else the recipe name."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its `craft` code event."}
+      ],
+      "example": {"num": 3, "name": "fireblade", "cevent": true, "success": true, "response": "craft", "place": "craft"},
+      "source": "node/server.js:6615",
+      "confirm": {"code": ["node/server.js:6600-6601", "node/server.js:6613-6615", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "craft",
+    "rows": [
+      {"when": "No character, or the character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:6523-6525", "confirm": {"code": ["node/server.js:6523-6525", "node/server_functions.js:3393-3419"]}},
+      {"when": "The character is dead (`rip` or `dead`).", "code": "disabled", "source": "node/server.js:6526", "confirm": {"code": ["node/server.js:6526", "node/server_functions.js:3393-3419"]}},
+      {"when": "`items` is not an array, is empty or has more than 9 entries. Or an entry is not an array, its `[1]` is not an integer from 0 to the inventory length - 1, or two entries have the same slot.", "code": "invalid", "source": "node/server.js:6527-6537", "confirm": {"code": ["node/server.js:6527-6537", "node/server_functions.js:3393-3419"]}},
+      {"when": "An ingredient has the lock `l`, the flag `b` or `giveaway`. The server checks this before it checks for empty slots.", "code": "item_locked", "source": "node/server.js:6538-6558", "confirm": {"code": ["node/server.js:6538-6559", "node/server_functions.js:3393-3419"]}},
+      {"when": "A slot in the list is empty.", "code": "no_item", "source": "node/server.js:6560-6561", "confirm": {"code": ["node/server.js:6539-6540", "node/server.js:6560-6562", "node/server_functions.js:3393-3419"]}},
+      {"when": "The sorted list of ingredient names matches no recipe in `D.craftmap`. A name gets `+<level>` when the item has a level above 0.", "code": "craft_cant", "source": "node/server.js:6563-6568", "confirm": {"code": ["node/server.js:6545-6549", "node/server.js:6564-6569", "node/server_functions.js:3393-3419"]}},
+      {"when": "The recipe has `quest: \"anniversary_baker\"`, and the anniversary event is not active or that NPC is not present.", "code": "craft_cant", "source": "node/server.js:6569-6572", "confirm": {"code": ["node/server.js:6571-6573", "node/server_functions.js:3393-3419"]}},
+      {"when": "The recipe has no `quest`, and you are more than `B.sell_dist` (400 px) from the `craftsman` NPC on `main`. A character with a `computer` passes this check.", "code": "distance", "source": "node/server.js:6575-6580", "confirm": {"code": ["node/server.js:6575-6581", "node/server_functions.js:3393-3419"]}},
+      {"when": "The recipe has a `quest`, and you are more than `B.sell_dist` (400 px) from that quest NPC. A character with a `computer` passes this check.", "code": "distance", "source": "node/server.js:6582-6587", "confirm": {"code": ["node/server.js:6582-6588", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your gold is less than `G.craft[recipe].cost`.", "code": "gold_not_enough", "source": "node/server.js:6589-6590", "confirm": {"code": ["node/server.js:6589-6591", "node/server_functions.js:3393-3419"]}},
+      {"when": "No ingredient stack becomes empty, and the result does not fit in the inventory.", "code": "inventory_full", "source": "node/server.js:6603-6604", "confirm": {"code": ["node/server.js:6592-6605", "node/server_functions.js:3393-3419"]}},
+      {"when": "A stack has fewer units than the recipe needs.", "code": "craft_cant_quantity", "source": "node/server.js:6606-6607", "confirm": {"code": ["node/server.js:6592-6595", "node/server.js:6606-6608", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "player",
+      "to": "you",
+      "when": "Success, before the `game_response`.",
+      "summary": "Your state with `reopen: true`. `items`, `esize` and `gold` show the craft.",
+      "source": "node/server.js:6614",
+      "confirm": {"code": ["node/server.js:6614", "node/server.js:4550-4594"]}
+    },
+    {
+      "event": "server_message",
+      "to": "everyone",
+      "when": "Success, when the result is rare (the count of announcements of this item on the server is below `G.items[name].a`), or when the result got `p: \"shiny\"`. Not when you are `stealth`.",
+      "type": "ItemAnnouncement",
+      "example": {"message": "Wizard received a Fire Blade", "phrase": "server.item.named_received.a", "phrase_args": {"player": "Wizard", "item": "Fire Blade", "quantity": 1}, "color": "#85C76B", "type": "server_received", "item": {"name": "fireblade", "level": 0}, "name": "Wizard"},
+      "source": "node/server.js:2098-2128",
+      "confirm": {"code": ["node/server.js:6613", "node/server.js:2029-2036", "node/server.js:2098-2128", "node/server_functions.js:4576-4589", "node/server_functions.js:3495-3496"], "note": "`r: 1` gives the shiny roll (1/500 for an upgrade item, 1/20000 for a compound item), which always announces"}
+    }
+  ],
+  "order": [
+    "`server_message` to everyone, only for a rare or shiny result",
+    "`player` to you",
+    "`game_response` `craft` to you"
+  ]
+}

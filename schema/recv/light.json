@@ -1,0 +1,16 @@
+{
+  "event": "light",
+  "to": "everyone near the source (`xy_emit`): players and observers. A rogue or an invisible character nearer than 300 px gets the form with `affected` instead",
+  "payload": {
+    "fields": [
+      {"name": "name", "type": "string", "optional": false, "description": "The source: the name of the character that used `light`, or the id of the monster."},
+      {"name": "affected", "type": "1", "optional": true, "description": "Only to a rogue, or to an invisible character, nearer than 300 px: the light found you. The server removes your `invis` condition and sends you `player` (node/server_functions.js:3762-3766)."}
+    ],
+    "confirm": {"code": ["node/server.js:10172-10175", "node/server.js:14245-14247", "node/server_functions.js:3744-3791"], "note": "`xy_emit` sends `{name}` to everyone in view; the form with `affected` is built in `xy_emit` itself (node/server_functions.js:3762-3766)"}
+  },
+  "example": {"name": "Wizard", "affected": 1},
+  "senders": [
+    {"what": "The `skill` handler: `light`", "source": "node/server.js:10172-10175"},
+    {"what": "The tick of the instance: a monster with the `mlight` ability", "source": "node/server.js:14245-14247"}
+  ]
+}

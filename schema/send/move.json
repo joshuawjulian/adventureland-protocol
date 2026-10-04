@@ -1,0 +1,70 @@
+{
+  "event": "move",
+  "source": "node/server.js:11183-11272",
+  "request": {
+    "fields": [
+      {"name": "x", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(x) || 0`", "description": "Your x as the client sees it. The server uses it only for the grid check and for `correction`. It does not set your position from it."},
+      {"name": "y", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(y) || 0`", "description": "Your y as the client sees it."},
+      {"name": "going_x", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(going_x) || 0`, so a value that is not a number moves you toward x = 0", "description": "The x of the destination."},
+      {"name": "going_y", "type": "number", "optional": true, "default": 0, "coerce": "`parseFloat(going_y) || 0`", "description": "The y of the destination."},
+      {"name": "m", "type": "integer", "optional": false, "coerce": "compared with `==` to `player.m`, so `\"3\"` also matches 3", "description": "The map-change counter `m` from your last `player`, `start` or `new_map`. If it does not match, the server ignores the move."},
+      {"name": "pet", "type": "any", "optional": true, "coerce": "any truthy value", "description": "Move `player.monster` (your pet) instead of the character. Nothing sets `player.monster` (the `pet` handler always throws), so a move with `pet` does nothing."},
+      {"name": "key", "type": "string", "optional": true, "coerce": "the server pushes `key[0]`; a value that is not a string pushes `undefined`", "description": "One konami key (`\"u\"`, `\"d\"`, `\"l\"`, `\"r\"`). The server adds it to `player.konami` while that list has fewer than 20 entries. It does this before the other checks, so also for a move that the server ignores. [`interaction`](#send-interaction) uses the list."}
+    ],
+    "others": "ignored",
+    "example": {"x": 10, "y": 20, "going_x": 150, "going_y": 20, "m": 0}, "confirm": {"code": ["node/server.js:11189-11202", "node/server.js:11207-11208"], "note": "The handler reads only `going_x`, `going_y`, `pet`, `key`, `m`, `x` and `y`"}
+  },
+  "responses": [
+    {
+      "name": "Correction",
+      "event": "correction",
+      "when": "The move starts, your `x`, `y` is more than 132 px from your position on the server, and the grid cell at `x`, `y` has the value 0. `mode.enforce_smap` and `mode.lcorrection` must be on; both are on (node/server.js:278-279).",
+      "fields": [
+        {"name": "x", "type": "number", "optional": false, "description": "Your x on the server."},
+        {"name": "y", "type": "number", "optional": false, "description": "Your y on the server."}
+      ],
+      "example": {"x": 312.5, "y": -48},
+      "source": "node/server.js:11248-11255", "confirm": {"code": ["node/server.js:11211-11213", "node/server.js:11248-11256", "node/server.js:278-279"]}
+    },
+    {
+      "name": "Channels stopped",
+      "event": "player",
+      "when": "The move starts and it removed one or more channels in `c` whose condition does not have `can_move` (for example fishing or mining). A normal move sends no `player`.",
+      "summary": "Your state without those channels in `c`.",
+      "example": {"id": "Merlin", "c": {}, "cid": 419},
+      "example_trimmed": true,
+      "source": "node/server.js:11256-11267", "confirm": {"code": ["node/server.js:11257-11267", "node/server.js:4550-4594"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "move",
+    "intro": "A move that the server ignores sends nothing. Only the rows below send something.",
+    "rows": [
+      {"when": "No character, and no `pet` and no `key`.", "replies": [], "source": "node/server.js:11185, 11202", "confirm": {"code": ["node/server.js:11185", "node/server.js:11191", "node/server.js:11195", "node/server.js:11202"]}},
+      {"when": "**Server bug:** the handler throws. With no character and `pet` set, it reads `player.monster` of `undefined`. With `key` set and no character, or `pet` set (nothing sets `player.monster`), it reads `konami` of `undefined`.", "replies": [
+        {"event": "game_error", "example": "ERROR!", "note": "from the socket wrapper, with 16 call-cost"}
+      ], "source": "node/server.js:11191-11201", "confirm": {"code": ["node/server.js:11191-11201", "node/server.js:4947-4966"]}},
+      {"when": "`m` does not match, you cannot walk (`can_walk`: disabled, or `dash` is active), or the destination is your position on the server now.", "replies": [], "source": "node/server.js:11202", "confirm": {"code": ["node/server.js:11202", "js/old_common_functions.js:755-761"]}},
+      {"when": "The grid cell at `x`, `y` or at the destination is unknown or not walkable (`smap` value 2 or more). The check is on the two points, not on the line between them. The server adds 1 to `player.violations` (`defeat_player`, node/server.js:4499-4524; in a cave run it kills you) and sends you to `jail`.", "replies": [
+        {"event": "game_log", "example": {"message": "Line violation detected", "phrase": "server.game_log.line_violation_detected", "phrase_args": {}}},
+        {"event": "game_log", "example": {"message": "Make sure you only move with the built-in move function", "phrase": "server.game_log.make_sure_you_only_move_with_the_built_in_move_function", "phrase_args": {}}},
+        {"event": "new_map", "example": {"name": "jail", "in": "jail", "x": -79, "y": -153, "effect": 0, "info": {}, "m": 6, "entities": {"players": [], "monsters": [], "type": "all", "in": "jail", "map": "jail"}}, "note": "then `player`, from `transport_player_to(player, \"jail\")`: no effect, and no `direction` (the one `jail` spawn, design/maps.js, has none)"}
+      ], "source": "node/server.js:11211-11244", "confirm": {"code": ["node/server.js:11211-11244", "node/server.js:4499-4504", "node/server.js:4640-4660", "node/server.js:4741-4757", "languages/en/server.js:210", "languages/en/server.js:236"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "entities",
+      "to": "nearby",
+      "when": "The move starts. The server marks you as changed (`u`), and the next entity update carries your new `going_x`, `going_y` and `move_num`.",
+      "summary": "Your entity, with `moving: true`. Not while your instance is frozen (`start_moving_element` returns at once).", "source": "node/server.js:11247, 13660-13673", "confirm": {"code": ["node/server.js:11247", "node/server.js:13660-13673"], "note": "`u` puts you in the next `entities` of each client that sees you"}
+    }
+  ],
+  "order": [
+    "nothing at once in most cases",
+    "`correction` to you, if your `x`, `y` is too far from the server position",
+    "`player` to you, if the move stopped a channel",
+    "later, `entities` to clients nearby with your movement"
+  ]
+}

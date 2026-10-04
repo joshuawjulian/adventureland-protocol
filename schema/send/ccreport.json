@@ -1,0 +1,22 @@
+{
+  "event": "ccreport",
+  "source": "node/server.js:5437-5439",
+  "request": {"fields": [], "note": "No payload. The handler does not read `data`, so any payload (also `null`) works.", "confirm": {"code": ["node/server.js:5437-5439"], "note": "The handler takes no argument"}},
+  "responses": [
+    {
+      "name": "Report",
+      "event": "ccreport",
+      "when": "Always, at once. It also works without a character and while a cave conversation pauses your instance.",
+      "fields": [
+        {"name": "calls", "type": "CallLogEntry[]", "optional": false, "description": "The call log of the socket for the last 4 s (`socket.calls`), oldest first. It includes this `ccreport` (cost 1 + 3)."},
+        {"name": "climit", "type": "integer", "optional": false, "description": "Always `limits.calls`: 200. A socket without a character has a limit of 50, but the report still says 200."},
+        {"name": "total", "type": "integer", "optional": false, "description": "The number of events that the socket sent since it connected (`socket.total_calls`)."}
+      ],
+      "example": {"calls": [["2026-10-04T12:00:01.512Z", "move", 2.5], ["2026-10-04T12:00:02.020Z", "ccreport", 4]], "climit": 200, "total": 318},
+      "source": "node/server.js:5438", "confirm": {"code": ["node/server.js:5438", "node/server.js:256-257", "node/server_functions.js:5354-5361", "node/msgpack_parser.js:40-52"], "note": "Each entry is `[new Date(), method, cost]`; both encoders send the `Date` as its ISO string (`toJSON`)"}
+    }
+  ],
+  "order": [
+    "`ccreport` `{calls, climit, total}` to you"
+  ]
+}

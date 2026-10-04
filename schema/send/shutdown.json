@@ -1,0 +1,60 @@
+{
+  "event": "shutdown",
+  "source": "node/server.js:13152-13160",
+  "request": {
+    "fields": [
+      {"name": "pass", "type": "string", "optional": false, "coerce": "compared with `!=` to `keys.ACCESS_MASTER`", "description": "The admin secret of the server."},
+      {"name": "reason", "type": "any", "optional": true, "coerce": "tested for truthiness, then sent with no change", "description": "When it is truthy, every client gets it as `disconnect_reason`."}
+    ],
+    "others": "ignored",
+    "example": {"pass": "<ACCESS_MASTER>", "reason": "Maintenance"},
+    "confirm": {"code": ["node/server.js:13153-13159"], "note": "The handler reads only `pass` and `reason`"}
+  },
+  "responses": [
+    {"name": "Accepted", "kind": "none", "when": "`pass` matches. The server sends no reply to you; it starts the shutdown (see **Also sent**).", "source": "node/server.js:13156-13159", "confirm": {"code": ["node/server.js:13156-13159"]}},
+    {"name": "Closed", "kind": "close", "when": "When the countdown ends, `shutdown` sets `server.live` to false. Then `sync_loop` disconnects the socket of each character, yours too when your socket has one. On `hardcore` and `test` servers, `sync_loop` skips this.", "source": "node/server.js:16922-16928, 16830-16842", "confirm": {"code": ["node/server.js:16982", "node/server.js:16922-16928", "node/server.js:16829-16842"], "note": "`sync_loop` returns at the first player on `hardcore` and `test` servers"}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "shutdown",
+    "intro": "Admin only. The handler needs no character.",
+    "rows": [
+      {"when": "`pass` is wrong.", "replies": [], "source": "node/server.js:13153-13155", "confirm": {"code": ["node/server.js:13153-13155"]}}
+    ]
+  },
+  "also": [
+    {"event": "disconnect_reason", "to": "everyone", "when": "`reason` is truthy, at once (`broadcast`).", "type": "any", "example": "Maintenance", "source": "node/server.js:13156-13158", "confirm": {"code": ["node/server.js:13156-13158", "node/server_functions.js:3495-3496"]}},
+    {
+      "event": "server_message",
+      "to": "everyone",
+      "when": "10 s later `shutdown_routine` starts. It closes the tavern (refunds, see `bet` and `poker`), sets each monster with a target to 1 HP, and then sends one message per second: for 20 s, 240 s on `hardcore` servers, 1 s on dev servers. Then the server stops.",
+      "type": "LocalizedText",
+      "example": {
+        "color": "#DD1B50",
+        "nod": true,
+        "log": true,
+        "message": "Server shutdown in: 20",
+        "phrase": "server.server_message.server_shutdown_in",
+        "phrase_args": {"x": "20"}
+      },
+      "source": "node/server.js:13159, 16931-16982",
+      "confirm": {"code": ["node/server.js:13159", "node/server.js:16931-16980", "node/server_functions.js:3495-3496", "languages/index.js:256-258"], "note": "`x` is `String(seconds - i)`; `nod: true` keeps it out of Discord and the event log"}
+    },
+    {
+      "event": "eval",
+      "to": "everyone",
+      "when": "At the start of `shutdown_routine`, once.",
+      "fields": [
+        {"name": "code", "type": "string", "optional": false, "description": "`call_code_function('trigger_event','shutdown',{seconds:N})`: it fires the `shutdown` event of CODE with the countdown in seconds."}
+      ],
+      "example": {"code": "call_code_function('trigger_event','shutdown',{seconds:20})"},
+      "source": "node/server.js:16981",
+      "confirm": {"code": ["node/server.js:16981", "node/server_functions.js:3495-3496"], "note": "Broadcast in the same tick as the timers are set, so it comes before the first `server_message` (a 0 ms timer)"}
+    }
+  ],
+  "order": [
+    "`disconnect_reason` to everyone (with `reason` only)",
+    "10 s later: `eval` to everyone, then a `server_message` countdown each second",
+    "at the end of the countdown: the server closes the socket of each character"
+  ]
+}

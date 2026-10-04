@@ -1,0 +1,119 @@
+{
+  "event": "trade_swap",
+  "source": "node/server.js:9061-9176",
+  "request": {
+    "fields": [
+      {"name": "id", "type": "CharacterName", "optional": false, "coerce": "a key of `id_to_id`, so a number works as its string", "description": "The owner of the stand that has the trade offer."},
+      {"name": "slot", "type": "TradeSlotName", "optional": false, "coerce": "strict `===` against `\"trade1\"` to `\"trade48\"` (`in_arr`)", "description": "The trade slot of the offer. It must be one of the open slots of the stand now (`get_trade_slots`)."},
+      {"name": "rid", "type": "string", "optional": false, "coerce": "compared with `!=` to the `rid` of the listing. A falsy value fails", "description": "The `rid` of the listing. Unlike `trade_buy`, it is required: a listing that changed never matches."},
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "`parseInt(num)`, so `\"7\"` works. NaN, a negative number or an empty slot gives `no_item`", "description": "The slot of your item that pays for the offer."},
+      {"name": "item", "type": "ItemInstance", "optional": false, "coerce": "compared field by field with `JSON.stringify`, except `q` (`seen_item_matches`)", "description": "The item in slot `num` as your client last got it in `player`. Each field except `q` must have the same value, and `item` must have no field that the slot item does not have. This stops a swap with an item that changed or moved."}
+    ],
+    "others": "ignored",
+    "example": {"id": "MerchantBob", "slot": "trade2", "rid": "AbCd", "num": 7, "item": {"name": "staff", "level": 8}}, "confirm": {"code": ["node/server.js:9063", "node/server.js:9067", "node/server.js:9082-9085", "node/server.js:9094-9095", "node/server.js:9111", "node/server_functions.js:4263-4280"], "note": "The handler reads only `id`, `slot`, `rid`, `num` and `item`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. The owner gets your item, and you get the listed item.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"trade_swap\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "Your inventory slot that got the listed item."}
+      ],
+      "example": {"num": 7, "success": true, "response": "data", "place": "trade_swap"},
+      "source": "node/server.js:9175", "confirm": {"code": ["node/server.js:9175", "node/server.js:9137", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "trade_swap",
+    "rows": [
+      {"when": "No character, or you are in the bank (`player.user` is set).", "code": "cant_in_bank", "source": "node/server.js:9064-9066", "confirm": {"code": ["node/server.js:9064-9066", "node/server_functions.js:3393-3419"]}},
+      {"when": "`slot` is not one of `\"trade1\"` to `\"trade48\"`.", "code": "invalid", "source": "node/server.js:9067-9069", "confirm": {"code": ["node/server.js:9067-9069", "js/old_common_functions.js:52-53", "node/server_functions.js:3393-3419"]}},
+      {"when": "No character has the name `id`, or it is an NPC, or it is invisible (condition `invis` or `ethereal`).", "code": "seller_gone", "source": "node/server.js:9070-9072", "confirm": {"code": ["node/server.js:9070-9072", "node/server.js:9063", "node/server_functions.js:469-474", "node/server_functions.js:3393-3419"]}},
+      {"when": "The owner is in the bank.", "code": "cant_in_bank", "source": "node/server.js:9073-9075", "confirm": {"code": ["node/server.js:9073-9075", "node/server_functions.js:3393-3419"]}},
+      {"when": "The owner is more than `B.dist` (400 px) from you, edge to edge of the two hitboxes, or on another map.", "code": "distance", "source": "node/server.js:9076-9078", "confirm": {"code": ["node/server.js:9076-9078", "node/server.js:219", "js/old_common_functions.js:707-711", "node/server_functions.js:3393-3419"]}},
+      {"when": "The owner is you.", "code": "hmm", "source": "node/server.js:9079-9081", "confirm": {"code": ["node/server.js:9079-9081", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot of the owner is empty; or `rid` is missing or is not the `rid` of the listing; or the slot is not open now (for example, the stand is closed).", "code": "item_gone", "source": "node/server.js:9082-9087", "confirm": {"code": ["node/server.js:9082-9087", "node/server_functions.js:4282-4299", "node/server_functions.js:3393-3419"]}},
+      {"when": "The listing is a placeholder.", "code": "item_placeholder", "source": "node/server.js:9088-9090", "confirm": {"code": ["node/server.js:9088-9090", "node/server_functions.js:3393-3419"]}},
+      {"when": "The listing is not a trade offer (no `want`), or it is a buy order (`b`) or a giveaway.", "code": "sneaky", "source": "node/server.js:9091-9093", "confirm": {"code": ["node/server.js:9091-9093", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your slot `num` is empty, or `num` is not a number.", "code": "no_item", "source": "node/server.js:9094-9098", "confirm": {"code": ["node/server.js:9094-9098", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your slot `num` holds a placeholder.", "code": "item_placeholder", "source": "node/server.js:9099-9101", "confirm": {"code": ["node/server.js:9099-9101", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your item is locked (`l`) or account-bound (`acl`).", "code": "item_locked", "source": "node/server.js:9103-9105", "confirm": {"code": ["node/server.js:9103-9105", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your item has `b` (for example, it is your open stand) or `v` (it came from PvP).", "code": "item_blocked", "source": "node/server.js:9106-9108", "confirm": {"code": ["node/server.js:9106-9108", "node/server_functions.js:3393-3419"]}},
+      {"when": "`item` does not agree with your item, or your item does not satisfy the `want` of the offer (a `TradeWant`).", "code": "trade_swap_match", "source": "node/server.js:9111-9113", "confirm": {"code": ["node/server.js:9111-9113", "node/server_functions.js:4263-4280", "js/old_common_functions.js:484-491", "node/server_functions.js:3393-3419"]}},
+      {"when": "The inventory of the owner has no space for your item.", "code": "trade_swap_space", "source": "node/server.js:9114-9118", "confirm": {"code": ["node/server.js:9114-9118", "node/server.js:1992-2014", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your stack has more units than `want.q`, and the listed item does not fit in your inventory after `want.q` units leave the stack. When you give the whole item or the whole stack, the server does not do this check.", "code": "no_space", "source": "node/server.js:9119-9128", "confirm": {"code": ["node/server.js:9119-9128", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "name": "You",
+      "event": "game_log",
+      "to": "you",
+      "when": "Success, first. `item` is what you gave, `received` is what you got.",
+      "type": "LocalizedText",
+      "example": {
+        "message": "Traded Staff +8 to MerchantBob for 20 Candy Pop",
+        "phrase": "server.game_log.traded_for",
+        "phrase_args": {"item": "Staff +8", "player": "MerchantBob", "received": "20 Candy Pop"}
+      },
+      "source": "node/server.js:9144-9151", "confirm": {"code": ["node/server.js:9144-9151", "js/old_common_functions.js:493-500", "languages/index.js:256-258"]}
+    },
+    {
+      "name": "Owner",
+      "event": "game_log",
+      "to": "the owner",
+      "when": "Success, after your `game_log`. The same phrase from the side of the owner.",
+      "type": "LocalizedText",
+      "example": {
+        "message": "Traded 20 Candy Pop to Wizard for Staff +8",
+        "phrase": "server.game_log.traded_for",
+        "phrase_args": {"item": "20 Candy Pop", "player": "Wizard", "received": "Staff +8"}
+      },
+      "source": "node/server.js:9152-9159", "confirm": {"code": ["node/server.js:9152-9159", "js/old_common_functions.js:493-500", "languages/index.js:256-258"]}
+    },
+    {
+      "event": "ui",
+      "to": "nearby",
+      "when": "Success. Every client whose view holds the owner.",
+      "fields": [
+        {"name": "type", "type": "\"swap\"", "optional": false, "description": "A trade offer was accepted."},
+        {"name": "event", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "seller", "type": "CharacterName", "optional": false, "description": "The owner of the stand."},
+        {"name": "buyer", "type": "CharacterName", "optional": false, "description": "You."},
+        {"name": "item", "type": "TradeSlotItem", "optional": false, "description": "The listed item, without `want` and `rid`."},
+        {"name": "received", "type": "TradeSlotItem", "optional": false, "description": "Your item. For a stack, `q` is the units given."},
+        {"name": "slot", "type": "TradeSlotName", "optional": false, "description": "The trade slot of the offer."},
+        {"name": "num", "type": "InventoryIndex", "optional": false, "description": "Your inventory slot that got the listed item."},
+        {"name": "snum", "type": "InventoryIndex", "optional": false, "description": "The inventory slot of the owner that got your item."}
+      ],
+      "example": {
+        "type": "swap",
+        "event": true,
+        "seller": "MerchantBob",
+        "buyer": "Wizard",
+        "item": {"name": "candypop", "q": 20},
+        "received": {"name": "staff", "level": 8},
+        "slot": "trade2",
+        "num": 7,
+        "snum": 12
+      },
+      "source": "node/server.js:9161-9171", "confirm": {"code": ["node/server.js:9131-9138", "node/server.js:9161-9171", "node/server_functions.js:4203", "node/server_functions.js:4234-4258", "node/server_functions.js:3744-3779"]}
+    },
+    {"name": "You", "event": "player", "to": "you", "when": "Success, before the `game_response`.", "summary": "Your state with `reopen: true`: your item gone (or fewer units), the listed item in `items`.", "source": "node/server.js:9173", "confirm": {"code": ["node/server.js:9173", "node/server.js:4550-4594"]}},
+    {"name": "Owner", "event": "player", "to": "the owner", "when": "Success, after your `player`.", "summary": "The state of the owner with `reopen: true`: your item in `items`, the trade slot empty. Clients nearby see the change in the next `entities` (`u`).", "source": "node/server.js:9174", "confirm": {"code": ["node/server.js:9174", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "`game_log` to you",
+    "`game_log` to the owner",
+    "`ui` `swap` to clients near the owner",
+    "`player` to you, then `player` to the owner",
+    "`game_response` `data` with `num` to you"
+  ]
+}

@@ -1,0 +1,10 @@
+<!-- Albot.csproj: the albot class library (namespace Albot). .NET 8, no NuGet packages:
+     HttpClient, ClientWebSocket and System.Text.Json are all in the standard library. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Albot</RootNamespace>
+  </PropertyGroup>
+</Project>

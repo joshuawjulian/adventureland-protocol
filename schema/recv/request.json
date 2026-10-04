@@ -1,0 +1,10 @@
+{
+  "event": "request",
+  "to": "the asked character only",
+  "payload": {
+    "fields": [{"name": "name", "type": "CharacterName", "optional": false, "description": "The character that asks to join your party. To accept, send `party` with `event: \"raccept\"` and this name."}],
+    "confirm": {"code": ["node/server.js:12385-12395"]}
+  },
+  "example": {"name": "Arrow"},
+  "senders": [{"what": "The `party` handler, `event: \"request\"`, after the checks for an invalid name and a shared party.", "source": "node/server.js:12385-12404"}]
+}

@@ -1,0 +1,65 @@
+{
+  "event": "join",
+  "source": "node/server.js:12593-12655",
+  "request": {
+    "fields": [
+      {"name": "name", "type": "\"goobrawl\" | \"crabxx\" | \"franky\" | \"icegolem\" | \"abtesting\"", "optional": false, "coerce": "compared with `==` to each name", "description": "The server event to join. It must run now: `events[name]` is set, or `E.abtesting` for `\"abtesting\"`."}
+    ],
+    "others": "ignored",
+    "example": {"name": "goobrawl"},
+    "confirm": {"code": ["node/server.js:12607", "node/server.js:12611", "node/server.js:12615", "node/server.js:12619", "node/server.js:12623"], "note": "The handler reads only `data.name`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "The event runs. The server moves you first when you are not at the event yet (see Also sent). It also sends this reply when `transport_player_to` refused the move: that happens when you are in a generated map (a dream cave), node/server.js:4647.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"join\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "join"},
+      "source": "node/server.js:12654; node/server_functions.js:3421-3446",
+      "confirm": {"code": ["node/server.js:12654", "node/server_functions.js:3421-3446", "node/server.js:4647"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "join",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12595-12597", "confirm": {"code": ["node/server.js:12594-12597"]}},
+      {"when": "You are a merchant.", "code": "no_merchants", "source": "node/server.js:12598-12600", "confirm": {"code": ["node/server.js:12598-12600", "node/server_functions.js:3393-3419"]}},
+      {"when": "You have the `hopsickness` condition.", "code": "cant_when_sick", "source": "node/server.js:12601-12603", "confirm": {"code": ["node/server.js:12601-12603", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are in the bank (`player.user` is set).", "code": "cant_in_bank", "source": "node/server.js:12604-12606", "confirm": {"code": ["node/server.js:12604-12606", "node/server_functions.js:3393-3419"]}},
+      {"when": "`name` is `\"abtesting\"`, and you are not on the `abtesting` map with a team. More than 120 s passed since `timers.abtesting_start`, and `p.abtesting` has no team for this abtesting id.", "code": "join_too_late", "source": "node/server.js:12623-12630", "confirm": {"code": ["node/server.js:12623-12630", "node/server_functions.js:3393-3419"]}},
+      {"when": "`name` is not one of the five names, or that event does not run now.", "code": "cant_join", "source": "node/server.js:12651-12653", "confirm": {"code": ["node/server.js:12607-12653", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "disappear",
+      "to": "nearby",
+      "when": "A move: every client whose view holds your old position, or that was told about you. `to` and `s` are absent when you are invisible (`invis` or `ethereal`) or `stealth`. `s` is also absent for `goobrawl`: that move passes no point.",
+      "fields": [
+        {"name": "id", "type": "CharacterName", "optional": false, "description": "You."},
+        {"name": "reason", "type": "\"transport\"", "optional": false, "description": "Why."},
+        {"name": "to", "type": "InstanceName", "optional": true, "description": "The destination instance."},
+        {"name": "s", "type": "[number, number, number, number] | integer", "optional": true, "description": "The point passed to the move: `[x, y, direction, scatter]` (crabxx, franky, icegolem), or a spawn index of the map (abtesting: 2 for team A, 3 for team B). Absent for goobrawl."}
+      ],
+      "example": {"id": "Wizard", "reason": "transport", "to": "main", "s": [-1000, 1700, 0, 40]},
+      "source": "node/server.js:4652-4660",
+      "confirm": {"code": ["node/server.js:4652-4660", "node/server_functions.js:469-474", "node/server_functions.js:3834-3866", "node/server.js:12609", "node/server.js:12613", "node/server.js:12617", "node/server.js:12621", "node/server.js:12644-12646"]}
+    },
+    {"name": "Bets returned", "event": "player", "to": "you", "when": "A move out of the `tavern` while you have open dice bets: the server returns the stakes first (`resend \"reopen+nc\"`).", "summary": "Your state with the gold of the bets returned.", "source": "node/server.js:4677-4683", "confirm": {"code": ["node/server.js:4677-4683", "node/server.js:4550-4594"]}},
+    {"event": "new_map", "to": "you", "when": "A move. The `y` and `x` have a random scatter (40 px for crabxx and franky, 10 px for icegolem, 160 px for the abtesting spawns 2 and 3 in G). `eval` is absent: its variable is never set (the code that sets it is behind `if (0 && ...)`).", "summary": "`{name, in, x, y, direction, effect: 0, info, m, entities}`. See the receive entry.", "source": "node/server.js:4744-4755", "confirm": {"code": ["node/server.js:4686-4704", "node/server.js:4727-4738", "node/server.js:4744-4755"]}},
+    {"name": "At destination", "event": "player", "to": "you", "when": "A move, after `new_map` (`resend \"u+cid\"`). For abtesting, one more `player` follows (`resend \"cid\"`), with `team` set.", "summary": "Your state at the destination.", "source": "node/server.js:4757, 12649", "confirm": {"code": ["node/server.js:4757", "node/server.js:12649", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "if the server moves you: `disappear` to clients near your old position, `new_map` to you, then `player` to you",
+    "abtesting only: `player` to you (your `team`)",
+    "`game_response` `{response: \"data\", place: \"join\", success: true}` to you"
+  ]
+}

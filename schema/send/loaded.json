@@ -1,0 +1,40 @@
+{
+  "event": "loaded",
+  "source": "node/server.js:5028-5054",
+  "request": {
+    "fields": [],
+    "note": "No payload. The handler does not read `data`. The official client still sends `{success: 1, width, height, scale}` (js/game.js:7452), but the code that read `width`, `height` and `scale` is a comment now (node/server.js:5034).", "confirm": {"code": ["node/server.js:5028-5054"], "note": "The handler never reads `data`"}
+  },
+  "responses": [
+    {
+      "name": "Snapshot",
+      "event": "entities",
+      "when": "The server makes the observer and sends everything in its view. Before it, `disappear` events can come, as for `send_updates` (the new observer saw nothing before, so usually none).",
+      "type": "EntitiesFrame",
+      "example": {"players": [], "monsters": [{"id": "48213", "type": "goo", "x": 120, "y": 300, "cid": 3, "s": {}}], "type": "all", "in": "main", "map": "main"},
+      "source": "node/server.js:5049, node/server_functions.js:3675-3705", "confirm": {"code": ["node/server.js:5030-5049", "node/server_functions.js:3675-3707"]}
+    },
+    {
+      "name": "Broadcast camera",
+      "event": "observer_broadcast",
+      "when": "Only for a socket with the query `broadcast=1`, without `no_graphics=1`, and with no `secret` character. The server must not be PvP, and `gameplay` must be `\"normal\"`. The server sends it at once after `entities`, and again each time that the camera changes.",
+      "summary": "The state of the broadcast camera: `{group, party, focus, map, x, y, online, remaining_ms, kind, available, town_players}`. See the `observer_broadcast` entry. When the camera must move, a `new_map` follows (`transport_observer_to`, node/server.js:4613-4638).",
+      "example": {"group": "party:Ranger", "party": {"Ranger": {"skin": "mranger", "level": 70, "type": "ranger", "x": 1240, "y": -310, "in": "main", "map": "main", "name": "Ranger", "hp": 3400, "max_hp": 3400, "cx": {}}, "Merlin": {"skin": "marmor12d", "level": 62, "type": "mage", "x": 1180, "y": -290, "in": "main", "map": "main", "name": "Merlin", "hp": 2100, "max_hp": 2100, "cx": {"head": "makeup117"}}}, "focus": ["Ranger", "Merlin"], "map": "main", "x": 1210, "y": -300, "online": 148, "remaining_ms": 21480.5, "kind": "group", "available": true, "town_players": 9},
+      "source": "node/server.js:5050-5053, node/logic/observer_broadcast.js:173-195", "confirm": {"code": ["node/server.js:5050-5053", "node/logic/observer_broadcast.js:3-6", "node/logic/observer_broadcast.js:49-51", "node/logic/observer_broadcast.js:168-195"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {
+        "when": "The socket is not connected, it has a character or an observer already, or a login attempt runs (`socket.login_attempt`).",
+        "replies": [],
+        "source": "node/server.js:5029", "confirm": {"code": ["node/server.js:5029"]}
+      }
+    ]
+  },
+  "order": [
+    "`entities` (`type: \"all\"`) for the new observer",
+    "only for a broadcast camera: `observer_broadcast`, and `new_map` when the camera moves"
+  ]
+}

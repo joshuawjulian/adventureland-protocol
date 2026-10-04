@@ -1,0 +1,50 @@
+{
+  "event": "convert",
+  "source": "node/server.js:9741-9763",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key (`player.items[num]`), so a number or a numeric string; any other value is an empty slot", "description": "The slot of the stone: `stoneofxp`, `stoneofgold` or `stoneofluck`."}
+    ],
+    "others": "ignored",
+    "example": {"num": 3}, "confirm": {"code": ["node/server.js:9750"], "note": "The handler reads only `num` (it logs `action`)"}
+  },
+  "responses": [
+    {
+      "name": "Shells",
+      "event": "game_log",
+      "when": "The stone is converted. The amount is 3,600 shells; for a stone that has `expires` (an activated one), it is `round(600 - 100 * days since expires)`. **Server bug:** that amount has no floor, so an old activated stone gives a negative amount, which `add_shells` takes from `cash` (the account save then fails its `cash < amount` check). Not on a `hardcore` or `test` server: there `add_shells` gives nothing and sends nothing, but the stone is still removed.",
+      "fields": [
+        {"name": "phrase", "type": "\"server.shells.received\"", "optional": false, "description": "The phrase key."},
+        {"name": "phrase_args", "type": "object", "optional": false, "description": "`{amount}`: the shells, as a formatted string (`to_pretty_num`)."},
+        {"name": "color", "type": "\"green\"", "optional": false, "description": "The color of the log line."}
+      ],
+      "example": {"color": "green", "message": "Received 3,600 SHELLS", "phrase": "server.shells.received", "phrase_args": {"amount": "3,600"}},
+      "source": "node/server.js:4764-4769", "confirm": {"code": ["node/server.js:9751", "node/server.js:9756-9759", "node/server.js:4760-4769", "languages/index.js:256-258", "js/old_common_functions.js:1091-1093"]},
+      "extends": "LocalizedText"
+    },
+    {"name": "Updated", "event": "player", "when": "After the shells: the slot is empty. A second `player` with `reopen: true` follows when the account update is saved.", "summary": "Your state with `reopen: true`, `items[num]` set to `null` and the new `cash`.", "example": {"id": "Merlin", "cash": 4200, "items": [{"name": "hpot0", "q": 200}, {"name": "mpot0", "q": 150}, {"name": "wand", "level": 5}, null], "cid": 419, "reopen": true}, "example_trimmed": true, "source": "node/server.js:9762, 4810-4812", "confirm": {"code": ["node/server.js:9760-9762", "node/server.js:4776-4813", "node/server.js:4550-4594"], "note": "The second `player` comes after the async account save at node/server.js:4810-4812"}}
+  ],
+  "failures": {
+    "event": "game_response",
+    "intro": "The handler sends no failure reply.",
+    "rows": [
+      {
+        "when": "No character. **Server bug:** the handler does not check for one. It throws on `player.items`.",
+        "replies": [
+          {"event": "game_error", "example": "ERROR!", "note": "from the socket wrapper, with 16 more call cost"}
+        ],
+        "source": "node/server.js:9749-9750, 4947-4968", "confirm": {"code": ["node/server.js:9749-9750", "node/server.js:4947-4966"]}
+      },
+      {"when": "The slot is empty, or it does not hold one of the three stones.", "replies": [], "source": "node/server.js:9753-9755", "confirm": {"code": ["node/server.js:9753-9755"]}}
+    ]
+  },
+  "also": [
+    {"event": "disappearing_text", "to": "nearby", "when": "With the `game_log` (not on `hardcore` or `test`).", "summary": "The text `\"+3,600\"` (the amount) above you, in the shell color, with the `cash` sound.", "source": "node/server.js:4770-4775", "confirm": {"code": ["node/server.js:4770-4775", "node/server_functions.js:3956-3990"]}}
+  ],
+  "order": [
+    "`game_log` (shells received) to you",
+    "`disappearing_text` to clients nearby",
+    "`player` with `reopen: true` to you",
+    "later, a second `player` with `reopen: true` when the account update is saved"
+  ]
+}

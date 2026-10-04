@@ -1,0 +1,139 @@
+{
+  "event": "destat",
+  "source": "node/server.js:6742-6790",
+  "request": {
+    "fields": [
+      {"name": "num", "type": "InventoryIndex", "optional": false, "coerce": "none: used as an array key, so `\"3\"` also works. Any other value reads an empty slot", "description": "The slot of the item with a stat (`stat_type`)."},
+      {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. The server copies it into each reply, and the success reply then has more fields."}
+    ],
+    "others": "ignored",
+    "example": {"num": 3},
+    "confirm": {"code": ["node/server.js:6745", "node/server.js:6750", "node/server.js:6781-6789"], "note": "The handler reads `num` and `request_id`"}
+  },
+  "responses": [
+    {
+      "name": "Scrolls",
+      "event": "game_response",
+      "code": "scrollsmith_success",
+      "when": "All checks pass. The server takes the gold, adds the scrolls and deletes `stat_type` from the item.",
+      "fields": [
+        {"name": "response", "type": "\"scrollsmith_success\"", "optional": false, "description": "The code."},
+        {"name": "gold", "type": "integer", "optional": false, "description": "The gold paid: `needed * G.items[scroll].g * 10`."}
+      ],
+      "example": {"response": "scrollsmith_success", "gold": 80000},
+      "source": "node/server.js:6778",
+      "confirm": {"code": ["node/server.js:6766-6768", "node/server.js:6778"]}
+    },
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "After `scrollsmith_success` and the `player` update.",
+      "with_request_id": {
+        "extends": "GameResponseSuccess",
+        "fields": [
+          {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+          {"name": "place", "type": "\"destat\"", "optional": false, "description": "The request."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+          {"name": "request_id", "type": "any", "optional": false, "description": "A copy of `request_id`."},
+          {"name": "num", "type": "InventoryIndex", "optional": false, "description": "`num` from the request, with no conversion."},
+          {"name": "cost", "type": "integer", "optional": false, "description": "The gold paid."},
+          {"name": "scroll", "type": "ItemName", "optional": false, "description": "The scroll that you got, `<stat>scroll` (`mpcostscroll` for `mp_cost`)."},
+          {"name": "quantity", "type": "integer", "optional": false, "description": "How many scrolls you got."}
+        ],
+        "example": {"request_id": "r1", "num": 3, "cost": 80000, "scroll": "intscroll", "quantity": 1, "success": true, "response": "data", "place": "destat"}
+      },
+      "without_request_id": {
+        "extends": "GameResponseSuccess",
+        "fields": [
+          {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+          {"name": "place", "type": "\"destat\"", "optional": false, "description": "The request."},
+          {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+        ],
+        "example": {"success": true, "response": "data", "place": "destat"}
+      },
+      "source": "node/server.js:6781-6789",
+      "confirm": {"code": ["node/server.js:6781-6789", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "destat",
+    "intro": "Each failure also has `request_id` when the request has a truthy one.",
+    "rows": [
+      {
+        "when": "No character, or the character is in the bank.",
+        "code": "cant_in_bank",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request. Only when the request has a truthy one.", "example": "r1"}
+        ],
+        "source": "node/server.js:6744-6746",
+        "confirm": {"code": ["node/server.js:6744-6746", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "You are more than `B.sell_dist` (400 px) from the `scrollsmith` NPC on `desertland`. A character with a `computer` passes this check.",
+        "code": "distance",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request. Only when the request has a truthy one.", "example": "r1"}
+        ],
+        "source": "node/server.js:6747-6749",
+        "confirm": {"code": ["node/server.js:6747-6749", "node/server.js:220", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The slot `num` is empty.",
+        "code": "no_item",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request. Only when the request has a truthy one.", "example": "r1"}
+        ],
+        "source": "node/server.js:6750-6753",
+        "confirm": {"code": ["node/server.js:6750-6753", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The item has no `stat_type`.",
+        "code": "scrollsmith_cant",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request. Only when the request has a truthy one.", "example": "r1"}
+        ],
+        "source": "node/server.js:6755-6757",
+        "confirm": {"code": ["node/server.js:6755-6757", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "No item `<stat_type>scroll` exists in `G.items`.",
+        "code": "scrollsmith_cant",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request. Only when the request has a truthy one.", "example": "r1"}
+        ],
+        "source": "node/server.js:6758-6765",
+        "confirm": {"code": ["node/server.js:6758-6765", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "Your gold is less than the cost: `needed * G.items[scroll].g * 10`. `needed` is `[1, 10, 100, 1000, 9999, 9999, 9999][grade]`, with the grade of the item at level 0.",
+        "code": "gold_not_enough",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request. Only when the request has a truthy one.", "example": "r1"}
+        ],
+        "source": "node/server.js:6766-6771",
+        "confirm": {"code": ["node/server.js:6766-6771", "node/server_functions.js:3393-3419"]}
+      },
+      {
+        "when": "The scrolls do not fit in the inventory.",
+        "code": "inv_size",
+        "extra": [
+          {"name": "request_id", "type": "any", "optional": true, "description": "A copy of `request_id` from the request. Only when the request has a truthy one.", "example": "r1"}
+        ],
+        "source": "node/server.js:6772-6774",
+        "confirm": {"code": ["node/server.js:6772-6774", "node/server_functions.js:3393-3419"]}
+      }
+    ]
+  },
+  "also": [
+    {"event": "server_message", "to": "everyone", "when": "Success, when the scroll is rare (see `ItemAnnouncement`). The server sends it before `scrollsmith_success`.", "summary": "An `ItemAnnouncement` with `type: \"server_received\"` and the scrolls.", "source": "node/server.js:6776, 2098-2128", "confirm": {"code": ["node/server.js:6776", "node/server.js:2098-2128", "node/server_functions.js:4576-4589", "node/server_functions.js:3495-3496"]}},
+    {"event": "player", "to": "you", "when": "Success, between `scrollsmith_success` and the `data` reply.", "summary": "Your state with `reopen: true`. The item has no `stat_type` now.", "source": "node/server.js:6780", "confirm": {"code": ["node/server.js:6779-6780", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "`server_message` to everyone, only for a rare scroll",
+    "`game_response` `scrollsmith_success` to you",
+    "`player` to you",
+    "`game_response` `data` to you"
+  ]
+}

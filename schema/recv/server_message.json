@@ -1,0 +1,33 @@
+{
+  "event": "server_message",
+  "to": "everyone: every socket on the server (`broadcast`), also sockets with no character. `realm_broadcast` sends it on every server. PvP kill lines go only to the characters in the instance (`instance_emit`)",
+  "payload": {
+    "extends": "LocalizedText",
+    "fields": [
+      {"name": "color", "type": "string | true", "optional": false, "description": "A CSS color, or `G.monsters[type].announce` for a boss. That is `true`, not a color, for `icegolem` in the current G (node/server.js:13627, 13633)."},
+      {"name": "type", "type": "\"server_found\" | \"server_received\" | \"server_gold\" | \"server_usuccess\" | \"server_ufail\" | \"server_csuccess\" | \"server_cfail\"", "optional": true, "description": "The kind of an item or gold announcement: found, received, gold from a chest, upgrade success or failure, compound success or failure."},
+      {"name": "name", "type": "CharacterName", "optional": true, "description": "With `type`: the character of the announcement."},
+      {"name": "item", "type": "ItemInstance", "optional": true, "description": "With an item `type`: the item, as `cache_item` gives it."},
+      {"name": "shells", "type": "integer", "optional": true, "description": "Only with `type: \"server_found\"` from `add_shells`: the shells found (node/server.js:4824)."},
+      {"name": "event", "type": "true", "optional": true, "description": "An event message: an event item, or the call to fight a cooperative boss. The server does not copy it to Discord."},
+      {"name": "discord", "type": "\"orange\"", "optional": true, "description": "Only on a boss spawn: the format of the Discord copy (node/server.js:13627). `broadcast` also knows `\"red\"`; no call site sends it."},
+      {"name": "nod", "type": "true", "optional": true, "description": "Only on the shutdown countdown: no Discord copy (node/server.js:16974)."},
+      {"name": "log", "type": "true", "optional": true, "description": "Only on the shutdown countdown. The server does not read it; the meaning is unclear from the source."},
+      {"name": "sname", "type": "string", "optional": true, "description": "Only from `realm_broadcast`: the origin server, `region + \" \" + server_name`, for example `\"EU I\"` (node/server_functions.js:3490)."}
+    ],
+    "confirm": {"code": ["node/server_functions.js:3489-3496", "node/server.js:1324-1342", "node/server.js:2098-2126", "node/server.js:2909-2917", "node/server.js:4507-4515", "node/server.js:4818-4826", "node/server.js:8301-8308", "node/server.js:8720-8727", "node/server.js:11317-11323", "node/server.js:11398-11404", "node/server.js:13621-13636", "node/server.js:14841-14848", "node/server.js:14865-14872", "node/server.js:14926-14933", "node/server.js:14944-14951", "node/server.js:16287-16294", "node/server.js:16966-16975", "node/server_functions.js:2290-2296", "node/server_functions.js:2360-2366", "node/server_functions.js:2823-2829", "node/server_functions.js:2857-2860", "node/server_functions.js:3047-3050", "node/server_functions.js:4073-4079", "node/logic/tavern_slots.js:88-94", "languages/index.js:256-258", "node/server_functions.js:4576-4588"], "note": "`realm_broadcast` sends the object through `JSON.stringify` to every server, which calls `broadcast`. `broadcast` adds ` [<sname>]` to `message` only after the emit (node/server_functions.js:3499-3501), so clients get the plain text. `add_item` has a plain branch with no phrase (`item_notice`) for a `phrase` other than Fished, Mined or Glitched; no caller passes one."}
+  },
+  "example": {"color": "#968CFA", "message": "Wizard is now level 80", "phrase": "server.server_message.is_now_level", "phrase_args": {"player": "Wizard", "level": "80"}, "sname": "EU I"},
+  "senders": [
+    {"what": "`calculate_player_stats`: a level up. From level 80 with `realm_broadcast`, from level 70 with `broadcast`.", "source": "node/server.js:1324-1342"},
+    {"what": "`add_item`: a rare item (`a_score` below `G.items[name].a`), unless the call sets `announce: false` or the character has `stealth`.", "source": "node/server.js:2098-2126"},
+    {"what": "`add_shells` with `announce`: shells found.", "source": "node/server.js:4818-4826"},
+    {"what": "Announced `upgrade` and `compound` results, and `destroy` at the statue when the item becomes +13.", "source": "node/server.js:8721, 14842, 14866, 14927, 14945"},
+    {"what": "`open_chest`: a large amount of gold.", "source": "node/server.js:11318, 11399"},
+    {"what": "`new_monster`: a boss spawns (`discord: \"orange\"`); a cooperative boss also sends `event: true`.", "source": "node/server.js:13622-13636"},
+    {"what": "`bless_server` and the first login of a new character (`aura_loop`): `realm_broadcast`.", "source": "node/server.js:8302, 16288"},
+    {"what": "`pwn_routine` and `defeat_player`: a PvP kill, with `instance_emit` to the instance.", "source": "node/server.js:2911-2917, 4509-4515"},
+    {"what": "The shutdown countdown, once a second.", "source": "node/server.js:16967-16977"},
+    {"what": "Events, the anniversary, `exchange` gold above 3,000,000, and a big slots prize.", "source": "node/server_functions.js:2291, 2361, 2824, 2858, 3048, 4074; node/logic/tavern_slots.js:89"}
+  ]
+}

@@ -1,0 +1,20 @@
+// tsconfig.json: tsc only checks the types ("npx tsc"). Node.js 22.18+ runs the
+// .ts files itself: it removes the types and runs what is left. So no option here
+// may need a compile step (no enums, no namespaces, no parameter properties).
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext", // ES modules, resolved the way Node.js does it
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true, // check only; never write .js files
+    "allowImportingTsExtensions": true, // imports name the real file: "./albot/api.ts"
+    // Node.js removes types but does not follow them: a type-only import must
+    // say `import type`, or Node.js looks for a value that is not there.
+    "verbatimModuleSyntax": true,
+    "types": ["node"], // process, fetch, WebSocket and node:fs come from @types/node
+    "lib": ["es2022"],
+    "skipLibCheck": true
+  },
+  "include": ["albot/*.ts", "*.ts"]
+}

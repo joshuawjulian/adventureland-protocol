@@ -1,0 +1,407 @@
+{
+  "event": "duel",
+  "source": "node/server.js:12191-12356",
+  "request": {
+    "fields": [
+      {"name": "event", "type": "\"challenge\" | \"accept\" | \"enter\"", "optional": false, "coerce": "compared with `==`", "description": "The action. Any other value does nothing and sends no reply."},
+      {"name": "request_id", "type": "any", "optional": true, "description": "Any truthy value. With it, failures are `game_response` objects, and `accept` and `enter` send a success reply. Without it, a failure is only a `game_log` text. The server copies it into its replies."}
+    ],
+    "others": "ignored",
+    "example": {"event": "challenge", "request_id": "duel-1"},
+    "confirm": {"code": ["node/server.js:12193-12196", "node/server.js:12197-12200", "node/server.js:12204", "node/server.js:12217", "node/server.js:12308-12309"]}
+  },
+  "failures": {
+    "event": "game_response",
+    "place": "duel",
+    "intro": "With `request_id`, each failure is `{response: \"data\", place: \"duel\", failed: true, reason, request_id}`. Without `request_id`, the only reply is a `game_log` `LocalizedText`. Only the checks of the action in `event` run.",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:12201-12203", "confirm": {"code": ["node/server.js:12201-12203"]}}
+    ]
+  },
+  "variants": {
+    "key": "event",
+    "list": [
+      {
+        "value": "challenge",
+        "when": "Challenges a character to a duel. The challenge stays open until the character accepts it, or until you challenge another character.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": true, "coerce": "none: `data.id || data.name`, used as a key of `name_to_id`", "description": "The character to challenge. The server uses it first, then `name`."},
+            {"name": "name", "type": "CharacterName", "optional": true, "coerce": "none: `data.id || data.name`, used as a key of `name_to_id`", "description": "The character to challenge, when `id` is absent. Give `id` or `name`."}
+          ],
+          "example": {"event": "challenge", "name": "Ranger", "request_id": "duel-1"},
+          "confirm": {"code": ["node/server.js:12205"]}
+        },
+        "responses": [
+          {
+            "name": "Challenge sent",
+            "event": "game_response",
+            "code": "challenge_sent",
+            "when": "Success. Without `request_id`, the reply has no `place` and no `success`.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {"name": "response", "type": "\"challenge_sent\"", "optional": false, "description": "The code."},
+                {"name": "place", "type": "\"duel\"", "optional": false, "description": "The request."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request."},
+                {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that you challenged."}
+              ],
+              "example": {"request_id": "duel-1", "name": "Ranger", "success": true, "response": "challenge_sent", "place": "duel"}
+            },
+            "without_request_id": {
+              "fields": [
+                {"name": "response", "type": "\"challenge_sent\"", "optional": false, "description": "The code."},
+                {"name": "name", "type": "CharacterName", "optional": false, "description": "The character that you challenged."}
+              ],
+              "example": {"response": "challenge_sent", "name": "Ranger"}
+            },
+            "source": "node/server.js:12213-12215",
+            "confirm": {"code": ["node/server.js:12213-12215", "node/server_functions.js:3421-3446"]}
+          }
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The character is not online on this server, or it is you.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"invalid\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-1"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Invalid", "phrase": "server.game_log.invalid", "phrase_args": {}}
+              },
+              "source": "node/server.js:12205-12208",
+              "confirm": {"code": ["node/server.js:12205-12208", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:194"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            },
+            {
+              "when": "You or the character is in a duel.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"already_dueling\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-1"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Already dueling", "phrase": "server.game_log.already_dueling", "phrase_args": {}}
+              },
+              "source": "node/server.js:12209-12211",
+              "confirm": {"code": ["node/server.js:12209-12211", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:122"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "duel",
+            "to": "the challenged character",
+            "when": "Success. **Server bug:** the `event` value is spelled `\"chellenge\"`.",
+            "fields": [
+              {"name": "event", "type": "\"chellenge\"", "optional": false, "description": "A new challenge (spelled so by the server)."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You: the name to send back in `accept`."}
+            ],
+            "example": {"event": "chellenge", "name": "Warrior"},
+            "source": "node/server.js:12212",
+            "confirm": {"code": ["node/server.js:12212"]}
+          },
+          {
+            "event": "game_response",
+            "to": "the challenged character",
+            "when": "Success, after the `duel` event.",
+            "fields": [
+              {"name": "response", "type": "\"challenge_received\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."}
+            ],
+            "example": {"response": "challenge_received", "name": "Warrior"},
+            "source": "node/server.js:12216",
+            "confirm": {"code": ["node/server.js:12216"]},
+            "name": "Challenge received"
+          }
+        ],
+        "order": [
+          "`duel` (`chellenge`) to the character",
+          "`game_response` `challenge_sent` to you",
+          "`game_response` `challenge_received` to the character"
+        ]
+      },
+      {
+        "value": "accept",
+        "when": "Accepts a challenge. The server makes a `duelland` instance and moves you and the challenger into it. The party members of both can join with `enter`.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "CharacterName", "optional": true, "coerce": "none: `data.id || data.name`, used as a key of `name_to_id`", "description": "The character that challenged you (the `name` of the `duel` event). The server uses it first, then `name`."},
+            {"name": "name", "type": "CharacterName", "optional": true, "coerce": "none: used as a key of `name_to_id`", "description": "The character that challenged you, when `id` is absent. Give `id` or `name`."}
+          ],
+          "example": {"event": "accept", "name": "Warrior", "request_id": "duel-2"},
+          "confirm": {"code": ["node/server.js:12218"]}
+        },
+        "responses": [
+          {
+            "name": "Accepted",
+            "event": "game_response",
+            "code": "data",
+            "when": "Success. You are in the duel instance now. Only with `request_id`.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+                {"name": "place", "type": "\"duel\"", "optional": false, "description": "The request."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request."},
+                {"name": "action", "type": "\"accepted\"", "optional": false, "description": "The action."},
+                {"name": "id", "type": "string", "optional": false, "description": "The duel id: the key in `S.duels` and the name of the instance."},
+                {"name": "challenger", "type": "CharacterName", "optional": false, "description": "The character that challenged you (team A)."},
+                {"name": "vs", "type": "CharacterName", "optional": false, "description": "You (team B)."}
+              ],
+              "example": {"request_id": "duel-2", "action": "accepted", "id": "kQ3vXb9TnR2mLw8ZpYc4", "challenger": "Warrior", "vs": "Ranger", "success": true, "response": "data", "place": "duel"}
+            },
+            "without_request_id": {"none": true},
+            "source": "node/server.js:12197-12200, 12308",
+            "confirm": {"code": ["node/server.js:12197-12200", "node/server.js:12308", "node/server_functions.js:3421-3446"]}
+          },
+          {"name": "Moved", "event": "new_map", "when": "Success. The server moves you into the `duelland` instance (spawn 2: team B), after the challenger. A `player` update follows.", "summary": "The `duelland` map, with `in` = the duel id and `info` = the duel state (`{seconds, active, A, B, id}`).", "example": {"name": "duelland", "in": "Xk2Lm9QwPz4RtY7bNc1D", "x": 705.3, "y": -791.8, "direction": 0, "effect": 0, "info": {"seconds": 60, "active": false, "A": [{"skin": "mranger", "level": 70, "type": "ranger", "x": -120, "y": 10, "in": "main", "map": "main", "name": "Ranger", "hp": 3400, "max_hp": 3400, "cx": {}, "active": true}], "B": [{"skin": "marmor12d", "level": 62, "type": "mage", "x": -90, "y": 22, "in": "main", "map": "main", "name": "Merlin", "hp": 2100, "max_hp": 2100, "cx": {"head": "makeup117"}, "active": true}], "id": "Xk2Lm9QwPz4RtY7bNc1D"}, "m": 19, "entities": {"type": "all", "in": "Xk2Lm9QwPz4RtY7bNc1D", "map": "duelland", "players": [], "monsters": []}}, "example_trimmed": true, "source": "node/server.js:12257, 4744-4756", "confirm": {"code": ["node/server.js:12237-12247", "node/server.js:12256-12257", "node/server.js:4744-4756", "node/server.js:1075-1093"], "note": "`transport_player_to` builds it; x and y are the spawn of `duelland` in G"}}
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "The character is not online, or its open challenge is not to you.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"challenge_expired\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-2"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Challenge expired", "phrase": "server.game_log.challenge_expired", "phrase_args": {}}
+              },
+              "source": "node/server.js:12219-12222",
+              "confirm": {"code": ["node/server.js:12218-12222", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:168"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            },
+            {
+              "when": "You or the challenger is in a duel.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"already_dueling\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-2"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Already dueling", "phrase": "server.game_log.already_dueling", "phrase_args": {}}
+              },
+              "source": "node/server.js:12223-12225",
+              "confirm": {"code": ["node/server.js:12223-12225", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:122"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            },
+            {
+              "when": "You or the challenger is in a PvP area (`is_in_pvp`). On a PvP server every map except a generated one (a dream cave) is a PvP area, so this check fails there.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"pvp_zone\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-2"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {
+                  "message": "Can't start a duel if any of the parties are already in a pvp zone",
+                  "phrase": "server.game_log.can_t_start_a_duel_if_any_of_the_parties_are_already",
+                  "phrase_args": {}
+                }
+              },
+              "source": "node/server.js:12226-12231, node/server_functions.js:483-492",
+              "confirm": {"code": ["node/server.js:12226-12231", "node/server_functions.js:483-492", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:166"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            }
+          ]
+        },
+        "also": [
+          {
+            "event": "game_response",
+            "to": "the challenger",
+            "when": "Success, first.",
+            "fields": [
+              {"name": "response", "type": "\"challenge_accepted\"", "optional": false, "description": "The code."},
+              {"name": "name", "type": "CharacterName", "optional": false, "description": "You."}
+            ],
+            "example": {"response": "challenge_accepted", "name": "Ranger"},
+            "source": "node/server.js:12233",
+            "confirm": {"code": ["node/server.js:12233"]},
+            "name": "Challenge accepted"
+          },
+          {"event": "new_map", "to": "the challenger", "when": "Success. The server moves the challenger into the instance (spawn 1) before you. A `player` update follows.", "summary": "The same as the `Moved` reply.", "source": "node/server.js:12248", "confirm": {"code": ["node/server.js:12247-12248", "node/server.js:4744-4756"]}},
+          {"event": "player", "to": "the challenger, then you", "when": "After both moves. Clients nearby the old position get `disappear` with `reason: \"transport\"`.", "summary": "The state with full `hp` and `mp`, `s` = `{stunned: {ms: 120000}}` and `team`. The stun ends when the duel starts: the server then clears `s`.", "source": "node/server.js:12278-12285, node/server_functions.js:2934-2953", "confirm": {"code": ["node/server.js:1108-1115", "node/server.js:12278-12285", "node/server_functions.js:2934-2953", "node/server.js:4550-4594"]}},
+          {"event": "server_info", "to": "everyone", "when": "Success. The server event state now has the new duel in `duels`.", "summary": "The whole `S` object, with `duels[id]` = `{challenger, a, vs, b, instance, seconds, active, id}`.", "source": "node/server.js:12267-12287", "confirm": {"code": ["node/server.js:12264-12287", "node/server_functions.js:3028-3032"]}},
+          {
+            "event": "game_response",
+            "to": "the party members of the two characters",
+            "when": "Success. Every member on this server, except the two characters.",
+            "fields": [
+              {"name": "response", "type": "\"duel_started\"", "optional": false, "description": "The code."},
+              {"name": "challenger", "type": "CharacterName", "optional": false, "description": "The challenger (team A)."},
+              {"name": "vs", "type": "CharacterName", "optional": false, "description": "The character that accepted (team B)."},
+              {"name": "id", "type": "string", "optional": false, "description": "The duel id: send it as `id` in `enter`."}
+            ],
+            "example": {"response": "duel_started", "challenger": "Warrior", "vs": "Ranger", "id": "kQ3vXb9TnR2mLw8ZpYc4"},
+            "source": "node/server.js:12288-12307",
+            "confirm": {"code": ["node/server.js:12288-12307"]},
+            "name": "Duel started"
+          }
+        ],
+        "order": [
+          "`game_response` `challenge_accepted` to the challenger",
+          "`new_map` and `player` to the challenger, then `new_map` and `player` to you",
+          "`player` (stunned) to the challenger, then to you",
+          "`server_info` to everyone",
+          "`game_response` `duel_started` to the other party members",
+          "with `request_id`: `game_response` `data` to you"
+        ]
+      },
+      {
+        "value": "enter",
+        "when": "Moves you into a duel that did not start. Only the party members of the two characters at `accept` can enter.",
+        "request": {
+          "fields": [
+            {"name": "id", "type": "string", "optional": false, "coerce": "none: used as an object key", "description": "The duel id: the key of `S.duels` (`E.duels`), from the `duel_started` reply. It is also the name of the `duelland` instance: 20 random characters."}
+          ],
+          "example": {"event": "enter", "id": "kQ3vXb9TnR2mLw8ZpYc4", "request_id": "duel-3"},
+          "confirm": {"code": ["node/server.js:12319-12327", "node/server.js:12239"]}
+        },
+        "responses": [
+          {
+            "name": "Entered",
+            "event": "game_response",
+            "code": "data",
+            "when": "Success. You are in the duel instance now. Only with `request_id`.",
+            "with_request_id": {
+              "extends": "GameResponseSuccess",
+              "fields": [
+                {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+                {"name": "place", "type": "\"duel\"", "optional": false, "description": "The request."},
+                {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+                {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request."},
+                {"name": "action", "type": "\"entered\"", "optional": false, "description": "The action."},
+                {"name": "id", "type": "string", "optional": false, "description": "The duel id from the request."},
+                {"name": "team", "type": "\"A\" | \"B\"", "optional": false, "description": "Your team: `A` for the party of the challenger, `B` for the other party."}
+              ],
+              "example": {"request_id": "duel-3", "action": "entered", "id": "kQ3vXb9TnR2mLw8ZpYc4", "team": "A", "success": true, "response": "data", "place": "duel"}
+            },
+            "without_request_id": {"none": true},
+            "source": "node/server.js:12197-12200, 12354",
+            "confirm": {"code": ["node/server.js:12197-12200", "node/server.js:12330-12336", "node/server.js:12354", "node/server_functions.js:3421-3446"]}
+          },
+          {"name": "Moved in", "event": "new_map", "when": "Success. The server moves you into the `duelland` instance (spawn 1 for team A, spawn 2 for team B). A `player` update follows.", "summary": "The `duelland` map, with `in` = the duel id and `info` = the duel state (`{seconds, active, A, B, id}`).", "example": {"name": "duelland", "in": "Xk2Lm9QwPz4RtY7bNc1D", "x": -718.4, "y": -806.1, "direction": 0, "effect": 0, "info": {"seconds": 47, "active": false, "A": [{"skin": "mranger", "level": 70, "type": "ranger", "x": -709, "y": -795, "in": "Xk2Lm9QwPz4RtY7bNc1D", "map": "duelland", "name": "Ranger", "hp": 3400, "max_hp": 3400, "cx": {}, "active": true}], "B": [{"skin": "marmor12d", "level": 62, "type": "mage", "x": 705, "y": -792, "in": "Xk2Lm9QwPz4RtY7bNc1D", "map": "duelland", "name": "Merlin", "hp": 2100, "max_hp": 2100, "cx": {"head": "makeup117"}, "active": true}], "id": "Xk2Lm9QwPz4RtY7bNc1D"}, "m": 7, "entities": {"type": "all", "in": "Xk2Lm9QwPz4RtY7bNc1D", "map": "duelland", "players": [], "monsters": []}}, "example_trimmed": true, "source": "node/server.js:12331-12334, 4744-4756", "confirm": {"code": ["node/server.js:12331-12336", "node/server.js:4744-4756", "node/server_functions.js:2908-2932"], "note": "`transport_player_to` builds it; x and y are the spawn of `duelland` in G"}}
+        ],
+        "failures": {
+          "rows": [
+            {
+              "when": "You are in a PvP area.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"pvp_zone\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-3"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Can't join the duel from a pvp zone!", "phrase": "server.game_log.can_t_join_the_duel_from_a_pvp_zone", "phrase_args": {}}
+              },
+              "source": "node/server.js:12310-12315",
+              "confirm": {"code": ["node/server.js:12310-12315", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:164"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            },
+            {
+              "when": "You are in a duel.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"already_dueling\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-3"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Already in a duel!", "phrase": "server.game_log.already_in_a_duel", "phrase_args": {}}
+              },
+              "source": "node/server.js:12316-12318",
+              "confirm": {"code": ["node/server.js:12316-12318", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:124"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            },
+            {
+              "when": "No duel has the id `id`, or its instance is gone.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"duel_expired\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-3"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Duel expired", "phrase": "server.game_log.duel_expired", "phrase_args": {}}
+              },
+              "source": "node/server.js:12319-12321",
+              "confirm": {"code": ["node/server.js:12319-12321", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:178"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            },
+            {
+              "when": "The duel started. **Server bug:** this check never fails (see Notes).",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"duel_started\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-3"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Duel already started", "phrase": "server.game_log.duel_already_started", "phrase_args": {}}
+              },
+              "source": "node/server.js:12322-12324",
+              "confirm": {"code": ["node/server.js:12322-12324", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:176", "node/server_functions.js:3009"], "note": "`duel.active` is set from `instance.active`, which is never set (the flag is `info.active`), so this row never fires"}
+            },
+            {
+              "when": "Your name is not in the team lists (`a`, `b`) of the duel. The lists hold the party members of the two characters at `accept`. When the duel starts, the lists hold only the fighters in the instance.",
+              "with_request_id": {
+                "code": "data",
+                "extra": [
+                  {"name": "reason", "type": "\"not_your_duel\"", "optional": false, "description": "Why."},
+                  {"name": "request_id", "type": "any", "optional": false, "description": "The `request_id` of the request.", "example": "duel-3"}
+                ]
+              },
+              "without_request_id": {
+                "event": "game_log",
+                "example": {"message": "Not your duel", "phrase": "server.game_log.not_your_duel", "phrase_args": {}}
+              },
+              "source": "node/server.js:12325-12327, node/server_functions.js:2934-2953",
+              "confirm": {"code": ["node/server.js:12325-12327", "node/server_functions.js:2934-2953", "node/server.js:12193-12196", "node/server_functions.js:3393-3419", "languages/index.js:256-258", "languages/en/server.js:252"], "note": "`duel_failure`: `fail_response` with `request_id`, else the `game_log` text"}
+            }
+          ]
+        },
+        "also": [
+          {"event": "player", "to": "you", "when": "After the move. Clients nearby the old position get `disappear` with `reason: \"transport\"`.", "summary": "The state with full `hp` and `mp`, `s` = `{stunned: {ms: 120000}}` and `team`. The stun ends when the duel starts: the server then clears `s`.", "source": "node/server.js:12346-12348, node/server_functions.js:2934-2953", "confirm": {"code": ["node/server.js:12328", "node/server.js:1108-1115", "node/server.js:12346-12348", "node/server_functions.js:2934-2953", "node/server.js:4550-4594"]}},
+          {
+            "event": "game_chat",
+            "to": "every player in the duel instance",
+            "when": "Success.",
+            "type": "LocalizedText",
+            "example": {"message": "Priest joined the duel!", "phrase": "server.game_chat.joined_the_duel", "phrase_args": {"player": "Priest"}},
+            "source": "node/server.js:12349-12353",
+            "confirm": {"code": ["node/server.js:12349-12353", "node/server_functions.js:3540-3550", "languages/index.js:256-258", "languages/en/server.js:114"]}
+          }
+        ],
+        "order": [
+          "`new_map` and `player` to you",
+          "`player` (stunned) to you",
+          "`game_chat` to the instance",
+          "with `request_id`: `game_response` `data` to you"
+        ]
+      }
+    ]
+  }
+}

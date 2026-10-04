@@ -1,0 +1,79 @@
+{
+  "event": "join_giveaway",
+  "source": "node/server.js:8737-8789",
+  "request": {
+    "fields": [
+      {"name": "id", "type": "CharacterName", "optional": false, "coerce": "`id_to_id[id]`: the id of an online character", "description": "The seller: the character whose stand holds the giveaway."},
+      {"name": "slot", "type": "string", "optional": false, "description": "The trade slot of the giveaway, `\"trade1\"` to `\"trade48\"`."},
+      {"name": "rid", "type": "string", "optional": true, "description": "The listing id. When present and truthy, it must be the `rid` of the item in the slot."}
+    ],
+    "others": "ignored",
+    "example": {"id": "Merchant", "slot": "trade1", "rid": "x7Qa"},
+    "confirm": {"code": ["node/server.js:8739", "node/server.js:8744", "node/server.js:8759-8760"], "note": "The handler reads `id`, `slot` and `rid`"}
+  },
+  "responses": [
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "All checks pass. The server sets `item.registry[auth_id]` to your name and makes `item.list` again from the registry. A second join from the same `auth_id` replaces the first entry.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"join_giveaway\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "join_giveaway"},
+      "source": "node/server.js:8788",
+      "confirm": {"code": ["node/server.js:8774-8776", "node/server.js:8788", "node/server_functions.js:3421-3446"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "place": "join_giveaway",
+    "rows": [
+      {"when": "No character, or the character is in the bank.", "code": "cant_in_bank", "source": "node/server.js:8741-8743", "confirm": {"code": ["node/server.js:8741-8743", "node/server_functions.js:3393-3419"]}},
+      {"when": "`slot` is not one of `trade1` to `trade48`.", "code": "invalid", "source": "node/server.js:8744-8746", "confirm": {"code": ["node/server.js:8744-8746", "js/old_common_functions.js:52-53", "node/server_functions.js:3393-3419"]}},
+      {"when": "No online character has that `id`, or it is an NPC, or it is invisible.", "code": "seller_gone", "source": "node/server.js:8747-8749", "confirm": {"code": ["node/server.js:8747-8749", "node/server_functions.js:3393-3419"]}},
+      {"when": "The seller is in the bank.", "code": "cant_in_bank", "source": "node/server.js:8750-8752", "confirm": {"code": ["node/server.js:8750-8752", "node/server_functions.js:3393-3419"]}},
+      {"when": "The seller is on another map, or more than `B.dist` (400 px) from you.", "code": "distance", "source": "node/server.js:8753-8755", "confirm": {"code": ["node/server.js:8753-8755", "node/server.js:219", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are the seller.", "code": "hmm", "source": "node/server.js:8756-8758", "confirm": {"code": ["node/server.js:8756-8758", "node/server_functions.js:3393-3419"]}},
+      {"when": "The slot is empty, or `rid` is not the `rid` of its item.", "code": "item_gone", "source": "node/server.js:8759-8762", "confirm": {"code": ["node/server.js:8759-8762", "node/server_functions.js:3393-3419"]}},
+      {"when": "The item in the slot is not a giveaway.", "code": "sneaky", "source": "node/server.js:8763-8765", "confirm": {"code": ["node/server.js:8763-8765", "node/server_functions.js:3393-3419"]}},
+      {"when": "Your character has no `auth_id`. The server sets it only for a Steam or a Mac App Store login (node/server_functions.js:864-883, 977-998).", "code": "need_auth", "source": "node/server.js:8766-8768", "confirm": {"code": ["node/server.js:8766-8768", "node/server_functions.js:864", "node/server_functions.js:883", "node/server_functions.js:977", "node/server_functions.js:997-998", "node/server_functions.js:3393-3419"]}}
+    ]
+  },
+  "also": [
+    {
+      "event": "game_log",
+      "to": "you",
+      "when": "Success, first.",
+      "type": "LocalizedText",
+      "example": {"message": "Joined the giveaway!", "phrase": "server.game_log.joined_the_giveaway", "phrase_args": {}},
+      "source": "node/server.js:8778",
+      "confirm": {"code": ["node/server.js:8778", "languages/index.js:256-258"]}
+    },
+    {
+      "event": "game_response",
+      "to": "the seller",
+      "code": "giveaway_join",
+      "when": "Success, after your `game_log`.",
+      "fields": [
+        {"name": "response", "type": "\"giveaway_join\"", "optional": false, "description": "The code."},
+        {"name": "name", "type": "CharacterName", "optional": false, "description": "You, the character that joined."},
+        {"name": "slot", "type": "string", "optional": false, "description": "The trade slot."},
+        {"name": "cevent", "type": "true", "optional": false, "description": "Tells the official client to fire its code event."}
+      ],
+      "example": {"response": "giveaway_join", "name": "Wizard", "slot": "trade1", "cevent": true},
+      "source": "node/server.js:8779-8784",
+      "confirm": {"code": ["node/server.js:8779-8784"]}
+    },
+    {"event": "player", "to": "you, then the seller", "when": "Success, before your `game_response`.", "summary": "Your state with `reopen: true`, then the state of the seller with `reopen: true`. **Server bug:** the handler does not update `cslots`, so `list` of the giveaway in the `slots` of the seller does not show the new entry.", "source": "node/server.js:8774-8776, 8786-8787", "confirm": {"code": ["node/server.js:8774-8776", "node/server.js:8786-8787", "node/server.js:4550-4594"]}}
+  ],
+  "order": [
+    "`game_log` to you",
+    "`game_response` `giveaway_join` to the seller",
+    "`player` to you, then to the seller",
+    "`game_response` `data` to you"
+  ]
+}

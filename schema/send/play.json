@@ -1,0 +1,8 @@
+{
+  "event": "play",
+  "source": "node/server.js:12880",
+  "request": {"fields": [], "note": "No payload. The handler body is empty: it reads nothing.", "confirm": {"code": ["node/server.js:12880"]}},
+  "responses": [
+    {"name": "Nothing", "kind": "none", "when": "Every call. The handler is empty.", "source": "node/server.js:12880", "confirm": {"code": ["node/server.js:12880"]}}
+  ]
+}

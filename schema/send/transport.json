@@ -1,0 +1,153 @@
+{
+  "event": "transport",
+  "source": "node/server.js:5887-6057",
+  "request": {
+    "fields": [
+      {"name": "to", "type": "MapName", "optional": false, "coerce": "a key of `G.maps` and of `instances`", "description": "The map to go to. In a map of the Cave of Many Dreams: the next floor, or `main` to leave the cave."},
+      {"name": "s", "type": "integer", "optional": true, "default": 0, "coerce": "`s || 0`. A door compares it with loose `==` to `door[5] || 0`, so `\"1\"` matches 1. The Transporter compares it with strict `===` to `G.npcs.transporter.places[to]`, so a string fails with `transport_cant_reach`. A cave door uses strict `===` (node/logic/generated_maps.js:158)", "description": "The spawn on the destination map. It must match the spawn of the door or the spawn of the Transporter list (`winterland` 1, `main` 9, `desertland` 1, `cyberland` 0)."}
+    ],
+    "others": "ignored",
+    "example": {"to": "winterland", "s": 1}, "confirm": {"code": ["node/server.js:5909-5910", "node/server.js:5927-5928", "node/server.js:5951", "node/logic/generated_maps.js:155-158"]}
+  },
+  "responses": [
+    {
+      "name": "Moved",
+      "event": "new_map",
+      "when": "A normal move: all checks pass. The server first lowers by 5,200 ms the time of each condition that is not a debuff and has less than 60,000 ms left (`decay_s`; a `citizens` aura also has its numbers divided by 4). A `player` update follows.",
+      "type": "NewMapData",
+      "example": {
+        "name": "winterland",
+        "in": "winterland",
+        "x": -8,
+        "y": -337,
+        "direction": 3,
+        "effect": 0,
+        "info": {},
+        "m": 14,
+        "entities": {"players": [], "monsters": [], "type": "all", "in": "winterland", "map": "winterland"}
+      },
+      "source": "node/server.js:6053-6054, 4744-4755", "confirm": {"code": ["node/server.js:6052-6054", "node/server_functions.js:527-543", "node/server.js:4640-4758", "node/server_functions.js:3675-3706"]}
+    },
+    {
+      "name": "Success",
+      "event": "game_response",
+      "code": "data",
+      "when": "A normal move, after `new_map` and `player`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"transport\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."}
+      ],
+      "example": {"success": true, "response": "data", "place": "transport"},
+      "source": "node/server.js:6055", "confirm": {"code": ["node/server.js:6055", "node/server_functions.js:3421-3446"]}
+    },
+    {
+      "name": "Bank pending",
+      "event": "game_response",
+      "code": "data",
+      "when": "Bank entry: the destination has `mount` and you are not in a bank. Bank exit: you are in a bank and the destination has no `mount`. The server adds 32 call-cost (entry) or 16 (exit) and starts a database transaction; the move comes later. For a `ulocked` bank map entered from outside the bank, this reply comes after a database read of the unlock flag.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"transport\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "false", "optional": false, "description": "Always `false`: the move did not happen yet."},
+        {"name": "in_progress", "type": "true", "optional": false, "description": "The bank transaction runs."}
+      ],
+      "example": {"success": false, "in_progress": true, "response": "data", "place": "transport"},
+      "source": "node/server.js:6022, 6031-6036, 6042-6047", "confirm": {"code": ["node/server.js:6022", "node/server.js:6031-6036", "node/server.js:6042-6047", "node/server_functions.js:3421-3446"]}
+    },
+    {
+      "name": "Bank done",
+      "event": "new_map",
+      "when": "Later: the bank transaction succeeded. Then two `player` updates follow: one from the move, then a full one (`resend(player)`). After an entry, the second has `user`: your bank packs `items0` to `items47`, `gold`, `rewards`, `unlocked`.",
+      "type": "NewMapData",
+      "example": {
+        "name": "bank",
+        "in": "bank",
+        "x": 0,
+        "y": -37,
+        "direction": 3,
+        "effect": 0,
+        "info": {},
+        "m": 15,
+        "entities": {"players": [], "monsters": [], "type": "all", "in": "bank", "map": "bank"}
+      },
+      "source": "node/server.js:16624-16634, 16688-16699", "confirm": {"code": ["node/server.js:16625-16634", "node/server.js:16687-16699", "node/server.js:4640-4758", "node/server_functions.js:3675-3706", "node/server.js:4550-4594"]}
+    },
+    {
+      "name": "Cave door",
+      "event": "game_response",
+      "code": "data",
+      "when": "You are in a map of the Cave of Many Dreams (checked after `transport_failed`). A different handler, `generated_use_door`, does the move; it is asynchronous. `map` is the new floor. A door to `main` leaves the cave: you get `cave` `{type: \"ended\", reason: \"exit\"}`, `new_map` and `player` first, and the reply has `exited: true` in place of `map`.",
+      "extends": "GameResponseSuccess",
+      "fields": [
+        {"name": "response", "type": "\"data\"", "optional": false, "description": "Always `\"data\"`."},
+        {"name": "place", "type": "\"transport\"", "optional": false, "description": "The request."},
+        {"name": "success", "type": "true", "optional": false, "description": "Always `true`."},
+        {"name": "map", "type": "MapName", "optional": true, "description": "The floor that you moved to."},
+        {"name": "exited", "type": "true", "optional": true, "description": "You left the cave through a door to `main`."}
+      ],
+      "example": {"response": "data", "place": "transport", "success": true, "map": "zone_5f0c2a9e8b7d6c5b4a3f2e1d_1"},
+      "source": "node/server.js:5896-5909, node/logic/generated_maps.js:149-170", "confirm": {"code": ["node/server.js:5896-5903", "node/logic/generated_maps.js:149-176", "node/logic/cave_of_many_dreams.js:1895-1899"]}
+    }
+  ],
+  "failures": {
+    "event": "game_response",
+    "rows": [
+      {"when": "No character.", "replies": [], "source": "node/server.js:5890-5892", "confirm": {"code": ["node/server.js:5888-5892"]}},
+      {"when": "You cannot walk (`can_walk`: dead, `stunned`, `fingered`, `stoned`, `deepfreezed`, `sleeping`, or `dash`), or you are in `jail`.", "code": "transport_failed", "source": "node/server.js:5893-5895", "confirm": {"code": ["node/server.js:5893-5895", "js/old_common_functions.js:755-771", "node/server_functions.js:3393-3419"]}},
+      {
+        "when": "Cave map: the door failed. `reason` is the message of the error. `use_exit`: you cannot walk or are dead, or `to` is not a floor of the run. `cave_closed`: the run ended or you left it. `cave_paused`: a conversation pauses the run. `transport_cant_reach`: no door to `to` with spawn `s` is near you. `seal_closed`: the current floor is not complete. `transport_failed`: the move failed after the server built the floor. Another error gives its own message.",
+        "code": "data",
+        "extra": [
+          {"name": "reason", "type": "string", "optional": false, "description": "The message of the error.", "example": "seal_closed"}
+        ],
+        "source": "node/server.js:5904-5906, node/logic/generated_maps.js:149-170", "confirm": {"code": ["node/server.js:5904-5906", "node/logic/generated_maps.js:149-171", "node/logic/cave_of_many_dreams.js:1894"]}
+      },
+      {"when": "`to` is not a map, it has no instance, its instance does not allow entry (`allow`), or it is a cave map (`generated_can_enter`).", "code": "cant_enter", "source": "node/server.js:5911-5919", "confirm": {"code": ["node/server.js:5909-5919", "node/logic/generated_maps.js:29-50", "node/server_functions.js:3393-3419"]}},
+      {"when": "More than 5 monsters target you.", "code": "cant_escape", "source": "node/server.js:5920-5922", "confirm": {"code": ["node/server.js:5920-5922", "node/server_functions.js:3393-3419"]}},
+      {"when": "You use the Transporter (or you are a GM, or in `woffice` on a `hardcore` server) and you have the `dampened` condition.", "code": "transport_cant_dampened", "source": "node/server.js:5944-5957", "confirm": {"code": ["node/server.js:5944-5957", "node/server_functions.js:3393-3419"]}},
+      {"when": "No door to `to` with spawn `s` is within `B.door_dist` (112 px) of you. And no Transporter of your map within `B.transporter_dist` (160 px) lists `to` with spawn `s`. GMs, and characters in `woffice` on a `hardcore` server, skip this check.", "code": "transport_cant_reach", "source": "node/server.js:5924-5960", "confirm": {"code": ["node/server.js:5924-5960", "node/server.js:221", "node/server.js:223", "node/server_functions.js:3393-3419"]}},
+      {"when": "The door is `protected`, and a gatekeeper monster is alive in your instance.", "code": "transport_cant_protection", "source": "node/server.js:5961-5971", "confirm": {"code": ["node/server.js:5961-5971", "node/server_functions.js:3393-3419"]}},
+      {"when": "You are in a bank (`player.user`), the door is `ulocked` into a bank map, and your account did not unlock that map.", "code": "transport_cant_locked", "source": "node/server.js:5972-5980", "confirm": {"code": ["node/server.js:5972-5980", "node/server_functions.js:3393-3419"]}},
+      {"when": "Bank entry or exit: a bank entry or exit of this character runs already.", "code": "bank_opi", "source": "node/server.js:5983-5985, 6039-6041", "confirm": {"code": ["node/server.js:5982-5985", "node/server.js:6037-6041", "node/server_functions.js:3393-3419"]}},
+      {"when": "Bank entry through a `ulocked` door from outside the bank: a read of the unlock flag for an earlier `transport` runs already.", "code": "bank_opi", "source": "node/server.js:5993-5995", "confirm": {"code": ["node/server.js:5992-5995", "node/server_functions.js:3393-3419"]}},
+      {"when": "Bank entry through a `ulocked` door from outside the bank: the database says that your account did not unlock that map. This reply comes after the read.", "code": "transport_cant_locked", "source": "node/server.js:6006-6012", "confirm": {"code": ["node/server.js:6006-6012"]}},
+      {"when": "Bank entry through a `ulocked` door: after the read, your character left, is in a bank, or a bank operation started. Also any error in the read.", "replies": [], "source": "node/server.js:6014-6016, 6023-6027", "confirm": {"code": ["node/server.js:6014-6016", "node/server.js:6023-6027"]}},
+      {
+        "when": "Later: the bank entry transaction failed. You stay where you are. The object has no `place` and no `failed`.",
+        "code": "bank_opx",
+        "form": "plain",
+        "extra": [
+          {"name": "name", "type": "string | null", "optional": true, "description": "Only for `already_in_bank`: the id of the character that holds the bank now (`owner.mounted_to`). `null` if the account record is missing (`owner && owner.mounted_to`).", "example": "4815162342"},
+          {"name": "reason", "type": "\"character_gone\" | \"already_in_bank\" | \"exception\"", "optional": false, "description": "`character_gone`: the session of your character changed. `already_in_bank`: another character of the account (or another server) has the bank. `exception`: a database error, after up to 6 tries.", "example": "already_in_bank"}
+        ],
+        "source": "node/server.js:16597-16606, 16635-16639", "confirm": {"code": ["node/server.js:16597-16606", "node/server.js:16635-16639", "node/logic/character_sessions.js:91-98", "common:mongodb_functions.js:88-95"], "note": "If the account record is missing, `already_in_bank` sends `name: null` (`owner && owner.mounted_to`)"}
+      },
+      {"when": "Later: the bank exit transaction failed (`not_in_game` or `bank_owner_lost`, after up to 3 tries). The server sends nothing and disconnects the socket.", "close": true, "source": "node/server.js:16700-16703", "confirm": {"code": ["node/server.js:16700-16703"]}}
+    ]
+  },
+  "also": [
+    {"event": "disappear", "to": "nearby", "when": "A move (now, or later for the bank): clients that saw you at the old position.", "summary": "`{id, reason: \"transport\", to, s}`. `to` and `s` are absent when you are invisible or `stealth`, or when the instance name is not a map name. See the `leave` entry for the fields.", "source": "node/server.js:4652-4660", "confirm": {"code": ["node/server.js:4652-4660"]}},
+    {"event": "player", "to": "you", "when": "After each `new_map`, from `transport_player_to`.", "summary": "Your character (`u+cid`) on the new map.", "source": "node/server.js:4757", "confirm": {"code": ["node/server.js:4757", "node/server.js:4550-4594"]}}
+  ],
+  "order": {
+    "Normal move": [
+      "`disappear` to clients near your old position",
+      "`new_map` to you",
+      "`player` to you",
+      "`game_response` `data` to you"
+    ],
+    "Bank entry or exit": [
+      "`game_response` `data` with `in_progress: true` to you (after the read of the unlock flag, for a `ulocked` door from outside the bank)",
+      "later: `disappear` to clients near your old position",
+      "`new_map` to you",
+      "`player` to you, twice (the second is the full one)"
+    ],
+    "Cave door": [
+      "later: `new_map` and `player` to you (a door to `main`: `cave` `ended` first)",
+      "`game_response` `data` with `map` (or with `exited: true`) to you"
+    ]
+  }
+}
