@@ -187,10 +187,10 @@ citations whose lines only shifted. `.github/workflows/game-update.yml` runs it 
   `files: {"learn.html": "site/learn.html", "game.html": "site/game.html", "types/<f>": {from:
   "site/types/<f>", contentType: "text/plain"}, "asyncapi.json": "site/asyncapi.json"}` for each
   of the six generated type files plus the AsyncAPI document.
-- **GitHub: the owner is setting it up** (2026-10-04). Don't run `git init`, `gh repo
-  create` or push unless asked. When it exists: serve `site/` with Pages, and
-  `.github/workflows/game-update.yml` starts its daily check.
-## License and attribution
+- **GitHub:** https://github.com/joshuawjulian/adventureland-protocol (public). The site is on
+  GitHub Pages at https://joshuawjulian.github.io/adventureland-protocol/, deployed by
+  `.github/workflows/pages.yml` on every push to `main` (it runs build.py and publishes `site/`).
+  The owner pushes; don't push without being asked.
 
 The game's code is under "AdventureLandOnlyUse" (in `vendor/adventureland/LICENSE`): use is
 fine; **attribution is required, and a website needs a crawlable link back to
@@ -211,5 +211,5 @@ server bugs plainly (see `docs/WRITING.md` for the known quirks list).
    citations to live line numbers (in progress, 2026-10-04).
 2. Per-event examples in all seven languages (stage 2, docs/EXAMPLES.md).
 3. Re-check the game guide and the Learn chapters against the live code.
-4. GitHub: the owner is setting up the repository.
+4. GitHub: published (see "Published copies").
 5. Typed payload definitions: done (`scripts/gen-types.py`, seven languages, from `schema/`).

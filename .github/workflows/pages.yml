@@ -1,0 +1,45 @@
+# Publishes the site to GitHub Pages on every push to main.
+#
+# It runs build.py (Python 3 only, no dependencies; vendor/ is not needed) and deploys the
+# resulting site/ folder: learn.html, game.html, index.html, asyncapi.json and types/.
+# One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # "Run workflow" button, to republish by hand
+
+permissions:
+  contents: read
+  pages: write # deploy to Pages
+  id-token: write # required by actions/deploy-pages
+
+# One deploy at a time; a newer push cancels an older one still in the queue.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the site
+        run: python3 build.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
