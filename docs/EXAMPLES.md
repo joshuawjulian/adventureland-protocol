@@ -39,14 +39,14 @@ Rules:
 - **No secrets in examples.** Read email/password/auth from environment variables
   `AL_EMAIL`, `AL_PASSWORD` (or `AL_AUTH` = `<userID>-<authToken>`).
 - Keep per-event snippets short (5–25 lines per language). Tutorial programs can be longer.
-- **Course code lives in `course/`, not in the Markdown.** The Learn chapters show the library
+- **Course code lives in `course/`, not in the Markdown.** The Build a bot chapters show the library
   and the programs of `course/<lang>` with includes (below). The contract for its modules,
   names, programs and environment variables is docs/COURSE.md.
 - Prose stays **language-agnostic**: explain the idea in words first, then the tab group.
 
 ## The `AlSocket` mini client (built in the tutorial, used everywhere after)
 
-Its code is `course/<lang>`'s `alsocket` file (docs/COURSE.md); Learn shows it in the chapter
+Its code is `course/<lang>`'s `alsocket` file (docs/COURSE.md); Build a bot shows it in the chapter
 "AlSocket" (`#learn-alsocket`), after the wire format in "Socket.IO by hand".
 
 **Sources.** Everything is written from the live game's open-source code,
@@ -85,7 +85,7 @@ What it does on the wire (Engine.IO v4 + Socket.IO v4, text frames only):
 
 Short and neutral: show how to send the event and how to read the result, nothing else.
 
-- Assume a connected `sock` (the `AlSocket` from Learn, "AlSocket"). Don't repeat setup;
+- Assume a connected `sock` (the `AlSocket` from Build a bot, "AlSocket"). Don't repeat setup;
   one comment line at the top of the JS tab may say `// sock: a connected AlSocket`.
 - **Send entries:** register the wait for the result first, then emit, then read the result.
   Failures arrive as `game_response` with `place` = the event name (check the entry's Fails
@@ -135,7 +135,7 @@ material doesn't clutter it:
 
 | Page | File | Content |
 |---|---|---|
-| Learn | `site/learn.html` | the tutorial, `content/learn-*.md` (kind `learn`, one entry per `##` chapter, id `learn-<slug>`) |
+| Build a bot | `site/learn.html` | the tutorial, `content/learn-*.md` (kind `learn`, one entry per `##` chapter, id `learn-<slug>`) |
 | Game guide | `site/game.html` | how the MMO works, `content/game-*.md` (kind `game`, one entry per `##`, id `game-<slug>`) |
 | API reference | `site/index.html` | everything that was already there: connect, send, receive, codes, G, S |
 

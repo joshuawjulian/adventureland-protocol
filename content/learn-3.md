@@ -257,6 +257,8 @@ keeps it.
 
 <!-- include course/java/src/main/java/albot/Grid.java region=find-path -->
 
+![The Mainland town with a grid of 8 px cells, a straight line through a fountain and an A* path around it](img/learn/pathfinding.png "An illustration on the Mainland town art, with a grid of 8 px cells. The straight line to the goal crosses the fountain. A* finds a path around it.")
+
 ### Walking a path
 
 `Travel.walkTo(x, y)` asks the grid for a path and walks it with `moveTo` of Part 2, one
@@ -597,6 +599,8 @@ Three fields of [`player`](#recv-player) describe what your character carries:
 | `me.slots` | The equipment: slot name → item, for example `mainhand`, `helmet`, `chest`, `ring1`. |
 | `me.esize` | The number of empty inventory slots. |
 
+![The stats, the equipment slots and the inventory slots in the official client](img/learn/inventory.png "Stats, equipment and inventory in the official client. Your program reads the same data from player: items, slots and esize.")
+
 The **slot number** of an item (`num`) is its index in `me.items`. Most item events take it. A
 `player` update can move items, so read the slot number again immediately before you use it.
 
@@ -817,6 +821,8 @@ You can play several characters at the same time. This chapter runs three fighte
 merchant in one program. The fighters farm in a **party**. The merchant walks to them, takes
 their loot and gold, sells the loot and puts the gold in the bank. The chapter adds the module
 `party` and the program `party-merchant`.
+
+![A merchant at its stand in the Mainland town, with its inventory open](img/learn/merchant.png "A merchant in town. In this chapter, your merchant takes the loot of the fighters, sells it and puts the gold in the bank.")
 
 Game guide: [Parties](#game-social-and-multiplayer), [A merchant in
 practice](#game-gold-and-the-economy) and [The bank](#game-items-and-equipment).
@@ -1106,6 +1112,8 @@ compound combines three identical items into one item of the next level. Gear is
 important than level for the strength of a character ([Gear is more important than
 level](#game-leveling-and-progression)). This chapter adds the program `gear-up`: it upgrades a
 coat to +3 and compounds rings, with a stop rule.
+
+![Cue, the upgrade NPC, and the upgrade window with a bow, a scroll and the chance 99.99%](img/learn/upgrade.png "Cue, the upgrade NPC in the Mainland town, and the upgrade window of the official client. Your program sends upgrade and compound to Cue.")
 
 Game guide: [Upgrading and compounding](#game-upgrading-and-compounding), and in it [Your first
 upgrade, step by step](#game-upgrading-and-compounding), [The odds](#game-upgrading-and-compounding)

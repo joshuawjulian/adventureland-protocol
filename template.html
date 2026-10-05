@@ -329,6 +329,12 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 }
 .md blockquote p { margin: 4px 0; }
 .table-wrap { overflow-x: auto; max-width: 100%; margin: 12px 0 18px; border: 1px solid var(--rule); border-radius: 8px; }
+/* Pictures: the game's own art. A paragraph that is only `![alt](src "caption")` becomes a figure
+   (enhance). The files are made at their display size, so pixelated keeps the pixel art sharp when
+   a high-density screen scales them up. */
+.md figure { margin: 16px 0 20px; max-width: 100%; }
+.md figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 8px; image-rendering: pixelated; }
+.md figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); max-width: 72ch; }
 .md table { border-collapse: collapse; font-size: 13.5px; width: 100%; }
 .md th, .md td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
 .md th { font: 600 11px var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--sunk); white-space: nowrap; }
@@ -368,7 +374,7 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   color: var(--muted);
 }
 
-/* Page switcher (Learn / Game guide / API reference) and the code-language picker. */
+/* Page switcher (Build a bot / Game guide / API reference) and the code-language picker. */
 .pages { display: flex; gap: 2px; background: var(--sunk); border: 1px solid var(--rule); border-radius: 8px; padding: 2px; }
 .pages a {
   font: 500 13px var(--body);
@@ -454,6 +460,7 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   body:not(.reading) .reader { display: none; }
   .btn.back { display: inline-flex; margin-bottom: 14px; }
   .doc { padding: 20px 16px 48px; }
+  .md figure img { image-rendering: auto; } /* scaled down on a phone: smooth reads better */
   .foot { margin: 0 16px 32px; }
   .brand .wire { display: none; }
   .pages { order: 3; flex: 1 1 100%; }
@@ -491,7 +498,7 @@ const DATA = __DATA__;
 
 /* Kinds of entry, in index order. `tag` is the short label beside each row. */
 const ALL_KINDS = [
-  { id: "learn", label: "Learn", tag: "LEARN", color: "var(--learn)", long: "Learn" },
+  { id: "learn", label: "Build a bot", tag: "BUILD", color: "var(--learn)", long: "Build a bot" },
   { id: "game", label: "Game guide", tag: "GAME", color: "var(--game)", long: "Game guide" },
   { id: "guide", label: "Guide", tag: "GUIDE", color: "var(--guide)", long: "Guide" },
   { id: "send", label: "Send", tag: "SEND", color: "var(--send)", long: "Events you send (client → server)" },
@@ -706,6 +713,20 @@ function srcHref(prefix, file, a, b) {
 
 /* After Markdown is rendered: wrap tables so they scroll, link source refs, cross-link names. */
 function enhance(root, fromKind, selfId) {
+  for (const img of root.querySelectorAll("p > img:only-child")) {
+    const p = img.parentElement;
+    if (p.textContent.trim()) continue; // an image inside a sentence stays inline
+    const fig = document.createElement("figure");
+    img.loading = "lazy";
+    fig.append(img);
+    if (img.title) {
+      const cap = document.createElement("figcaption");
+      cap.textContent = img.title;
+      fig.append(cap);
+      img.removeAttribute("title");
+    }
+    p.replaceWith(fig);
+  }
   for (const t of root.querySelectorAll("table")) {
     const wrap = document.createElement("div");
     wrap.className = "table-wrap";
@@ -886,7 +907,7 @@ function footer() {
     `<footer class="foot">An unofficial reference for <a href="https://adventure.land">Adventure Land</a>, ` +
     `written from the game's open-source code (<a href="${DATA.source.live.repo}">kaansoral/adventureland_mongodb</a>, commit ` +
     `<a href="${DATA.source.live.repo}/tree/${DATA.source.live.commit}"><code>${short}</code></a>). ` +
-    `Adventure Land and its code belong to their author.</footer>`
+    `The pictures use the game's own art and screenshots from the same repository. Adventure Land, its code and its art belong to their author.</footer>`
   );
 }
 

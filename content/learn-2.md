@@ -6,6 +6,8 @@ Part 1 gave you `AlSocket` and a local test server. Part 2 uses them to put a ch
 the game world. Your character then reads the world, acts in it, and reads the replies. At the
 end of the part, a program kills a monster and loots it: [Checkpoint: your first kill](#learn-hearing-back).
 
+![The character list of the official client, with the level and class of each character](img/learn/character-list.png "The character list in the official client. Your program gets the same list from the HTTP API.")
+
 Part 2 adds seven modules to the library `albot`. Each chapter explains one or two of them:
 
 | Module | What it does | Chapter |
@@ -328,6 +330,8 @@ time. That is slow, but correct.
 
 G has more than 30 tables. The [table of all keys](#g-the-top-level-tables) lists each one.
 These tables are the most important for a bot:
+
+![Item icons (potions, scrolls, weapons, armor) and monsters (goo to scorpion) from the game's sprites](img/learn/g-data.png "Some items and monsters of G, drawn with the game's own sprites. G gives their data. The pictures are separate image files of the client.")
 
 | Table | Key | What one entry tells you |
 |---|---|---|
@@ -729,6 +733,8 @@ An **entity** is anything with a position: a monster, a player or an NPC. An **i
 one copy of a map. On normal maps, the instance id (`in`) is equal to the map name (`map`).
 Dungeons get a random instance id, so two parties can be in two copies of the same map.
 
+![A player, five monsters and an NPC standing on the Mainland road](img/learn/entities.png "Entities: a player, monsters and an NPC. Each one is a JSON object in your World, with an id and a position.")
+
 Each entity is the JSON object of the server, as it arrived. A `player` update merges into it
 field by field, and an `entities` update replaces it. Each language keeps it in its own type
 for a JSON object that you can change:
@@ -867,6 +873,8 @@ In both types, each entity object is the complete current state of that entity. 
 copy, and do not merge. The live code says it plainly: "complete payloads only"
 (`node/server.js:13705`). Each `entities` event also has `in`. If it is not your instance,
 ignore the event: it is about a map that you left.
+
+![The official client's panel for a goo at level 15: 800 HP, 1500 xp, attack 8](img/learn/monster-info.png "A goo at level 15, as the official client shows it. A monster that nobody attacks gains levels. Read level and hp from entities, not from G.")
 
 Monsters are a special case. A monster sends `hp`, `max_hp`, `speed` and some other stats
 **only when they are different** from `G.monsters[type]` (`node/server.js:1003-1028`). A
@@ -1023,6 +1031,8 @@ To act, you send an event. Then you watch for the result. The module `actions` h
 for each action. This chapter shows five of them: move, attack, heal, loot and respawn. Each
 section gives the payload, the replies and the failures.
 
+![A character fights monsters near the Mainland town, with HP and MP bars at the bottom](img/learn/acting.png "A character fights near the town. Each action is one event that your program sends, and the result comes back as events.")
+
 Two rules apply to each method:
 
 1. Each event goes through `budget.emit`, so that the bot stays under the call-cost limit.
@@ -1176,6 +1186,8 @@ When you kill a monster, the server can send [`drop`](#recv-drop) with a chest:
 [`chest_opened`](#recv-chest_opened) with `gold` and `items`, or `{id, gone: true}` if the chest
 does not exist now.
 
+![Four chest sprites: chest3, chest4, chest5 and chest6](img/learn/chests.png "The chest sprites. The chest field of drop names one of them: chest3 holds gold, chest4 and chest5 hold gold with a ×10 or ×50 bonus, chest6 holds items.")
+
 - If you are more than 400 px from the chest, you get only the base gold (`goldm: 1, dry: true`).
 - A chest that is older than 8 minutes also gives only the base gold (`stale: true`).
 - [`loot_no_space`](#code-loot_no_space): your inventory is full. No `chest_opened` comes.
@@ -1209,6 +1221,8 @@ When a monster kills you, you get [`game_response`](#recv-game_response)
 [`defeated_by_a_monster`](#code-defeated_by_a_monster) `{monster, xp}`, where `xp` is the xp
 that you lost. Your `rip` field becomes `true`, or the name of a gravestone. You cannot act
 while you are dead.
+
+![A dead character: the official client shows the world in gray](img/learn/death.png "A dead character. The official client shows the world in gray until the respawn.")
 
 1. Wait 12 s after the death. This is `B.rip_time` (`node/server.js:224`, `:6282-6286`).
 2. Send [`respawn`](#send-respawn) `{}`. Send `{"safe": true}` to go to the map `woffice` instead.

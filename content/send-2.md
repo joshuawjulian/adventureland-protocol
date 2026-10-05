@@ -52,7 +52,7 @@ Breaks an item into parts at the Craftsman for a gold cost.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "dismantle");
 sock.emit("dismantle", { num: 5 });
@@ -162,7 +162,7 @@ Combines inventory items by a `G.craft` recipe for a gold cost, at the Craftsman
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "craft");
 sock.emit("craft", { items: [[0, 3], [1, 7]] });
@@ -273,7 +273,7 @@ Starts the exchange of an item, or of `e` units of a stack, for a random drop at
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 // Success here means started: the drop comes 3-6 s later (game_log, player).
 const reply = sock.waitFor("game_response", (r) => r?.place === "exchange");
@@ -385,7 +385,7 @@ Spends token items (for example `monstertoken` or `funtoken`) at their NPC for a
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "exchange_buy");
 sock.emit("exchange_buy", { num: 2, name: "rabbitsfoot", q: 140 });
@@ -489,7 +489,7 @@ Removes the stat (`stat_type`) of an item at the Scrollsmith (desertland) for go
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 // With request_id, the success reply has scroll, quantity and cost.
 const reply = sock.waitFor("game_response", (r) => r?.place === "destat");
@@ -607,7 +607,7 @@ Locks, seals or unlocks an item at the Locksmith (desertland).
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 // "locksmith_unsealing" (success: false, in_progress: true) is not a failure.
 const reply = sock.waitFor("game_response", (r) => r?.place === "locksmith");
@@ -731,7 +731,7 @@ Combines three identical items of the same level with a compound scroll (`cscrol
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // No game_response at once on success: the result arrives as a hitchhiker
 // ["game_response", {...}] in a later `player` event. A failure comes at once
 // as game_response (see the Failure table); then this wait times out.
@@ -894,7 +894,7 @@ Upgrades one item at the upgrade NPC with a `uscroll` (level + 1), a `pscroll` (
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // No game_response at once on success: the result arrives as a hitchhiker
 // ["game_response", {...}] in a later `player` event. A failure comes at once
 // as game_response (see the Failure table); then this wait times out.
@@ -1041,7 +1041,7 @@ Equips up to 15 inventory items in one call.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 // slots: one entry per equip, {num, slot} or an error code. It stops at the first error.
 const reply = sock.waitFor("game_response", (r) => r?.place === "equip_batch");
@@ -1156,7 +1156,7 @@ Uses or equips one inventory item: gear, a trade listing, a potion, an elixir, a
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "equip");
 sock.emit("equip", { num: 0, slot: "mainhand" });
@@ -1307,7 +1307,7 @@ Moves the item in an equipment slot or a trade slot back to the inventory.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "unequip");
 sock.emit("unequip", { slot: "offhand" });
@@ -1410,7 +1410,7 @@ Gets the list of items that players sold to NPCs, from Ponty (the secondhands me
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Without request_id, the list arrives as a `secondhands` event.
 // A failure is a bare game_response string ("distance"); then this wait times out.
 const list = sock.waitFor("secondhands");
@@ -1501,7 +1501,7 @@ Gets the list of lost items from the Lost and Found NPC (woffice), or with `"inf
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Without request_id, the list arrives as a `lostandfound` event.
 // A failure is a bare game_response string ("lostandfound_donate", "distance"); then this wait times out.
 const list = sock.waitFor("lostandfound");
@@ -1588,7 +1588,7 @@ Moves part of a stack into the first empty inventory slot.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "split");
 sock.emit("split", { num: 7, quantity: 50 });
@@ -1695,7 +1695,7 @@ Sells an inventory item, or part of a stack, to a nearby NPC merchant for its go
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "sell");
 sock.emit("sell", { num: 12, quantity: 1 });
@@ -1844,7 +1844,7 @@ Buys an item from the shop for shells (the premium currency). The payment goes t
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Two replies: at once {in_progress: true} or a failure, then the result after the shell payment.
 const first = sock.waitFor("game_response", (r) => r?.place === "buy_with_cash");
 sock.emit("buy_with_cash", { name: "cosmo0", quantity: 1 });
@@ -1972,7 +1972,7 @@ Spends 1,200 shells to bless the current server for 3 days, with an announcement
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Two replies: at once {in_progress: true} or a failure, then the result after the shell payment.
 const first = sock.waitFor("game_response", (r) => r?.place === "bless_server");
 sock.emit("bless_server", { request_id: "bless-1" });
@@ -2097,7 +2097,7 @@ Buys an item back from the secondhands list of Ponty, or with `f`, from the Lost
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 // With request_id, place is "secondhands" ("lostandfound" with f: true).
 const reply = sock.waitFor("game_response", (r) => r?.place === "secondhands");
@@ -2214,7 +2214,7 @@ Buys an item for gold from an NPC shop near you.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "buy");
 sock.emit("buy", { name: "hpot0", quantity: 100 });
@@ -2325,7 +2325,7 @@ Gives an item, gold or a cosmetic to another player who is near on the same map.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 // Gold mode. The sender gets gold_sent; the receiver gets gold_received.
 const reply = sock.waitFor("game_response", (r) => r?.place === "send");
@@ -2440,7 +2440,7 @@ Gives gold to the gold pool of the server.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 // With request_id, each reply is an object with place "donate".
 const reply = sock.waitFor("game_response", (r) => r?.place === "donate");
@@ -2554,7 +2554,7 @@ Destroys an inventory item, with special effects near the "poof" statue in spook
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "destroy");
 sock.emit("destroy", { num: 9, q: 1 });
@@ -2655,7 +2655,7 @@ Enters the player into a giveaway that a merchant lists in a trade slot. The ser
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "join_giveaway");
 sock.emit("join_giveaway", { id: "MerchantName", slot: "trade1", rid: "x7Qa" });
@@ -2754,7 +2754,7 @@ Puts a wishlist entry (a "buy" request) in a trade slot of the player.
 **Example:**
 
 ```js
-// sock: a connected AlSocket (Learn, "Socket.IO by hand")
+// sock: a connected AlSocket (Build a bot, "Socket.IO by hand")
 // Register the wait before emit: the reply can arrive first.
 const reply = sock.waitFor("game_response", (r) => r?.place === "trade_wishlist");
 sock.emit("trade_wishlist", { slot: "trade2", name: "wbook0", q: 1, price: 2000000, level: 0 });

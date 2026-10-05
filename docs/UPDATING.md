@@ -39,7 +39,7 @@ Do these steps in order.
 3. Document new socket handlers, and add each one to `SEND_GROUPS` in `build.py`. Add a row to
    the `game_response` table for each new response code.
 4. If a protocol file changed (`api.js`, `node/json_parser.js`, `node/msgpack_parser.js`, the
-   `auth` handler), re-check the Learn chapters on logging in and connecting. Re-run their
+   `auth` handler), re-check the Build a bot chapters on logging in and connecting. Re-run their
    example programs.
 5. If **G** moved, go through "Entries to re-check for G". Update numbers, tables and examples.
    Update the counts in `content/game-data.md` headings (`### items (638)`). New items,

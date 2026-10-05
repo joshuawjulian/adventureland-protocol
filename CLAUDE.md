@@ -57,11 +57,12 @@ at legacy line numbers.
 | `content/*.md` | All content, in Markdown. Edit these. |
 | `course/` | The course library **albot** and its programs, one project per language (`course/js` ... `course/java`), plus `course/test-server` (one fake Adventure Land for all programs). Contract: `docs/COURSE.md`. |
 | `docs/COURSE.md` | **The contract for course code**: modules, public names per language, programs and their output, the environment variables, the test server. |
-| `includes.py` | The `<!-- include path region=name -->` mechanism build.py uses for Learn chapters. |
+| `includes.py` | The `<!-- include path region=name -->` mechanism build.py uses for Build a bot chapters. |
 | `docs/EXAMPLES.md` | **The contract for code examples**: seven languages, fence tags, libraries, the `AlSocket` mini client every example uses, how to compile-check in docker. |
 | `template.html` | The page: CSS, layout, search, rendering. `__DATA__` is replaced by the build. |
 | `build.py` | Python 3, no deps. Splits `content/` into entries, embeds them, writes the three `site/*.html` pages. |
-| `site/*.html` | The built pages: `learn.html` (course), `game.html` (game guide), `index.html` (API reference). Complete HTML documents; GitHub Pages serves this folder. |
+| `site/*.html` | The built pages: `learn.html` (the Build a bot course; the file name and the `learn-*` ids stay, so old links work), `game.html` (game guide), `index.html` (API reference). Complete HTML documents; GitHub Pages serves this folder. |
+| `site/img/learn/` | Pictures for the Build a bot pages, made from the game's own art in `vendor/adventureland_mongodb/images` (screenshots, sprites cropped by the `G.sprites` / `G.imagesets` layout, labels in the game font `m5x7.ttf`). Git-tracked, unlike `vendor/`. License AdventureLandOnlyUse: use is fine, attribution required (the page footer credits the art). In Markdown: `![alt](img/learn/x.png "caption")` alone in a paragraph becomes a figure with that caption (`enhance` in template.html). Make files at display size (760 px wide or less), pixel art scaled by whole numbers with nearest-neighbour. |
 | `vendor/adventureland/` | The game's source at the pinned commit (git-ignored; `bash scripts/fetch-source.sh` recreates it). |
 | `docs/WRITING.md` | The entry formats and the prompts used to write each content file. |
 | `docs/STYLE.md` | Simplified Technical English (ASD-STE100) rules for all prose. |
@@ -70,7 +71,7 @@ at legacy line numbers.
 | `scripts/check-updates.py` | Compares the pins with the live game; lists entries to re-check; `--fix-lines`, `--pin`. |
 
 **Three pages, kept separate on purpose** (the owner wants the reference apart from the teaching
-material): Learn = `learn-1..3.md`, a course from zero (HTTP, WebSockets, Socket.IO by hand,
+material): Build a bot (`site/learn.html`, formerly "Learn") = `learn-1..3.md`, a course from zero (HTTP, WebSockets, Socket.IO by hand,
 login, handshake, world state, acting, bot architecture, a complete bot); Game guide =
 `game-1..2.md` (what the MMO is, classes, combat, progression, items, upgrading, economy, events
 and seasons); API reference = everything else. Every code example comes in seven languages (JS,
@@ -127,7 +128,7 @@ schema format and the type mapping are in docs/WRITING.md, "The schema".
 G (`vendor/G/G_17478.json`), builds all seven projects at once (caches in `alapi-course-*`
 volumes), then runs each program and matches its output with docs/COURSE.md "The programs"
 (`--lang`, `--program`, `--build-only`, `-v`). Run it after touching anything in `course/`.
-Learn chapters show course code with includes (`<!-- include course/go/world/world.go
+Build a bot chapters show course code with includes (`<!-- include course/go/world/world.go
 region=step -->`, `includes.py`, docs/EXAMPLES.md "Including code from course/"); the build
 fails on a missing file or region, so fix code in `course/`, never on the page.
 
@@ -185,8 +186,8 @@ citations whose lines only shifted. `.github/workflows/game-update.yml` runs it 
   relative links work. To update from a new session: `python3 build.py --fragment <tmp>`, read
   the artifact (the tool requires it), then publish `<tmp>` with this `url` and
   `files: {"learn.html": "site/learn.html", "game.html": "site/game.html", "types/<f>": {from:
-  "site/types/<f>", contentType: "text/plain"}, "asyncapi.json": "site/asyncapi.json"}` for each
-  of the six generated type files plus the AsyncAPI document.
+  "site/types/<f>", contentType: "text/plain"}, "asyncapi.json": "site/asyncapi.json", "img/learn/<f>": "site/img/learn/<f>"}` for each
+  of the six generated type files, the AsyncAPI document and each picture in `site/img/learn/`.
 - **GitHub:** https://github.com/joshuawjulian/adventureland-protocol (public). The site is on
   GitHub Pages at https://joshuawjulian.github.io/adventureland-protocol/, deployed by
   `.github/workflows/pages.yml` on every push to `main` (it runs build.py and publishes `site/`).
@@ -210,6 +211,6 @@ server bugs plainly (see `docs/WRITING.md` for the known quirks list).
 1. Re-verify the whole API reference against the live code, rewrite it in STE, and move its
    citations to live line numbers (in progress, 2026-10-04).
 2. Per-event examples in all seven languages (stage 2, docs/EXAMPLES.md).
-3. Re-check the game guide and the Learn chapters against the live code.
+3. Re-check the game guide and the Build a bot chapters against the live code.
 4. GitHub: published (see "Published copies").
 5. Typed payload definitions: done (`scripts/gen-types.py`, seven languages, from `schema/`).

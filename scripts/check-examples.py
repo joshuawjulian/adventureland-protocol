@@ -3,7 +3,7 @@
 
 The reference entries (content/send-*.md, content/receive.md) each end with an `**Example:**`
 (or `#### Example`) section: one tab group of seven fenced blocks (js ts python go csharp rust java), see
-docs/EXAMPLES.md. Those snippets assume a connected `sock`, the AlSocket that the Learn page
+docs/EXAMPLES.md. Those snippets assume a connected `sock`, the AlSocket that the Build a bot page
 builds in its chapter "AlSocket" and keeps in course/<lang> (docs/COURSE.md). This script makes sure each
 snippet compiles against *that* AlSocket, not a hand-made stub:
 
@@ -128,7 +128,7 @@ def fenced_blocks(lines, start=0, end=None):
             i += 1
 
 
-# Where each language's AlSocket lives: the course library (docs/COURSE.md). The Learn page shows
+# Where each language's AlSocket lives: the course library (docs/COURSE.md). The Build a bot page shows
 # these files through includes, so the course code is the single source of truth.
 AL_SOURCE = {
     "js": "course/js/albot/alsocket.js",

@@ -9,10 +9,10 @@ can be redone the same way. Source paths below are relative to `vendor/adventure
 The API reference (index.html) is for **lookup while coding**. It states what the server does,
 nothing else (owner, 2026-10-04: "neutral, just useful for lookups so I know how to code
 things"). Teaching, advice, recommendations, strategy, "you should", history ("changed from the
-old server") and opinions go in Learn or the game guide, never here. Facts that matter when you
+old server") and opinions go in Build a bot or the game guide, never here. Facts that matter when you
 code stay: limits, costs, cooldowns, exact replies, and server bugs (stated as facts:
 "**Server bug:** ..."). No Caution/Warning blockquotes in the reference: state the fact as a
-plain "**Note:**" or "**Server bug:**" paragraph. Warnings and advice belong in Learn. Prose follows docs/STYLE.md.
+plain "**Note:**" or "**Server bug:**" paragraph. Warnings and advice belong in Build a bot. Prose follows docs/STYLE.md.
 
 Every entry of one kind has the same sections, in the same order, with the same labels. Omit a
 section only when it has nothing. Shapes on the wire come from the schema (`schema/`, see "The
@@ -145,7 +145,7 @@ build makes that list, so do not write it by hand.
 ## Guide entries in the reference (`content/connect.md`)
 
 Protocol facts in tables and numbered sequences (a handshake is a sequence of messages, not
-advice). No "you should", no recommendations, no tutorials: those are in Learn.
+advice). No "you should", no recommendations, no tutorials: those are in Build a bot.
 
 ## Response codes
 

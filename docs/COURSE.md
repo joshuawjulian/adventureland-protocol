@@ -1,6 +1,6 @@
 # The course library: the contract
 
-The Learn page builds one small library, **albot**, in seven languages, plus a set of programs
+The Build a bot page builds one small library, **albot**, in seven languages, plus a set of programs
 that use it. The code lives in `course/`, one project per language, and the chapters show it
 with includes (docs/EXAMPLES.md, "Including code from course/"). This file is the contract
 that every chapter and every language follows: the modules, the public names, the programs,

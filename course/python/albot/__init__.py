@@ -1,4 +1,4 @@
-# albot: the small Adventure Land client library of the Learn course.
+# albot: the small Adventure Land client library of the Build a bot course.
 #
 # One module per job (docs/COURSE.md, "Modules and public names"):
 #   alsocket   Socket.IO v4 by hand on a plain WebSocket (standalone)

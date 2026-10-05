@@ -10,7 +10,7 @@ A **bot** is a program that plays a game for you. Most MMOs ban bots. Adventure 
 
 The official client runs in a browser or on Steam. It has a code editor with the name CODE. In CODE, you write JavaScript that calls functions such as `attack(target)` or `move(x, y)`. Then your character plays without you. Players compete on the quality of their code, not on the speed of their hands.
 
-The [Learn](#learn-before-you-start) course goes one step further. It does not write scripts for the official client. It replaces the client. Its program logs in over HTTP, opens a WebSocket to a game server and sends the socket events of the game directly. The [overview](#guide-overview) shows the full sequence on one page.
+The [Build a bot](#learn-before-you-start) course goes one step further. It does not write scripts for the official client. It replaces the client. Its program logs in over HTTP, opens a WebSocket to a game server and sends the socket events of the game directly. The [overview](#guide-overview) shows the full sequence on one page.
 
 To write a good bot, you must know the game that the protocol describes. This guide tells you which class to play and how the server calculates damage. It also tells you where to go at each level, why characters die, and what to do in your first hour, day and week.
 

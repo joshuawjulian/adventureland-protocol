@@ -6,6 +6,8 @@ JSON and async I/O. You know the idea of a WebSocket. You do not need to know th
 protocol. The course teaches the parts that are specific to Adventure Land (AL), and the
 practical side of WebSockets.
 
+![The Mainland town in the official client, with characters, NPCs and the CODE panel](img/learn/town.png "The official client in the Mainland town. Your program replaces this client: it sends the same events to the same servers.")
+
 The course builds one small library, **albot**, chapter by chapter, and a set of programs that
 use it. Each part adds modules to the same project. At the end of each part, you run a program
 against a local test server, and later against the real game.
@@ -23,6 +25,8 @@ against a local test server, and later against the real game.
 such as `move` or `attack`, and it keeps the connection alive with its own pings. Each game
 server runs Socket.IO (`node/server.js:81-87`). The website and the game servers are different
 hosts. Your bot talks to the website first, then to one game server.
+
+![A bot sends HTTP requests to adventure.land and Socket.IO events to a game server](img/learn/client-server.png "Your bot talks to two hosts: the website over HTTP, then one game server over Socket.IO.")
 
 ### The map of this course
 
@@ -73,6 +77,8 @@ It removes 25% of your luck and 25% of your gold from kills (`node/server.js:118
 
 For step 3: make a class that fights. The game guide recommends a ranger or a mage for a first
 bot ([Classes](#game-classes)). The bots of Part 3 do not fight with a merchant.
+
+![The seven classes: warrior, paladin, rogue, ranger, mage, priest and merchant](img/learn/classes.png "The seven classes, drawn with sprites from the game. You select the class when you make the character, and you cannot change it.")
 
 For step 4: your bot does the same things that you do with the mouse. If you know how the game
 looks, the messages of the server are easier to understand. The game guide starts at

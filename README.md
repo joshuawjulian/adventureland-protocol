@@ -8,7 +8,7 @@ It is three pages:
 
 | Page | What it is |
 |---|---|
-| **Learn** (`site/learn.html`) | A course from zero for a CS student: HTTP and JSON, WebSockets, Socket.IO built by hand, logging in, the handshake, reading the world, acting, bot design, pathfinding, and a complete farming bot. |
+| **Build a bot** (`site/learn.html`) | A course from zero for a CS student: HTTP and JSON, WebSockets, Socket.IO built by hand, logging in, the handshake, reading the world, acting, bot design, pathfinding, and a complete farming bot. |
 | **Game guide** (`site/game.html`) | How the MMO works: classes, stats and combat, leveling, maps, items, upgrading, the economy, drops, events, seasons and social play. |
 | **API reference** (`site/index.html`) | Every client → server event (109), every server → client event (74), every `game_response` code (258), the game data **G** and the server's event state **S**: payload fields, every check and its exact reply, and the line of server code behind each one. |
 

@@ -69,7 +69,7 @@ server's event state (**S**). It is written from the live game's open-source cod
 [kaansoral/adventureland_mongodb](https://github.com/kaansoral/adventureland_mongodb). Each
 source reference links to the exact line at the pinned commit.
 
-For a course from zero, see [Learn](learn.html). For how the game works, see the
+For a course from zero, see [Build a bot](learn.html). For how the game works, see the
 [Game guide](game.html).
 
 ## Entry layout
@@ -142,7 +142,7 @@ def split(text, level):
 def first_sentence(md):
     for line in md.splitlines():
         line = line.strip()
-        if not line or line.startswith(("|", "#", "```", "**Send", "**Payload")):
+        if not line or line.startswith(("|", "#", "```", "**Send", "**Payload", "![")):
             continue
         line = re.sub(r"[*_`]", "", line)
         line = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", line)
@@ -358,8 +358,8 @@ if dupes:
 # that live on the *other* pages, so `#send-move` in the tutorial (or a `move` code span)
 # still finds its way to the reference.
 PAGES = [
-    {"id": "learn", "file": "learn.html", "title": "Learn", "kinds": ["learn"],
-     "doc_title": "Adventure Land: Learn"},
+    {"id": "learn", "file": "learn.html", "title": "Build a bot", "kinds": ["learn"],
+     "doc_title": "Adventure Land: Build a Bot"},
     {"id": "game", "file": "game.html", "title": "Game guide", "kinds": ["game"],
      "doc_title": "Adventure Land: Game Guide"},
     {"id": "ref", "file": "index.html", "title": "API reference",
