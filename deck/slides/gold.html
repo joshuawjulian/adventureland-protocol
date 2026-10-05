@@ -1,0 +1,28 @@
+<section id="gold" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Gold and the economy</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Where gold comes from, and where it goes</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #23685E;border-radius:16px;padding:32px 36px">
+<h3 style="font-size:36px;font-weight:600;color:#23685E">In</h3>
+<ul style="font-size:28px;line-height:1.4;color:#4A4E5E">
+<li>Monster kills: gold goes into the chest. The opener's gold multiplier applies, then 10% tax.</li>
+<li>Sales to NPCs: usually 60% of the shop price.</li>
+<li>Exchanges, sales to players, PvP kills.</li>
+</ul>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #8F5A0C;border-radius:16px;padding:32px 36px">
+<h3 style="font-size:36px;font-weight:600;color:#8F5A0C">Out (the sinks)</h3>
+<ul style="font-size:28px;line-height:1.4;color:#4A4E5E">
+<li>NPC purchases: potions, scrolls, gear.</li>
+<li>Upgrade scrolls, and the items that failures destroy.</li>
+<li>Bank packs: 75 million to 10 billion each.</li>
+<li>Taxes, fees and the tavern, into the server pool.</li>
+</ul>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#1B1F2E">Bots farm all day, so gold enters all the time. <b>Without sinks, all prices go up.</b></p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:2393-2446, 8079, 1718-1725; node/server_functions.js:715-727; js/old_common_functions.js:54</p>
+<aside>Sales tax on player trades is 1% to 5%, by the level of the seller. Gold to a different account loses 2.5%; between your own characters there is no fee. Most taxes go into S.gold, the server's gold pool, which pays tavern wins. The NPC sale price is the floor for common items, and the NPC shop price is the ceiling.</aside>
+</section>

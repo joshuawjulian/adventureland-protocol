@@ -1,0 +1,24 @@
+<section id="merchant" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">A merchant in practice</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Open a stand in the town square</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<ol style="flex:1;font-size:28px;line-height:1.4;color:#4A4E5E">
+<li>Create a merchant. Send it 40,000 gold from a fighter: no fee between your own characters.</li>
+<li>Buy a stand (stand0) from Divian at (−193, 680).</li>
+<li>Go to the square near (0, 0). Open the stand with merchant.</li>
+<li>List items above their NPC value, or the NPC is the better buyer.</li>
+<li>Keep one listing open for 2 minutes: Merrit brings a Market Parcel, once each hour.</li>
+</ol>
+<div style="width:780px;display:flex;flex-direction:column;gap:20px">
+<img src="img/deck/merchant.png" alt="A merchant character on a stand in town, with the inventory and trade slots open" style="width:780px;height:367px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 28px">
+<h3 style="font-size:30px;font-weight:600;color:#1B1F2E">For each item of loot, in order</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A4E5E">Keep what you need. Compound jewelry. Send better gear to a fighter. Stand for valuable items. Sell the rest to an NPC at once.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:1756, 3468; node/logic/market_patron.js; node/server_functions.js:4282-4299</p>
+<aside>A stand has 16 trade slots, 24 for a merchant at level 70 or with a computer stand, and 30 at level 80. A character on a stand moves at speed 10, and an attack closes the stand. Close it with merchant close: true before you walk. Xyn exchanges the parcel; the most probable results are 5 upgrade scrolls, 2 compound scrolls or a high upgrade scroll. Merchants get xp from trades, donations and an open stand, not from kills.</aside>
+</section>

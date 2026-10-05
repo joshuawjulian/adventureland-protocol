@@ -1,0 +1,27 @@
+<section id="party" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Parties</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">How a party shares a kill</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Every member gets xp</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Each member on the server gets its share of each kill, at any distance.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">The share</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Damage, heals ×1.8 and a quarter of damage taken, plus a fixed 36,000. Priests ×1.36. Merchants 0.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Loot</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Each chest item goes to one member by share. Gold is divided by share.</p>
+</div>
+</div>
+<table style="width:1664px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:28%">Fighters in the party</th><th style="width:9%;text-align:right">2</th><th style="width:9%;text-align:right">3</th><th style="width:9%;text-align:right">4</th><th style="width:9%;text-align:right">5</th><th style="width:9%;text-align:right">6</th><th style="width:9%;text-align:right">7</th><th style="width:9%;text-align:right">8</th><th style="width:9%;text-align:right">9</th></tr>
+<tr><td>Xp bonus</td><td style="text-align:right">+10%</td><td style="text-align:right">+16%</td><td style="text-align:right">+20%</td><td style="text-align:right">+24%</td><td style="text-align:right">+25%</td><td style="text-align:right">+30%</td><td style="text-align:right">+36%</td><td style="text-align:right">+40%</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Also +5% gold for all, and +10 luck for each member below level 60.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: party_to_client node/server.js:1138-1210; issue_monster_award node/server.js:2834-2866</p>
+<aside>To make a party, send party with event invite and a name; the other side sends accept. The server adds the scores for each account and divides by the number of that account's characters in the party, so your own characters share one account's share. The contribution score decays by 20% each minute. A merchant in the party does not reduce the fighters' xp and never gets chest items.</aside>
+</section>

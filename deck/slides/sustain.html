@@ -1,0 +1,25 @@
+<section id="sustain" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Potions and regeneration</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">No passive regeneration</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E">HP and MP return only from potions, the free regen abilities, heals, lifesteal and a new level. <b>All of them share one potion cooldown.</b></p>
+<table style="width:100%;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:34%">Source</th><th style="width:30%">Gives</th><th style="width:36%">Locks potions for</th></tr>
+<tr><td>regen_hp (free)</td><td>50 HP</td><td>4 s</td></tr>
+<tr><td>regen_mp (free)</td><td>100 MP</td><td>4 s</td></tr>
+<tr><td>hpot0, hpot1</td><td>+200, +400 HP</td><td>2 s</td></tr>
+<tr><td>mpot0, mpot1</td><td>+300, +500 MP</td><td>2 s</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Too early: not_ready, with the wait in ms. Poison halves potions.</p>
+</div>
+<div style="width:560px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/stats.png" alt="The character panel: name, level, HP, MP, attack and other stats beside the equipped items" style="width:560px;height:338px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:24px;line-height:1.35;color:#5D6170">The character panel. Mages and priests use MP the fastest, so they need MP potions and Energize.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:11988-12021 (regen), 7823-7875 (potions)</p>
+<aside>Use the free abilities with the use event, item hp or mp. Drink a potion with equip and the inventory slot of the potion. Each normal attack and each heal also costs mp_cost; a mage at level 80 pays 45 MP for each attack. Without MP, an attack fails with no_mp.</aside>
+</section>

@@ -10,7 +10,7 @@ It is three pages:
 |---|---|
 | **Build a bot** (`site/learn.html`) | A course from zero for a CS student: HTTP and JSON, WebSockets, Socket.IO built by hand, logging in, the handshake, reading the world, acting, bot design, pathfinding, and a complete farming bot. |
 | **Game guide** (`site/game.html`) | How the MMO works: classes, stats and combat, leveling, maps, items, upgrading, the economy, drops, events, seasons and social play. |
-| **API reference** (`site/index.html`) | Every client → server event (109), every server → client event (74), every `game_response` code (258), the game data **G** and the server's event state **S**: payload fields, every check and its exact reply, and the line of server code behind each one. |
+| **API reference** (`site/reference.html`) | Every client → server event (109), every server → client event (74), every `game_response` code (258), the game data **G** and the server's event state **S**: payload fields, every check and its exact reply, and the line of server code behind each one. |
 
 Every code example comes in **JavaScript, TypeScript, Python, Go, C#, Rust and Java**. Pick a
 language in the top bar; the pages remember it. The course's programs were compiled and run in
@@ -44,7 +44,7 @@ self-contained.
 ## Building
 
 ```sh
-python3 build.py                     # writes site/learn.html, game.html, index.html
+python3 build.py                     # writes site/index.html (start), game.html, learn.html, reference.html, deck.html
 bash scripts/fetch-source.sh         # the game's code at the pinned commits, into vendor/
 python3 scripts/check-updates.py     # is the reference still current?
 python3 scripts/ste-check.py content/*.md --summary   # style check

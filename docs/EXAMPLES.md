@@ -137,7 +137,7 @@ material doesn't clutter it:
 |---|---|---|
 | Build a bot | `site/learn.html` | the tutorial, `content/learn-*.md` (kind `learn`, one entry per `##` chapter, id `learn-<slug>`) |
 | Game guide | `site/game.html` | how the MMO works, `content/game-*.md` (kind `game`, one entry per `##`, id `game-<slug>`) |
-| API reference | `site/index.html` | everything that was already there: connect, send, receive, codes, G, S |
+| API reference | `site/reference.html` | everything that was already there: connect, send, receive, codes, G, S |
 
 - Link to any entry with `[text](#id)`, e.g. `[move](#send-move)` or `[AlSocket](#learn-alsocket)`;
   the build rewrites the link to the right page. Ids are slugs: `o:home` is `#send-o-home`.

@@ -1,0 +1,83 @@
+{
+  "v": 4,
+  "title": "Adventure Land Game Guide",
+  "cover": "cover",
+  "order": [
+    "cover",
+    "bots",
+    "world",
+    "servers",
+    "account",
+    "classes",
+    "firstclass",
+    "roles",
+    "skills",
+    "hit",
+    "aggro",
+    "sustain",
+    "death",
+    "xpcurve",
+    "bonuses",
+    "firsthour",
+    "ladder",
+    "stages",
+    "travel",
+    "maps",
+    "npcs",
+    "items",
+    "upgrade",
+    "grace",
+    "compound",
+    "upgradeplan",
+    "gold",
+    "merchant",
+    "bank",
+    "drops",
+    "events",
+    "cave",
+    "rare",
+    "party",
+    "rules",
+    "credits"
+  ],
+  "sections": {
+    "s1": {
+      "description": "What the game is, its world and servers, and how to set up an account.",
+      "start": "cover"
+    },
+    "s2": {
+      "description": "The seven classes, party roles and how the server resolves combat.",
+      "start": "classes"
+    },
+    "s3": {
+      "description": "How characters level, where to farm and how to move around the world.",
+      "start": "xpcurve"
+    },
+    "s4": {
+      "description": "Items, upgrades and compounds: the gamble behind gear.",
+      "start": "items"
+    },
+    "s5": {
+      "description": "Gold, merchants, the bank and loot.",
+      "start": "gold"
+    },
+    "s6": {
+      "description": "Events, rare monsters, parties and the rules for many characters.",
+      "start": "events"
+    }
+  },
+  "faces": {
+    "pixelify-sans": {
+      "family": "Pixelify Sans",
+      "href": "https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap"
+    },
+    "ibm-plex-sans": {
+      "family": "IBM Plex Sans",
+      "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap"
+    },
+    "jetbrains-mono": {
+      "family": "JetBrains Mono",
+      "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+    }
+  }
+}

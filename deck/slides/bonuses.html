@@ -1,0 +1,24 @@
+<section id="bonuses" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Bonuses for new and solo players</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Multipliers that you can plan for</h2>
+</div>
+<table style="width:1664px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:22%">Bonus</th><th style="width:48%">When</th><th style="width:30%">Gold / xp / luck</th></tr>
+<tr><td>New Player</td><td>The first 40 days after your first character</td><td>×5 on days 1-10, down to ×1.5</td></tr>
+<tr><td>Lone Wolf</td><td>Only one fighter of your account is online</td><td>×3</td></tr>
+<tr><td>Welcome Back</td><td>You return after more than 60 days away</td><td>×3 (×2 from level 80)</td></tr>
+</table>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">They multiply</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">When two apply, the server uses their product. A party gives its own bonus: +10% xp with 2 fighters, up to +40% with 9.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF1DC;border:2px solid #E0A73A;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#8F5A0C">Caution: authfail</h3>
+<p style="font-size:26px;line-height:1.4;color:#1B1F2E">The authfail condition stops all three bonuses. Link a platform id first.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/logic/encouragement.js:214-407; node/server.js:1186-1188</p>
+<aside>New Player by period: days 1 to 10 give 5, 5, 5; days 11 to 20 give 2, 4, 4; days 21 to 30 give 2, 2, 3; days 31 to 40 give 1.5 each. The xp part stops at level 80. The server pays the extra in proportion to your contribution to each monster, so for a monster you kill alone the result is close to the full multiplier. An account group with 25 or more characters gets no bonus.</aside>
+</section>

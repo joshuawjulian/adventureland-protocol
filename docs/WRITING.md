@@ -6,7 +6,7 @@ can be redone the same way. Source paths below are relative to `vendor/adventure
 
 ## The reference is neutral
 
-The API reference (index.html) is for **lookup while coding**. It states what the server does,
+The API reference (reference.html) is for **lookup while coding**. It states what the server does,
 nothing else (owner, 2026-10-04: "neutral, just useful for lookups so I know how to code
 things"). Teaching, advice, recommendations, strategy, "you should", history ("changed from the
 old server") and opinions go in Build a bot or the game guide, never here. Facts that matter when you

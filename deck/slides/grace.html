@@ -1,0 +1,33 @@
+<section id="grace" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Grace: the hidden luck counters</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Bad luck raises your next chance</h2>
+</div>
+<div style="display:flex;gap:40px;align-items:stretch">
+<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Item grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Stays on the item. Grows with higher scrolls, offerings, at random, and while the item is worn.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Player grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">One for each level. Each failure raises it. A success at that level sets it to 0.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Server grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Shared by all players on the server. Starts at 24. Any player's success resets it.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Offering grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Rises when an attempt with an offering fails. Falls after a success.</p>
+</div>
+</div>
+<div style="width:520px;display:flex;flex-direction:column;gap:20px;background:#161A2B;border-radius:16px;padding:36px 36px">
+<h3 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;font-weight:600;color:#E0A73A">Ask first</h3>
+<p style="font-size:26px;line-height:1.4;color:#F4EFE3">Most inputs are hidden. Send upgrade with calculate: true. The server returns the exact chance and uses nothing.</p>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Also hidden: one secret "lucky" inventory slot makes your roll better 60% of the time.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:7325-7400, 7457-7487; node/server_functions.js:44-52, 3193-3199</p>
+<aside>Grace is a pity system: it stops very long series of failures. The total that the formula uses is capped per level. The lucky slot is player.p.item_num, selected at random one time; the server log calls it "16 cheat". If the roll's first four decimals match the chance, a success gives the lucky property and achievement.</aside>
+</section>

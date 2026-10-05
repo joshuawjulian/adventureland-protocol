@@ -1,0 +1,33 @@
+<section id="xpcurve" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Leveling and progression</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">The xp curve</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:1022px;display:flex;flex-direction:column;gap:14px">
+<p style="font-size:24px;font-weight:600;color:#5D6170">Total xp to reach the level (log scale)</p>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 10</p><div style="width:62px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">4,910</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 20</p><div style="width:146px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">45,910</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 30</p><div style="width:226px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">377 thousand</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 40</p><div style="width:305px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">3.06 million</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 50</p><div style="width:384px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">24.8 million</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 60</p><div style="width:464px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">201 million</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 70</p><div style="width:539px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">1.43 billion</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 80</p><div style="width:608px;height:34px;background:#8F5A0C;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#1B1F2E">8.87 billion</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 90</p><div style="width:683px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">63.0 billion</p></div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:72px;color:#8F5A0C">+22%</p>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Each level costs about 22% more than the level before. The cost doubles about every 3.5 levels.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:72px;color:#8F5A0C">No penalty</p>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">A level-80 character gets the same xp from a goo as a level-1 character.</p>
+</div>
+<p style="font-size:26px;line-height:1.4;font-weight:600;color:#1B1F2E">Level 80 is a goal for a long time.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.levels (G 17478); node/server.js:1305-1316</p>
+<aside>G.levels[N] is the xp to go from level N to N+1. The server keeps the xp toward the next level, not a total. A monster gives its base xp times your xp multiplier; in a party each member gets a share. At level 70 the server tells everyone on the server about each new level, at 80 it tells all servers.</aside>
+</section>

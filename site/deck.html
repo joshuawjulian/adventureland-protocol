@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Adventure Land Game Guide: slides</title>
+<meta name="description" content="How the Adventure Land MMO works, in 36 slides: classes, combat, leveling, items, upgrades, gold and events, with the game's own art.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=IBM+Plex+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* The player. The slides carry their own inline styles; this sheet gives them the defaults of
+   the slide format (no margins, heading sizes, ruled tables) and draws <x-shape>. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0d1020; color: #f4efe3; font-family: "IBM Plex Sans", Arial, sans-serif; overflow: hidden; }
+.bar { position: fixed; left: 0; right: 0; top: 0; height: 44px; display: flex; align-items: center; gap: 14px; padding: 0 14px; font-size: 14px; background: #0d1020; z-index: 2; }
+.bar a, .bar button { color: #bcc3d6; text-decoration: none; background: none; border: 1px solid #2e3550; border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+.bar a:hover, .bar button:hover { color: #f4efe3; border-color: #8c93a8; }
+.bar .where { color: #8c93a8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
+.bar .count { color: #f4efe3; font-variant-numeric: tabular-nums; }
+.stage { position: fixed; left: 0; right: 0; top: 44px; bottom: 0; display: grid; place-items: center; }
+.stage.notes { bottom: 30vh; }
+.canvas { position: relative; width: 1920px; height: 1080px; transform-origin: center center; flex: none; }
+.canvas > section { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; opacity: 0; visibility: hidden; transition: opacity .25s; }
+.canvas > section.on { opacity: 1; visibility: visible; }
+.canvas h1, .canvas h2, .canvas h3, .canvas p, .canvas ul, .canvas ol, .canvas table { margin: 0; }
+.canvas h1 { font-size: 96px; font-weight: 600; line-height: 1.1; }
+.canvas h2 { font-size: 64px; font-weight: 600; line-height: 1.15; }
+.canvas h3 { font-size: 44px; font-weight: 600; line-height: 1.2; }
+.canvas p { font-size: 32px; line-height: 1.4; }
+.canvas ul, .canvas ol { padding-left: 1.3em; display: flex; flex-direction: column; gap: .5em; }
+.canvas table { border-collapse: collapse; }
+.canvas th, .canvas td { padding: .35em .6em; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(128, 128, 128, .35); }
+.canvas th { font-weight: 600; }
+.canvas img { display: block; }
+.canvas a { color: inherit; }
+.canvas aside { display: none; }
+/* Block arrow of the slide format: the head is the last 40% of the box. */
+x-shape { display: block; flex: none; }
+x-shape[kind="arrow-right"] { clip-path: polygon(0 30%, 60% 30%, 60% 0, 100% 50%, 60% 100%, 60% 70%, 0 70%); }
+.notes-panel { position: fixed; left: 0; right: 0; bottom: 0; height: 30vh; overflow: auto; padding: 14px 20px; background: #161a2b; border-top: 1px solid #2e3550; color: #bcc3d6; font-size: 16px; line-height: 1.6; display: none; }
+.notes-panel.on { display: block; }
+.hint { color: #8c93a8; }
+@media (max-width: 700px) { .hint, .bar .where { display: none; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <a href="index.html">← Start</a>
+  <span class="count" id="count"></span>
+  <span class="where" id="where"></span>
+  <span class="hint">← → to move · N for notes</span>
+  <button type="button" id="notesBtn">Notes</button>
+  <a href="game.html">Full guide</a>
+</div>
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+<section id="cover" data-transition="fade" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center">
+<img src="img/deck/cover.png" alt="The Adventure Land town with characters, NPCs and the CODE panel" style="position:absolute;left:0px;top:0px;width:1920px;height:1080px;object-fit:cover">
+<div style="position:absolute;left:0px;top:0px;width:1920px;height:1080px;background:linear-gradient(90deg, rgba(22,26,43,0.96) 0%, rgba(22,26,43,0.88) 45%, rgba(22,26,43,0.15) 100%)"></div>
+<p style="position:absolute;left:128px;top:300px;width:1100px;font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">From the open-source code of the live game</p>
+<h1 style="position:absolute;left:128px;top:350px;width:1200px;font-family:'Pixelify Sans', 'Courier New', monospace;font-size:144px;font-weight:700;line-height:1.05;color:#F4EFE3">Adventure Land</h1>
+<p style="position:absolute;left:128px;top:530px;width:1000px;font-size:44px;line-height:1.3;color:#F4EFE3">A game guide for bot writers</p>
+<p style="position:absolute;left:128px;top:620px;width:900px;font-size:30px;line-height:1.4;color:#BCC3D6">Classes, combat, leveling, items, upgrades, the economy and events: what your code must know about the game.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#BCC3D6">Game data G 17478 · Art and screenshots from Adventure Land (adventure.land)</p>
+<aside>This deck is a visual summary of the Game guide page of the Adventure Land protocol reference. Every number comes from the live game's open-source code and game data G version 17478. A game update can change them. The full guide, with links to each source line, is at joshuawjulian.github.io/adventureland-protocol/game.html.</aside>
+</section>
+<section id="bots" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">What Adventure Land is</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">A small 2D MMORPG, played by code</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:44px;line-height:1.25;color:#F4EFE3">Most MMOs ban bots. Adventure Land <span style="color:#E0A73A">welcomes them.</span></p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6">The official client has a code editor, CODE. Your JavaScript calls functions such as attack(target) and move(x, y), and the character plays without you.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6">Players compete on the quality of their code, not on the speed of their hands.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6">A custom client goes one step further: it replaces the official client and sends the socket events itself.</p>
+</div>
+<div style="width:820px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/crowd.png" alt="A crowded Mainland town with many characters around the fountain" style="width:820px;height:434px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<p style="font-size:24px;color:#8C93A8">The Mainland town, the hub of the world.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Adventure Land game guide · What Adventure Land is</p>
+<aside>An MMORPG is a game world that many people share at the same time. Each person controls one or more characters. In Adventure Land, a bot is the normal way to play. The Learn course on the site does not write scripts for the official client: it replaces the client and speaks the protocol directly. To write a good bot, you must know the game that the protocol describes. That is what this deck is about.</aside>
+</section>
+<section id="world" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">The world</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Maps seen from above, measured in pixels</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:620px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/mainland.png" alt="An overhead map of Mainland: the town in the center, beach to the west, water and paths around it" style="width:620px;height:598px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:22px">
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>A map</b> has walls, doors to other maps, NPCs and monster spawn areas. G.geometry holds the walls as lines.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>Mainland</b> (main) is the hub. Its town is near (0, 0). A new character starts at (−87, 673), in the south part of the town.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>A spawn area</b> is the box where one monster type lives. A dead monster returns after a few seconds.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>All characters on a server</b> share the same monsters, so other players can make a good area crowded.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>54 maps</b> are in G. The server uses 49 of them.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.maps, G.geometry (G 17478); api.js:496 · Map art from the game's own guide</p>
+<aside>The unit of distance is the pixel. A spawn area is the boundary of an entry in G.maps[map].monsters, as x1, y1, x2, y2. A monster that nobody attacks slowly becomes stronger, which comes later in the leveling section.</aside>
+</section>
+<section id="servers" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Servers, regions and PvP</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Each server is its own copy of the world</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="width:740px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E">A server key is a region plus a name: EUI, USII, USPVP. Each server has its own monsters, bosses and event state (S).</p>
+<table style="width:740px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:40%">Region</th><th style="width:60%">Clock offset</th></tr>
+<tr><td>EU</td><td>UTC +1 h</td></tr>
+<tr><td>US</td><td>UTC −5 h</td></tr>
+<tr><td>ASIA</td><td>UTC +7 h</td></tr>
+</table>
+<p style="font-size:30px;line-height:1.4;font-weight:600;color:#1B1F2E">Keep all your fighters on one server, and make it their home.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">PvP servers</h3>
+<p style="font-size:24px;line-height:1.35;color:#4A4E5E">Every map allows PvP. Xp ×1.2, gold ×1.25, luck ×1.15. Marked items can drop for your killer.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Home server</h3>
+<p style="font-size:24px;line-height:1.35;color:#4A4E5E">The first server you join. There you get 5× points on cooperative bosses and extra drop tables. Change it with set_home, once in 36 hours.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Hop Sickness</h3>
+<p style="font-size:24px;line-height:1.35;color:#4A4E5E">Level 60 or more on a server that is not home: −80% luck, gold and xp, and −20% damage, for 12 minutes of play.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:339-422, 5523-5535, 13311; node/server_functions.js:1094-1104</p>
+<aside>The region offset sets the hours of night and of the daily events. HARDCORE is a special server: one character per account, large multipliers, and a death costs a full level. Realm Fatigue stops the home bonuses for 30 minutes when another fighter of your account was recently on a different server.</aside>
+</section>
+<section id="account" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Accounts and characters</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Set up once, before your bot plays</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<ol style="font-size:30px;line-height:1.4;color:#4A4E5E">
+<li>Make an account in the desktop client (Steam or the Mac App Store). The website refuses new accounts.</li>
+<li>Log in one time through that client. This links a platform id to the account.</li>
+<li>Create one character and select its class.</li>
+<li>Write down its name. Your program needs it.</li>
+</ol>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF1DC;border:2px solid #E0A73A;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#8F5A0C">Caution: do not skip step 2</h3>
+<p style="font-size:26px;line-height:1.35;color:#1B1F2E">Without a platform link, each character gets authfail: −85% luck, −85% gold, −20% xp, and no bonuses for new players.</p>
+</div>
+<p style="font-size:26px;line-height:1.35;color:#4A4E5E">Slots: 5 for each account, 8 with a platform id, up to 18 at 200 shells each. A name has 4 to 12 characters.</p>
+</div>
+<div style="width:500px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/charselect.png" alt="The character select screen: ten characters with their class and level, and a New Character button" style="width:500px;height:584px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: api.js:14-31, 93, 559-563; node/server.js:11863-11869</p>
+<aside>One account owns many characters. You log in to the account, and then you put one of its characters into the game. A second limit controls how many characters of one account can be online at the same time; that comes at the end of the deck.</aside>
+</section>
+<section id="classes" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Classes</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Seven classes, chosen once</h2>
+</div>
+<table style="width:1664px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:14%">Class</th><th style="width:22%">Role</th><th style="width:13%">Main stat</th><th style="width:14%">Damage</th><th style="width:13%;text-align:right">Range (px)</th><th style="width:12%;text-align:right">Dmg/s</th><th style="width:12%;text-align:right">HP</th></tr>
+<tr><td>Warrior</td><td>Tank, melee DPS</td><td>str</td><td>physical</td><td style="text-align:right">23</td><td style="text-align:right">35</td><td style="text-align:right">624</td></tr>
+<tr><td>Paladin</td><td>Tank, support</td><td>str + int</td><td>physical</td><td style="text-align:right">20</td><td style="text-align:right">32</td><td style="text-align:right">724</td></tr>
+<tr><td>Rogue</td><td>Melee DPS</td><td>dex</td><td>physical</td><td style="text-align:right">20</td><td style="text-align:right">24</td><td style="text-align:right">349</td></tr>
+<tr style="background:#FBF1DC"><td>Ranger</td><td>Ranged DPS</td><td>dex</td><td>physical</td><td style="text-align:right">70</td><td style="text-align:right">25</td><td style="text-align:right">320</td></tr>
+<tr style="background:#FBF1DC"><td>Mage</td><td>Ranged DPS</td><td>int</td><td>magical</td><td style="text-align:right">170</td><td style="text-align:right">16</td><td style="text-align:right">257</td></tr>
+<tr><td>Priest</td><td>Healer</td><td>int</td><td>magical</td><td style="text-align:right">170</td><td style="text-align:right">10</td><td style="text-align:right">305</td></tr>
+<tr><td>Merchant</td><td>Economy</td><td>int</td><td>none</td><td style="text-align:right">70</td><td style="text-align:right">0</td><td style="text-align:right">109</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Each class at level 1 with its starting weapon. Armor stops physical damage, resistance stops magical damage. The two shaded rows are the classes for beginners.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.classes (G 17478); main stat bonus: node/server_functions.js:1745-1752</p>
+<aside>MMO parties divide the work into tank, DPS and healer. Adventure Land adds a fourth role, the merchant, which does business and does not fight. Each class changes one attribute into damage: the server adds weapon attack times main stat divided by 20 to the attack of the character. You cannot change the class later.</aside>
+</section>
+<section id="firstclass" data-transition="fade" style="background:#E0A73A;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between;gap:48px">
+<div style="display:flex;flex-direction:column;gap:20px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#1B1F2E">Which class to start with</p>
+<h1 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:112px;font-weight:700;line-height:1.05;color:#1B1F2E">Start with one ranger or one mage.</h1>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px;border-top:4px solid #1B1F2E;padding:24px 0px 0px 0px">
+<h3 style="font-size:36px;font-weight:700;color:#1B1F2E">One fighter</h3>
+<p style="font-size:28px;line-height:1.4;color:#1B1F2E">Lone Wolf gives 3× gold, xp and luck while only one fighter of your account is online.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;border-top:4px solid #1B1F2E;padding:24px 0px 0px 0px">
+<h3 style="font-size:36px;font-weight:700;color:#1B1F2E">Range is safety</h3>
+<p style="font-size:28px;line-height:1.4;color:#1B1F2E">70 px with a bow, 170 px with a staff. A simple bot that stands still and attacks survives.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;border-top:4px solid #1B1F2E;padding:24px 0px 0px 0px">
+<h3 style="font-size:36px;font-weight:700;color:#1B1F2E">Merchant later</h3>
+<p style="font-size:28px;line-height:1.4;color:#1B1F2E">A merchant gets no xp from kills. Add one when you have loot to sell.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#1B1F2E">Source: G.classes[cls].description; node/logic/encouragement.js:223-271</p>
+<aside>G calls the mage "ideal for beginners" and the ranger "very suitable for beginners". Pick a warrior if you want the most HP and damage at level 1, but it must stand next to the monster. G says the priest and the rogue are not ideal for beginners; a priest does little damage alone.</aside>
+</section>
+<section id="roles" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Party roles</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Four jobs in a party</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #8F5A0C;border-radius:16px;padding:28px 28px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#8F5A0C">Tank</p>
+<h3 style="font-size:36px;font-weight:600;color:#1B1F2E">Warrior, paladin</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Takes the hits. Taunt moves a monster from an ally to the tank.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #23685E;border-radius:16px;padding:28px 28px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#23685E">Healer</p>
+<h3 style="font-size:36px;font-weight:600;color:#1B1F2E">Priest</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Keeps the others alive. "Every serious party needs at least one priest."</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #8F5A0C;border-radius:16px;padding:28px 28px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#8F5A0C">DPS</p>
+<h3 style="font-size:36px;font-weight:600;color:#1B1F2E">Ranger, mage, rogue</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Kills quickly. Rangers and mages hit from a distance.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #23685E;border-radius:16px;padding:28px 28px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#23685E">Economy</p>
+<h3 style="font-size:36px;font-weight:600;color:#1B1F2E">Merchant</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Does not fight. Sells loot, upgrades gear and keeps the gold.</p>
+</div>
+</div>
+<table style="width:1664px;font-size:26px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:38%">Composition</th><th style="width:62%">Why</th></tr>
+<tr><td>Ranger or mage, plus a merchant</td><td>The start. Easy to code, and Lone Wolf gives 3×.</td></tr>
+<tr><td>Warrior, priest, mage or ranger, merchant</td><td>The usual party. It survives almost all monsters that its gear allows.</td></tr>
+<tr><td>Ranger, priest, mage, merchant</td><td>No tank. This works when monsters die before they arrive.</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">A party holds 10 names, at most 9 fighters · Source: node/server.js:256-260; G.classes</p>
+<aside>A party of two fighters loses the Lone Wolf bonus. Thus a party is better only when it kills much more than one character can, usually after your first week.</aside>
+</section>
+<section id="skills" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Skills by level</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">New skills arrive with levels</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:760px;display:flex;flex-direction:column;gap:20px">
+<div style="background:#161A2B;border-radius:12px;padding:16px">
+<img src="img/deck/skills.png" alt="The skill icons of each class, in columns: mage, warrior, ranger, rogue, priest, and the shared abilities" style="width:728px;height:388px;object-fit:contain">
+</div>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Below the level in G.skills[name].level, a skill fails with no_level. Skills with no level work at level 1.</p>
+</div>
+<table style="flex:1;font-size:26px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:18%">Level</th><th style="width:48%">Skill</th><th style="width:34%">Class</th></tr>
+<tr><td>20</td><td>Energize</td><td>Mage</td></tr>
+<tr><td>40</td><td>Merchant's Luck</td><td>Merchant</td></tr>
+<tr><td>40</td><td>Rogue Swiftness</td><td>Rogue</td></tr>
+<tr><td>52</td><td>Cleave, Stomp</td><td>Warrior</td></tr>
+<tr><td>55</td><td>Absorb Sins</td><td>Priest</td></tr>
+<tr><td>60</td><td>3-Shot</td><td>Ranger</td></tr>
+<tr><td>60</td><td>Paladin Aura</td><td>Paladin</td></tr>
+<tr><td>70</td><td>War Cry, Dark Blessing</td><td>Warrior, priest</td></tr>
+<tr><td>75</td><td>5-Shot</td><td>Ranger</td></tr>
+</table>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.skills (G 17478); level check at node/server.js:9849-9851</p>
+<aside>A selection of the skills that change how a bot plays. 3-Shot and 5-Shot cost only the MP of the skill, so rangers are very good against groups of weak monsters. Merchant's Luck gives any player +12 luck for one hour. War Cry and Dark Blessing are party buffs to use whenever they are ready. The full table per class is in the guide.</aside>
+</section>
+<section id="hit" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Stats and combat</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">How the server resolves a hit</h2>
+</div>
+<div style="display:flex;gap:16px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">1</p>
+<h3 style="font-size:30px;font-weight:600;color:#F4EFE3">Reflection</h3>
+<p style="font-size:24px;line-height:1.35;color:#BCC3D6">Magical hits only. With the target's reflection %, the hit goes back.</p>
+</div>
+<x-shape kind="arrow-right" style="width:40px;height:20px;background:#E0A73A;align-self:center"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">2</p>
+<h3 style="font-size:30px;font-weight:600;color:#F4EFE3">Evasion</h3>
+<p style="font-size:24px;line-height:1.35;color:#BCC3D6">Physical hits only. Evasion % stops it. Players max out at 50.</p>
+</div>
+<x-shape kind="arrow-right" style="width:40px;height:20px;background:#E0A73A;align-self:center"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">3</p>
+<h3 style="font-size:30px;font-weight:600;color:#F4EFE3">Miss</h3>
+<p style="font-size:24px;line-height:1.35;color:#BCC3D6">The attacker's miss % or the target's avoidance %.</p>
+</div>
+<x-shape kind="arrow-right" style="width:40px;height:20px;background:#E0A73A;align-self:center"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">4</p>
+<h3 style="font-size:30px;font-weight:600;color:#F4EFE3">Movement</h3>
+<p style="font-size:24px;line-height:1.35;color:#BCC3D6">Target more than 72 px from the aim point: the hit misses.</p>
+</div>
+<x-shape kind="arrow-right" style="width:40px;height:20px;background:#E0A73A;align-self:center"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #E0A73A;border-radius:16px;padding:24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">5</p>
+<h3 style="font-size:30px;font-weight:600;color:#F4EFE3">Damage</h3>
+<p style="font-size:24px;line-height:1.35;color:#BCC3D6">Crit, rogue stacks, mob combo, a ±10% roll, then the defense curve.</p>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:48px">
+<p style="font-size:28px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Step 4 is why kiting works.</span> Move away while you attack, and slow projectiles and melee monsters miss you.</p>
+<p style="font-size:28px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Pure damage</span> skips steps 1 and 2. It has no roll and ignores armor and resistance.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Source: commence_attack node/server.js:3159; complete_attack node/server.js:3707-4057</p>
+<aside>An attack is a projectile. commence_attack checks that the hit is legal, then sends an action event. When the projectile arrives, complete_attack runs these steps in order. Your client sees steps 1 to 4 as a hit event with damage 0 and one of reflect, evade, miss or avoid. A possible server bug: piercing counts two times, because both the attacker and the projectile carry it.</aside>
+</section>
+<section id="aggro" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Aggro, tanks and fear</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Why parties need a tank</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:22px">
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Passive monsters</b> (aggro 0) never start a fight. Goos and snakes are passive.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Aggressive monsters</b> check every 1.2 s. With the chance aggro, they attack a near player.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>A hit</b> makes a monster with no target select its attacker.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Fear</b> starts when more monsters target you than your courage allows. Warriors have 5, most classes 2.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>A tank bot's rule:</b> if a monster targets a different party member, taunt it.</p>
+</div>
+<div style="width:720px;display:flex;flex-direction:column;gap:20px">
+<img src="img/deck/hardcore.png" alt="A character on a sandy map with a crowd of monsters around it" style="width:720px;height:340px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<table style="width:720px;font-size:26px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:30%">Fear</th><th style="width:35%;text-align:right">Speed</th><th style="width:35%;text-align:right">Attack</th></tr>
+<tr><td>1</td><td style="text-align:right">−20</td><td style="text-align:right">× 0.6</td></tr>
+<tr><td>2</td><td style="text-align:right">−40</td><td style="text-align:right">× 0.4</td></tr>
+<tr><td>3</td><td style="text-align:right">−70</td><td style="text-align:right">× 0.2</td></tr>
+</table>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:1727-1751, 4390-4398, 13943-13947, 14308-14319</p>
+<aside>Each monster has one target at a time. Tanking is control of those targets: Taunt and Agitate (warrior) and Absorb Sins (priest) pull monsters to one character. A target with more than 3 monsters also gets a combo multiplier on each hit, so a crowd of weak monsters does much more damage than their attack values show. Keep your characters a few pixels apart: characters in the same 6 by 6 pixel cell can all take one hit.</aside>
+</section>
+<section id="sustain" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Potions and regeneration</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">No passive regeneration</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E">HP and MP return only from potions, the free regen abilities, heals, lifesteal and a new level. <b>All of them share one potion cooldown.</b></p>
+<table style="width:100%;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:34%">Source</th><th style="width:30%">Gives</th><th style="width:36%">Locks potions for</th></tr>
+<tr><td>regen_hp (free)</td><td>50 HP</td><td>4 s</td></tr>
+<tr><td>regen_mp (free)</td><td>100 MP</td><td>4 s</td></tr>
+<tr><td>hpot0, hpot1</td><td>+200, +400 HP</td><td>2 s</td></tr>
+<tr><td>mpot0, mpot1</td><td>+300, +500 MP</td><td>2 s</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Too early: not_ready, with the wait in ms. Poison halves potions.</p>
+</div>
+<div style="width:560px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/stats.png" alt="The character panel: name, level, HP, MP, attack and other stats beside the equipped items" style="width:560px;height:338px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:24px;line-height:1.35;color:#5D6170">The character panel. Mages and priests use MP the fastest, so they need MP potions and Energize.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:11988-12021 (regen), 7823-7875 (potions)</p>
+<aside>Use the free abilities with the use event, item hp or mp. Drink a potion with equip and the inventory slot of the potion. Each normal attack and each heal also costs mp_cost; a mage at level 80 pays 45 MP for each attack. Without MP, an attack fails with no_mp.</aside>
+</section>
+<section id="death" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Death and respawn</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">When HP reaches 0</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Xp loss:</span> the larger of 1% of the level's xp and 2% of your current xp. You never lose a level, except on HARDCORE.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Gravestone:</span> you stay dead (rip: true) for at least 12 s. A priest can revive you.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Respawn:</span> back to town with full HP and half MP.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Tome of Protection:</span> cuts the loss to 1/50, then it is used up.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Watch out:</span> each death can give the monster a level.</p>
+</div>
+<div style="width:820px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/death.png" alt="The game world turned gray after the character died, with a Respawn button" style="width:820px;height:454px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<p style="font-size:24px;line-height:1.35;color:#8C93A8">After a death the world turns gray until you respawn.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Source: node/server.js:224, 6271-6309, 13884-13936</p>
+<aside>Your own death arrives in your player data as rip: true. The death event is for monsters that die near you. Send respawn after 12 seconds; too early fails with cant_respawn. With safe: true, respawn moves you to the Wizard's Crib. In PvP areas the xp loss is divided by 10.</aside>
+</section>
+<section id="xpcurve" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Leveling and progression</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">The xp curve</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:1022px;display:flex;flex-direction:column;gap:14px">
+<p style="font-size:24px;font-weight:600;color:#5D6170">Total xp to reach the level (log scale)</p>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 10</p><div style="width:62px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">4,910</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 20</p><div style="width:146px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">45,910</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 30</p><div style="width:226px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">377 thousand</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 40</p><div style="width:305px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">3.06 million</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 50</p><div style="width:384px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">24.8 million</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 60</p><div style="width:464px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">201 million</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 70</p><div style="width:539px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">1.43 billion</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 80</p><div style="width:608px;height:34px;background:#8F5A0C;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#1B1F2E">8.87 billion</p></div>
+<div style="display:flex;gap:16px;align-items:center"><p style="width:120px;font-size:26px;color:#1B1F2E">Lv 90</p><div style="width:683px;height:34px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;color:#4A4E5E">63.0 billion</p></div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:72px;color:#8F5A0C">+22%</p>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Each level costs about 22% more than the level before. The cost doubles about every 3.5 levels.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:72px;color:#8F5A0C">No penalty</p>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">A level-80 character gets the same xp from a goo as a level-1 character.</p>
+</div>
+<p style="font-size:26px;line-height:1.4;font-weight:600;color:#1B1F2E">Level 80 is a goal for a long time.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.levels (G 17478); node/server.js:1305-1316</p>
+<aside>G.levels[N] is the xp to go from level N to N+1. The server keeps the xp toward the next level, not a total. A monster gives its base xp times your xp multiplier; in a party each member gets a share. At level 70 the server tells everyone on the server about each new level, at 80 it tells all servers.</aside>
+</section>
+<section id="bonuses" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Bonuses for new and solo players</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Multipliers that you can plan for</h2>
+</div>
+<table style="width:1664px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:22%">Bonus</th><th style="width:48%">When</th><th style="width:30%">Gold / xp / luck</th></tr>
+<tr><td>New Player</td><td>The first 40 days after your first character</td><td>×5 on days 1-10, down to ×1.5</td></tr>
+<tr><td>Lone Wolf</td><td>Only one fighter of your account is online</td><td>×3</td></tr>
+<tr><td>Welcome Back</td><td>You return after more than 60 days away</td><td>×3 (×2 from level 80)</td></tr>
+</table>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">They multiply</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">When two apply, the server uses their product. A party gives its own bonus: +10% xp with 2 fighters, up to +40% with 9.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF1DC;border:2px solid #E0A73A;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#8F5A0C">Caution: authfail</h3>
+<p style="font-size:26px;line-height:1.4;color:#1B1F2E">The authfail condition stops all three bonuses. Link a platform id first.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/logic/encouragement.js:214-407; node/server.js:1186-1188</p>
+<aside>New Player by period: days 1 to 10 give 5, 5, 5; days 11 to 20 give 2, 4, 4; days 21 to 30 give 2, 2, 3; days 31 to 40 give 1.5 each. The xp part stops at level 80. The server pays the extra in proportion to your contribution to each monster, so for a monster you kill alone the result is close to the full multiplier. An account group with 25 or more characters gets no bonus.</aside>
+</section>
+<section id="firsthour" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Your first hour</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">Level 10, and a bot that does not die</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<ol style="flex:1;font-size:30px;line-height:1.4;color:#BCC3D6">
+<li>Join a normal server, for example EUI. You start near (−87, 673).</li>
+<li>Walk south to the goo area: (−282, 702) to (218, 872).</li>
+<li>Attack the nearest goo. Attack again each time the cooldown ends.</li>
+<li>HP 50 below the maximum: use the free regen_hp. Below half: drink an hpot0.</li>
+<li>Level 2 after 2 goos. Level 10 after about 49 goos, or up to 5× faster with the new-player bonus.</li>
+</ol>
+<div style="width:520px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/goo.png" alt="A goo on the ground with its panel: Goo level 15, HP 800 of 800, XP 1500, attack 8" style="width:520px;height:458px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<p style="font-size:24px;line-height:1.35;color:#8C93A8">A goo has 100 HP and gives 100 xp at level 1. This one gained levels while nobody fought it.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Errors to expect: cooldown, too_far, no_mp, not_ready · Source: G.maps.main, G.levels</p>
+<aside>This path is for one ranger or mage. After each kill your xp grows by 100 and a chest appears; open it. If you see cooldown, wait for the ms in the reply. too_far means move closer: a mage hits from 170 px, a ranger from 70 px. no_mp: use regen_mp or an MP potion. not_ready: the shared potion cooldown has not ended. rip true: the character died; respawn after 12 seconds.</aside>
+</section>
+<section id="ladder" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Your first day</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">The Mainland ladder</h2>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E">Go to the next monster when you kill the current one in one or two hits.</p>
+<table style="width:1664px;font-size:24px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:24%">Monster</th><th style="width:11%;text-align:right">HP</th><th style="width:11%;text-align:right">Xp</th><th style="width:11%;text-align:right">Dmg/s</th><th style="width:10%;text-align:right">Aggro</th><th style="width:33%">Note</th></tr>
+<tr><td>Goo (goo)</td><td style="text-align:right">100</td><td style="text-align:right">100</td><td style="text-align:right">2</td><td style="text-align:right">0</td><td>South of the spawn point</td></tr>
+<tr><td>Bee (bee)</td><td style="text-align:right">300</td><td style="text-align:right">400</td><td style="text-align:right">8</td><td style="text-align:right">1</td><td>Attacks first</td></tr>
+<tr><td>Tiny Crab (crab)</td><td style="text-align:right">400</td><td style="text-align:right">500</td><td style="text-align:right">10</td><td style="text-align:right">0.2</td><td>160 armor: better for a mage</td></tr>
+<tr><td>Snake (snake)</td><td style="text-align:right">720</td><td style="text-align:right">960</td><td style="text-align:right">14</td><td style="text-align:right">0</td><td></td></tr>
+<tr><td>Squig (squig)</td><td style="text-align:right">1,000</td><td style="text-align:right">600</td><td style="text-align:right">4</td><td style="text-align:right">0</td><td></td></tr>
+<tr><td>Armadillo (armadillo)</td><td style="text-align:right">1,600</td><td style="text-align:right">1,720</td><td style="text-align:right">10</td><td style="text-align:right">0</td><td></td></tr>
+<tr><td>Croc (croc)</td><td style="text-align:right">3,200</td><td style="text-align:right">3,600</td><td style="text-align:right">24</td><td style="text-align:right">0.2</td><td></td></tr>
+<tr><td>Tortoise (tortoise)</td><td style="text-align:right">7,200</td><td style="text-align:right">5,200</td><td style="text-align:right">18</td><td style="text-align:right">0</td><td>200 armor</td></tr>
+<tr style="background:#FBF1DC"><td>Huge Crab (crabx)</td><td style="text-align:right">4,200</td><td style="text-align:right">3,600</td><td style="text-align:right">72</td><td style="text-align:right">0.5</td><td>Caution: not on day one</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.monsters, G.maps.main spawn boxes (G 17478) · Levels are estimates for this guide</p>
+<aside>Before you go to the next monster: its damage per second must be less than the HP that you get back. The free regen_hp gives 12.5 HP per second, an hpot0 gives 100 per second but costs 20 gold. Monsters with aggro 1 attack first, so more than one can attack you at the same time. Spend the gold: keep about 2,000 for potions, buy gloves, a coat and pants from Gabriel, and upgrade each piece to +3 at Cue.</aside>
+</section>
+<section id="stages" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">From level 1 to the endgame</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">Five stages</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">1-20</p>
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">Start</h3>
+<p style="font-size:24px;line-height:1.4;color:#BCC3D6">Goos, bees and crabs near the town. Basic gear. Upgrades to +3 almost always work.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">20-50</p>
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">Growth</h3>
+<p style="font-size:24px;line-height:1.4;color:#BCC3D6">Caves, Winterland, Desertland. Merchant's Luck at 40. Gear starts to matter more than level.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">50-70</p>
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">Midgame</h3>
+<p style="font-size:24px;line-height:1.4;color:#BCC3D6">The Underground. Cleave, 3-Shot, Absorb Sins. Upgrades past +6 fail more often than not.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">70-90</p>
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">Late game</h3>
+<p style="font-size:24px;line-height:1.4;color:#BCC3D6">Hundreds of millions of xp per level. Progress comes from gear and key dungeons.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1F2438;border:1px solid #E0A73A;border-radius:16px;padding:28px 24px">
+<p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">90+</p>
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">Endgame</h3>
+<p style="font-size:24px;line-height:1.4;color:#BCC3D6">World and instance bosses, rare items, gear at +10 and higher, and trade.</p>
+</div>
+</div>
+<p style="font-size:28px;line-height:1.4;color:#BCC3D6">After the first few dozen levels, <span style="color:#E0A73A">gear sets the limit more than level does.</span> Progress is a loop: farm gold and items, then change them into better gear.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">The level ranges are estimates for this guide, from the xp curve and monster stats. They are not official.</p>
+<aside>Adventure Land has no gear score in G or the server. A bot that needs one must make its own, for example the damage per second it does and takes against one monster.</aside>
+</section>
+<section id="travel" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Maps and the world</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Six ways to travel</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:600px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/town.png" alt="The Mainland town center: shops, two fountains, trees and paths" style="width:600px;height:600px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Walk</b> with move inside a map. The server refuses moves through walls, so your bot needs its own pathfinding.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Doors</b> connect maps. Go within 112 px, then send transport.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Alia, the transporter</b>, takes you between towns. Stay within 160 px of her.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Town</b> takes 3 s. It fails if more than 5 monsters target you.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Instances</b> are private map copies. Most need a key and enter.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Magiport and Blink</b> are mage skills that skip the walk.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:221-223 (B.door_dist, B.transporter_dist), 6254-6267 · Town art from the game's own guide</p>
+<aside>The world has 54 maps in G and 49 are in use. G.geometry holds the walls as line segments. The transporter lists main, winterland, desertland and cyberland. Town moves you to the main spawn point of your current map and fails with cant_escape when you are mobbed.</aside>
+</section>
+<section id="maps" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 1124px 160px 128px;display:flex;flex-direction:column;gap:24px">
+<img src="img/deck/winter.png" alt="Winterland: snowy town with a frozen pond, houses and pine trees" style="position:absolute;left:0px;top:0px;width:1920px;height:1080px;object-fit:cover">
+<div style="position:absolute;left:0px;top:0px;width:880px;height:1080px;background:rgba(22,26,43,0.94)"></div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Maps and the world</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">The main maps</h2>
+</div>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Mainland:</span> the hub, with almost all shops.</p>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Winterland:</span> the second town. Bees, boars, wolves, the Ice Golem.</p>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Desertland:</span> the third town. Scorpions, Fire Spirits, the Ent.</p>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">The Underground:</span> tunnels of strong, aggressive monsters.</p>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Key dungeons:</span> Crypt, Tomb, Spider Den, Lair of the Dark Mage.</p>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Night:</span> 00:00 to 05:59 server time. Monsters move at 70% speed.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:688px;font-size:24px;color:#8C93A8">Source: G.maps (G 17478); node/server.js:1828-1830</p>
+<aside>Safe maps (the bank, the Wizard's Crib) allow no hostile attacks. PvP maps such as the Arena allow other players to kill you. Most bosses in key dungeons do not respawn, so a dead boss stays dead. Do not walk through the Underground without preparation.</aside>
+</section>
+<section id="npcs" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">NPCs and their services</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Who does what in the town</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:480px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/cue.png" alt="Cue, the upgrade NPC, standing in a workshop between a red and a blue rug" style="width:480px;height:480px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:24px;line-height:1.35;color:#5D6170">Cue does upgrades and compounds.</p>
+</div>
+<table style="flex:1;font-size:26px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:22%">NPC</th><th style="width:44%">Service</th><th style="width:34%;text-align:right">Position</th></tr>
+<tr><td>Ernis</td><td>Potions</td><td style="text-align:right">(−35, −162)</td></tr>
+<tr><td>Gabriel</td><td>Basic gear</td><td style="text-align:right">(−89, −165)</td></tr>
+<tr><td>Lucas</td><td>Scrolls</td><td style="text-align:right">(−464, −96)</td></tr>
+<tr><td>Cue</td><td>Upgrade and compound</td><td style="text-align:right">(−207, −220)</td></tr>
+<tr><td>Xyn</td><td>Exchange</td><td style="text-align:right">(−25, −478)</td></tr>
+<tr><td>Alia</td><td>Transporter</td><td style="text-align:right">(−83, −441)</td></tr>
+<tr><td>Ponty</td><td>Secondhand items</td><td style="text-align:right">(106, −47)</td></tr>
+<tr><td>Daisy</td><td>Monster hunts</td><td style="text-align:right">(126, −413)</td></tr>
+<tr><td>Leo</td><td>Crafting</td><td style="text-align:right">(92, 670)</td></tr>
+</table>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Mainland pixel positions · Most services need you within 400 px · Source: G.npcs, G.maps (G 17478)</p>
+<aside>An Ancient Computer in the inventory lets a character use NPC shops and the upgrade NPC from any location. Other NPCs: Divian sells the merchant stand, Garwyn sells boosters and the Tome of Protection, Ron in the Wizard's Crib runs the Lost and Found, and Smith in Desertland locks items.</aside>
+</section>
+<section id="items" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Items and equipment</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">An item has two parts</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="width:640px;display:flex;flex-direction:column;gap:20px">
+<img src="img/deck/inv.png" alt="The character stats beside an inventory of items with their upgrade levels" style="width:640px;height:475px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">A full inventory is a bot's most frequent problem. Keep 5 or more slots free.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Definition: G.items[name]</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">The same for all copies: type, base price g, base stats, and the stat increase for each level.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Instance: the object in a slot</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">name, q (quantity), level, p (property such as shiny), l (lock), v (PvP mark) and a few more.</p>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;color:#8F5A0C">638</p><p style="font-size:24px;color:#4A4E5E">item definitions</p></div>
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;color:#8F5A0C">16</p><p style="font-size:24px;color:#4A4E5E">equipment slots</p></div>
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;color:#8F5A0C">42</p><p style="font-size:24px;color:#4A4E5E">inventory slots</p></div>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.items (G 17478); js/old_common_functions.js:104, 877; node/server.js:1456</p>
+<aside>To get the stats of an item, combine the two parts: calculate_item_properties starts with the definition, then adds the increase per level, the property, and extras for a class or map. A client that compares gear needs a copy of this function. Starter items have gift: 1 and sell for only 1 gold.</aside>
+</section>
+<section id="upgrade" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Upgrading and compounding</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">Every upgrade is a gamble</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:440px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/upgrade.png" alt="The upgrade window: a bow, a scroll and a potion, the chance 99.99%, and Reset and Upgrade buttons" style="width:440px;height:409px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<p style="font-size:24px;line-height:1.35;color:#8C93A8">The roll shows like a slot machine, but the server rolls at once.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:24px;font-weight:600;color:#8C93A8">Base chance for a Normal item, by target level</p>
+<div style="display:flex;gap:16px;align-items:end;height:460px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">~100</p><div style="width:100%;height:380px;background:#3E9E8F;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+1</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">98</p><div style="width:100%;height:372px;background:#3E9E8F;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+2</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">95</p><div style="width:100%;height:361px;background:#3E9E8F;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+3</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">70</p><div style="width:100%;height:266px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+4</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">60</p><div style="width:100%;height:228px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+5</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">40</p><div style="width:100%;height:152px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+6</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">25</p><div style="width:100%;height:95px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+7</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">15</p><div style="width:100%;height:57px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+8</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">7</p><div style="width:100%;height:27px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+9</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;align-items:center"><p style="font-size:24px;color:#F4EFE3">2.4</p><div style="width:100%;height:9px;background:#E0A73A;border-radius:4px"></div><p style="font-size:26px;font-weight:600;color:#BCC3D6">+10</p></div>
+</div>
+<p style="font-size:28px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">A failed upgrade destroys the item.</span> Upgrade a spare, not the item a character wears.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Chance in %, from G.upgrades (G 17478) · Higher scrolls, offerings and grace raise it</p>
+<aside>Green bars are 95% and above; gold bars are the levels where failures become normal. The scroll grade must be equal to or more than the current grade of the item: a Blade at +7 is High, so +8 needs a scroll1. The result comes some seconds later as a hitchhiker game_response, upgrade_success or upgrade_fail. Upgrades are the largest gold sink in the game.</aside>
+</section>
+<section id="grace" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Grace: the hidden luck counters</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Bad luck raises your next chance</h2>
+</div>
+<div style="display:flex;gap:40px;align-items:stretch">
+<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Item grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Stays on the item. Grows with higher scrolls, offerings, at random, and while the item is worn.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Player grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">One for each level. Each failure raises it. A success at that level sets it to 0.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Server grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Shared by all players on the server. Starts at 24. Any player's success resets it.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Offering grace</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Rises when an attempt with an offering fails. Falls after a success.</p>
+</div>
+</div>
+<div style="width:520px;display:flex;flex-direction:column;gap:20px;background:#161A2B;border-radius:16px;padding:36px 36px">
+<h3 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;font-weight:600;color:#E0A73A">Ask first</h3>
+<p style="font-size:26px;line-height:1.4;color:#F4EFE3">Most inputs are hidden. Send upgrade with calculate: true. The server returns the exact chance and uses nothing.</p>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Also hidden: one secret "lucky" inventory slot makes your roll better 60% of the time.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:7325-7400, 7457-7487; node/server_functions.js:44-52, 3193-3199</p>
+<aside>Grace is a pity system: it stops very long series of failures. The total that the formula uses is capped per level. The lucky slot is player.p.item_num, selected at random one time; the server log calls it "16 cheat". If the roll's first four decimals match the chance, a success gives the lucky property and achievement.</aside>
+</section>
+<section id="compound" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Compounding</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Three identical rings make one better ring</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:460px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/compound.png" alt="The compound window: three items, a scroll, and Reset and Combine buttons" style="width:460px;height:438px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">A failure destroys <b>all three</b> items.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<table style="width:100%;font-size:26px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:30%">Compound to</th><th style="width:30%;text-align:right">Base chance</th><th style="width:40%;text-align:right">+0 items for one</th></tr>
+<tr><td>+1</td><td style="text-align:right">99%</td><td style="text-align:right">3</td></tr>
+<tr><td>+2</td><td style="text-align:right">75%</td><td style="text-align:right">12</td></tr>
+<tr><td>+3</td><td style="text-align:right">40%</td><td style="text-align:right">91</td></tr>
+<tr><td>+4</td><td style="text-align:right">25%</td><td style="text-align:right">1,091</td></tr>
+<tr><td>+5</td><td style="text-align:right">20%</td><td style="text-align:right">16,364</td></tr>
+<tr><td>+6</td><td style="text-align:right">10%</td><td style="text-align:right">490,909</td></tr>
+<tr><td>+7</td><td style="text-align:right">8%</td><td style="text-align:right">18.4 million</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#1B1F2E"><b>Rule of thumb:</b> compound to +1 (it costs almost nothing) and +2. Buy +3 and higher from players.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.compounds["0"] (G 17478); node/server.js:6943-7079 · Average without bonuses</p>
+<aside>Rings, earrings, amulets, belts and orbs compound instead of upgrading. They come only from drops, crafts and exchanges. Use three items with the same name and level, plus a compound scroll of the right grade, at Cue. The result arrives after about 10 seconds; on a success the item is in the first slot. Keep +0 copies until you have a group of three.</aside>
+</section>
+<section id="upgradeplan" data-transition="fade" style="background:#E0A73A;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between;gap:40px">
+<div style="display:flex;flex-direction:column;gap:20px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#1B1F2E">A progression plan</p>
+<h1 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:96px;font-weight:700;line-height:1.05;color:#1B1F2E">An upgrade buys stats. It is not an investment.</h1>
+</div>
+<table style="width:1664px;font-size:30px;color:#1B1F2E">
+<tr style="background:#C99232"><th style="width:28%">Coat (6,000 gold)</th><th style="width:12%;text-align:right">+3</th><th style="width:12%;text-align:right">+4</th><th style="width:12%;text-align:right">+5</th><th style="width:12%;text-align:right">+6</th><th style="width:12%;text-align:right">+7</th><th style="width:12%;text-align:right">+8</th></tr>
+<tr><td>Average cost</td><td style="text-align:right">9.6k</td><td style="text-align:right">15k</td><td style="text-align:right">27k</td><td style="text-align:right">70k</td><td style="text-align:right">284k</td><td style="text-align:right">2.2M</td></tr>
+<tr><td>NPC value</td><td style="text-align:right">5.1k</td><td style="text-align:right">9.2k</td><td style="text-align:right">16.9k</td><td style="text-align:right">37.6k</td><td style="text-align:right">108k</td><td style="text-align:right">344k</td></tr>
+</table>
+<p style="font-size:32px;line-height:1.4;color:#1B1F2E">Take every piece to +4, then +5, before one piece goes higher. From +4, upgrade a spare copy and swap only after a success.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#1B1F2E">Average gold for one item at that level, with destroyed copies and scrolls, base chances, no grace</p>
+<aside>Five pieces at +5 give more stats than one piece at +7. Upgrade the weapon first at +6 and +7, because each level adds the most damage there. +8 needs a scroll1 at 15%; most players buy those items. To choose a scroll: for each, compute (value at risk + scroll price) divided by chance, and use the smaller result.</aside>
+</section>
+<section id="gold" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Gold and the economy</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Where gold comes from, and where it goes</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #23685E;border-radius:16px;padding:32px 36px">
+<h3 style="font-size:36px;font-weight:600;color:#23685E">In</h3>
+<ul style="font-size:28px;line-height:1.4;color:#4A4E5E">
+<li>Monster kills: gold goes into the chest. The opener's gold multiplier applies, then 10% tax.</li>
+<li>Sales to NPCs: usually 60% of the shop price.</li>
+<li>Exchanges, sales to players, PvP kills.</li>
+</ul>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;background:#FBF8F1;border:1px solid #E2DACA;border-top:6px solid #8F5A0C;border-radius:16px;padding:32px 36px">
+<h3 style="font-size:36px;font-weight:600;color:#8F5A0C">Out (the sinks)</h3>
+<ul style="font-size:28px;line-height:1.4;color:#4A4E5E">
+<li>NPC purchases: potions, scrolls, gear.</li>
+<li>Upgrade scrolls, and the items that failures destroy.</li>
+<li>Bank packs: 75 million to 10 billion each.</li>
+<li>Taxes, fees and the tavern, into the server pool.</li>
+</ul>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#1B1F2E">Bots farm all day, so gold enters all the time. <b>Without sinks, all prices go up.</b></p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:2393-2446, 8079, 1718-1725; node/server_functions.js:715-727; js/old_common_functions.js:54</p>
+<aside>Sales tax on player trades is 1% to 5%, by the level of the seller. Gold to a different account loses 2.5%; between your own characters there is no fee. Most taxes go into S.gold, the server's gold pool, which pays tavern wins. The NPC sale price is the floor for common items, and the NPC shop price is the ceiling.</aside>
+</section>
+<section id="merchant" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">A merchant in practice</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Open a stand in the town square</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<ol style="flex:1;font-size:28px;line-height:1.4;color:#4A4E5E">
+<li>Create a merchant. Send it 40,000 gold from a fighter: no fee between your own characters.</li>
+<li>Buy a stand (stand0) from Divian at (−193, 680).</li>
+<li>Go to the square near (0, 0). Open the stand with merchant.</li>
+<li>List items above their NPC value, or the NPC is the better buyer.</li>
+<li>Keep one listing open for 2 minutes: Merrit brings a Market Parcel, once each hour.</li>
+</ol>
+<div style="width:780px;display:flex;flex-direction:column;gap:20px">
+<img src="img/deck/merchant.png" alt="A merchant character on a stand in town, with the inventory and trade slots open" style="width:780px;height:367px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 28px">
+<h3 style="font-size:30px;font-weight:600;color:#1B1F2E">For each item of loot, in order</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A4E5E">Keep what you need. Compound jewelry. Send better gear to a fighter. Stand for valuable items. Sell the rest to an NPC at once.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:1756, 3468; node/logic/market_patron.js; node/server_functions.js:4282-4299</p>
+<aside>A stand has 16 trade slots, 24 for a merchant at level 70 or with a computer stand, and 30 at level 80. A character on a stand moves at speed 10, and an attack closes the stand. Close it with merchant close: true before you walk. Xyn exchanges the parcel; the most probable results are 5 upgrade scrolls, 2 compound scrolls or a high upgrade scroll. Merchants get xp from trades, donations and an open stand, not from kills.</aside>
+</section>
+<section id="bank" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">The bank</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">One store for the whole account</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="width:620px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/bank.png" alt="Inside the bank: a character in a hall with pillars, and the bank item packs open beside the inventory" style="width:620px;height:461px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:24px;line-height:1.35;color:#5D6170">The bank is north of the town center.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Items and gold for all characters of the account. Only one of your characters can be inside at a time. Each pack holds 42 items.</p>
+<table style="width:100%;font-size:26px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:30%">Floor</th><th style="width:28%">Packs</th><th style="width:42%">Others cost</th></tr>
+<tr><td>The Bank</td><td>0-7 (2 free)</td><td>75M-112.5M gold</td></tr>
+<tr><td>Basement</td><td>8-23 (1 free)</td><td>475M-1.675B gold</td></tr>
+<tr><td>Underground</td><td>24-47 (1 free)</td><td>2.075B-9.995B gold</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">A bkey opens the basement, a ukey the underground. Packs also sell for shells.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: bank_packs, js/old_common_functions.js:54-103; node/server.js:5983-6050, 9661-9686</p>
+<aside>All bank actions use the bank event. When a character enters a bank map, the server mounts the account. Bank packs are some of the largest gold sinks in the game. A Diamond Key opens the next closed pack.</aside>
+</section>
+<section id="drops" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Drops and loot</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">The loot goes to whom the monster attacks</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="width:700px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/loot.png" alt="A cave fight with the game log listing found items: a fiery staff, earrings and gold" style="width:700px;height:431px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">That is usually the tank. Open chests at once: after 8 minutes, or from more than 400 px, the gold bonus is lost.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<div style="background:#1F2438;border:1px solid #2E3550;border-radius:12px;padding:24px 28px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;line-height:1.5;color:#F4EFE3">drops when random() / (share × luckm × level × mult) &lt; chance</p>
+</div>
+<table style="width:100%;font-size:26px;color:#F4EFE3">
+<tr style="background:#2E3550"><th style="width:35%">Chest</th><th style="width:65%">Holds</th></tr>
+<tr><td>chest3</td><td>Gold</td></tr>
+<tr><td>chest4</td><td>Gold with the ×10 bonus (3.1%)</td></tr>
+<tr><td>chest5</td><td>Gold with the ×50 bonus (0.2%)</td></tr>
+<tr><td>chest6</td><td>Items or shells</td></tr>
+</table>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Luck, and the level of the monster, multiply every independent roll.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Source: node/server.js:2325-2334, 2869-2893, 11273-11470</p>
+<aside>For each entry in G.drops.monsters[type], the item drops when the test on the slide is true. share is 1 for a usual kill; luckm is 1 plus luck divided by 100. In a party, each item goes to one member at random by share, and gold is divided by share with the opener's multiplier, so let the member with the most gold gear open chests. Cooperative bosses give each contributor its own chest.</aside>
+</section>
+<section id="events" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Events, bosses and seasons</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Three events every day on each server</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Daily at 13:00 and 20:00, nightly at 23:00, in server time. Read S to find them, then send join.</p>
+<table style="width:100%;font-size:26px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:30%">Event</th><th style="width:20%">When</th><th style="width:50%">Rewards</th></tr>
+<tr><td>Giga Crab</td><td>daily</td><td>Funtokens, seashells, crab claws</td></tr>
+<tr><td>Goo Brawl</td><td>daily</td><td>Funtokens, Rainbow Goo drops</td></tr>
+<tr><td>A/B Testing</td><td>daily</td><td>Team PvP; winner and loser tables</td></tr>
+<tr><td>Franky</td><td>nightly</td><td>Crypt and tomb keys, candy</td></tr>
+<tr><td>Ice Golem</td><td>nightly</td><td>Frozen key, frost cores</td></tr>
+</table>
+</div>
+<div style="width:600px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/valentines.png" alt="The town decorated for Valentine's season, with players around the fountain" style="width:600px;height:334px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E"><b>Seasons</b> add bosses and drops while the operator turns them on: Halloween, the holidays, lunar new year, Valentine's, the egg hunt.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: S.schedule; node/server_functions.js:2386-2402; node/server.js:302-327</p>
+<aside>World bosses are cooperative: each character's share is points to the power 0.65 over the total, so small contributors still get a good share. Staying alive matters more than damage. On the home server, characters get 5 times the points. Merchants and characters with Hop Sickness cannot join.</aside>
+</section>
+<section id="cave" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">The Cave of Many Dreams</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">A daily dungeon for a small party</h2>
+</div>
+<div style="display:flex;gap:32px">
+<img src="img/deck/cave1.png" alt="Comic panels: the stone keeper says the rooms come from people's dreams and the door closes in 24 minutes" style="width:816px;height:459px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<img src="img/deck/cave4.png" alt="Comic panels: the party runs from a pack of level 100 wolves toward the open door" style="width:816px;height:459px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">1-3</p><p style="font-size:24px;color:#BCC3D6">characters, 1 run a day</p></div>
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">24 min</p><p style="font-size:24px;color:#BCC3D6">and 3 floors</p></div>
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">10× xp</p><p style="font-size:24px;color:#BCC3D6">death costs no xp or gold</p></div>
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;color:#E0A73A">Dorr</p><p style="font-size:24px;color:#BCC3D6">at (816, 1200): enter dreams</p></div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Comic panels from the game's repository · Source: G.events.dreams; node/logic/cave_of_many_dreams.js</p>
+<aside>Bring all members to Dorr, within 160 px. Kill or leave all monsters that target a member; all members must be alive. Then send enter with place dreams. The cave gives axes, scythes and Cave Amber, which Leo crafts into rare gear. A custom client needs extra work here: each member connects with map_protocol=1, and the server sends cave events for choices and story text.</aside>
+</section>
+<section id="rare" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Rare random monsters</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Kill counters call out rare monsters</h2>
+</div>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">After a random number of kills on the server, the rare monster appears among the usual ones. S does not show them.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:20px">
+<div style="display:flex;flex-direction:column;gap:10px"><img src="img/deck/r_bat.png" alt="Cave map where the Golden Bat lives" style="width:261px;height:290px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA"><h3 style="font-size:28px;font-weight:600;color:#1B1F2E">Golden Bat</h3><p style="font-size:24px;line-height:1.3;color:#4A4E5E">bats, 0-160k</p></div>
+<div style="display:flex;flex-direction:column;gap:10px"><img src="img/deck/mainland.png" alt="Mainland map where the Cute Bee lives" style="width:261px;height:290px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA"><h3 style="font-size:28px;font-weight:600;color:#1B1F2E">Cute Bee</h3><p style="font-size:24px;line-height:1.3;color:#4A4E5E">bees, 0-960k</p></div>
+<div style="display:flex;flex-direction:column;gap:10px"><img src="img/deck/r_bot.png" alt="Underground hills map where the Golden Bot lives" style="width:261px;height:290px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA"><h3 style="font-size:28px;font-weight:600;color:#1B1F2E">Golden Bot</h3><p style="font-size:24px;line-height:1.3;color:#4A4E5E">targetrons, sparkbots, 0-200k</p></div>
+<div style="display:flex;flex-direction:column;gap:10px"><img src="img/deck/r_eye.png" alt="Underground map where the Many Eye lives" style="width:261px;height:290px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA"><h3 style="font-size:28px;font-weight:600;color:#1B1F2E">Many Eye</h3><p style="font-size:24px;line-height:1.3;color:#4A4E5E">one-eyes, 0-30k</p></div>
+<div style="display:flex;flex-direction:column;gap:10px"><img src="img/deck/r_mimic.png" alt="Cliffs map where the Mimic lives" style="width:261px;height:290px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA"><h3 style="font-size:28px;font-weight:600;color:#1B1F2E">Mimic</h3><p style="font-size:24px;line-height:1.3;color:#4A4E5E">kobolds, 0-24k</p></div>
+<div style="display:flex;flex-direction:column;gap:10px"><img src="img/deck/r_dino.png" alt="Mystical forest map where the Pale Dino lives" style="width:261px;height:290px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA"><h3 style="font-size:28px;font-weight:600;color:#1B1F2E">Pale Dino</h3><p style="font-size:24px;line-height:1.3;color:#4A4E5E">dinos, 0-60k</p></div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Habitat maps from the game's own guide · Source: node/server_functions.js:2603-2627</p>
+<aside>Each counter is random in the range shown. Only the announce flag of the monster tells players about them. Only one Many Eye, Mimic or Pale Dino can be alive at a time. Other things to know: monster hunts from Daisy give monster tokens; the Tracktrix records kills and can call the cavalry, four NPC fighters, for help.</aside>
+</section>
+<section id="party" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Parties</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">How a party shares a kill</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Every member gets xp</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Each member on the server gets its share of each kill, at any distance.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">The share</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Damage, heals ×1.8 and a quarter of damage taken, plus a fixed 36,000. Priests ×1.36. Merchants 0.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Loot</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">Each chest item goes to one member by share. Gold is divided by share.</p>
+</div>
+</div>
+<table style="width:1664px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:28%">Fighters in the party</th><th style="width:9%;text-align:right">2</th><th style="width:9%;text-align:right">3</th><th style="width:9%;text-align:right">4</th><th style="width:9%;text-align:right">5</th><th style="width:9%;text-align:right">6</th><th style="width:9%;text-align:right">7</th><th style="width:9%;text-align:right">8</th><th style="width:9%;text-align:right">9</th></tr>
+<tr><td>Xp bonus</td><td style="text-align:right">+10%</td><td style="text-align:right">+16%</td><td style="text-align:right">+20%</td><td style="text-align:right">+24%</td><td style="text-align:right">+25%</td><td style="text-align:right">+30%</td><td style="text-align:right">+36%</td><td style="text-align:right">+40%</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Also +5% gold for all, and +10 luck for each member below level 60.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: party_to_client node/server.js:1138-1210; issue_monster_award node/server.js:2834-2866</p>
+<aside>To make a party, send party with event invite and a name; the other side sends accept. The server adds the scores for each account and divides by the number of that account's characters in the party, so your own characters share one account's share. The contribution score decays by 20% each minute. A merchant in the party does not reduce the fighters' xp and never gets chest items.</aside>
+</section>
+<section id="rules" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Many characters and bots</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">Bots are fine. The limits are on characters.</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#1F2438;border:1px solid #E0A73A;border-radius:16px;padding:28px 32px">
+<h3 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:44px;font-weight:600;color:#E0A73A">3 + 1</h3>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Three fighters and one merchant of an account online at a time.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">One account per player</h3>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">All accounts of one player share the same limits.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">80% for itself</h3>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">An account must serve itself 80% of the time or more.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">An active person</h3>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Accounts that run 24/7 with no contact with players can get a ban for a time.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">No real-money trade</h3>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Do not sell gold or items for money.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#1F2438;border:1px solid #2E3550;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#F4EFE3">Report bugs</h3>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Do not use them. A report gets a Bug Bounty Box.</p>
+</div>
+</div>
+<p style="font-size:26px;line-height:1.4;color:#8C93A8">From the official guide. Read the live rules before your bot depends on them.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Source: docs/guide/limits.html, htmls/contents/terms.html; is_player_allowed node/server_functions.js:383-437</p>
+<aside>The exact online limit is in a private configuration file, so the live number is unclear from the source. The server also limits players per IP address; Steam and Mac App Store accounts get a much higher limit. A Licence to Kill removes the limits for 7 minutes. Two or more online fighters end the Lone Wolf bonus.</aside>
+</section>
+<section id="credits" data-transition="fade" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:center;gap:36px">
+<img src="img/deck/crowd.png" alt="" style="position:absolute;left:0px;top:0px;width:1920px;height:1080px;object-fit:cover;opacity:0.18">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Credits</p>
+<h1 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:112px;font-weight:700;line-height:1.05;color:#F4EFE3">Play at <a href="https://adventure.land">adventure.land</a></h1>
+<p style="font-size:30px;line-height:1.4;width:1300px;color:#BCC3D6">Adventure Land is made by Kaan Soral. The art, screenshots and comic panels in this deck come from the game's open-source repository, kaansoral/adventureland_mongodb, under the AdventureLandOnlyUse license.</p>
+<p style="font-size:30px;line-height:1.4;width:1300px;color:#BCC3D6">The numbers come from game data G 17478 and the live server code. A game update can change them. The full guide, with a link to each source line: <a href="https://joshuawjulian.github.io/adventureland-protocol/game.html">joshuawjulian.github.io/adventureland-protocol</a></p>
+<aside>Attribution and a crawlable link back to adventure.land are required by the game's license.</aside>
+</section>
+</div></div>
+<div class="notes-panel" id="notes"></div>
+<script>
+// Slide player. One slide has class "on"; the canvas is 1920x1080 and scales to the stage.
+const SECTIONS = {"cover": "What the game is, its world and servers, and how to set up an account.", "classes": "The seven classes, party roles and how the server resolves combat.", "xpcurve": "How characters level, where to farm and how to move around the world.", "items": "Items, upgrades and compounds: the gamble behind gear.", "gold": "Gold, merchants, the bank and loot.", "events": "Events, rare monsters, parties and the rules for many characters."};
+const slides = [...document.querySelectorAll("#canvas > section")];
+const stage = document.getElementById("stage"), canvas = document.getElementById("canvas");
+const notes = document.getElementById("notes");
+let i = 0, where = "";
+
+function fit() {
+  const s = Math.min(stage.clientWidth / 1920, stage.clientHeight / 1080);
+  canvas.style.transform = `scale(${s})`;
+  canvas.style.margin = `${(1080 * s - 1080) / 2}px ${(1920 * s - 1920) / 2}px`;
+}
+
+function show(n, push) {
+  i = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach((s, k) => s.classList.toggle("on", k === i));
+  // The chapter is the last section start at or before this slide.
+  for (let k = 0; k <= i; k++) if (SECTIONS[slides[k].id]) where = SECTIONS[slides[k].id];
+  document.getElementById("count").textContent = `${i + 1} / ${slides.length}`;
+  document.getElementById("where").textContent = where;
+  const aside = slides[i].querySelector("aside");
+  notes.textContent = aside ? aside.textContent : "No notes for this slide.";
+  if (push) history.replaceState(null, "", "#" + slides[i].id);
+}
+
+function fromHash() {
+  const k = slides.findIndex((s) => "#" + s.id === location.hash);
+  show(k < 0 ? 0 : k, false);
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (["ArrowRight", "PageDown", " "].includes(e.key)) { show(i + 1, true); e.preventDefault(); }
+  else if (["ArrowLeft", "PageUp"].includes(e.key)) { show(i - 1, true); e.preventDefault(); }
+  else if (e.key === "Home") show(0, true);
+  else if (e.key === "End") show(slides.length - 1, true);
+  else if (e.key === "n" || e.key === "N") toggleNotes();
+});
+// Click the right two thirds to go on, the left third to go back. Links still work.
+stage.addEventListener("click", (e) => {
+  if (e.target.closest("a")) return;
+  show(e.clientX > window.innerWidth / 3 ? i + 1 : i - 1, true);
+});
+let x0 = null;
+stage.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+stage.addEventListener("touchend", (e) => {
+  if (x0 === null) return;
+  const dx = e.changedTouches[0].clientX - x0; x0 = null;
+  if (Math.abs(dx) > 40) show(dx < 0 ? i + 1 : i - 1, true);
+});
+function toggleNotes() {
+  notes.classList.toggle("on");
+  stage.classList.toggle("notes", notes.classList.contains("on"));
+  fit();
+}
+document.getElementById("notesBtn").addEventListener("click", toggleNotes);
+window.addEventListener("resize", fit);
+window.addEventListener("hashchange", fromHash);
+fit();
+fromHash();
+</script>
+</body>
+</html>

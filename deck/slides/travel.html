@@ -1,0 +1,21 @@
+<section id="travel" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Maps and the world</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Six ways to travel</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:600px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/town.png" alt="The Mainland town center: shops, two fountains, trees and paths" style="width:600px;height:600px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Walk</b> with move inside a map. The server refuses moves through walls, so your bot needs its own pathfinding.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Doors</b> connect maps. Go within 112 px, then send transport.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Alia, the transporter</b>, takes you between towns. Stay within 160 px of her.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Town</b> takes 3 s. It fails if more than 5 monsters target you.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Instances</b> are private map copies. Most need a key and enter.</p>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E"><b>Magiport and Blink</b> are mage skills that skip the walk.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:221-223 (B.door_dist, B.transporter_dist), 6254-6267 · Town art from the game's own guide</p>
+<aside>The world has 54 maps in G and 49 are in use. G.geometry holds the walls as line segments. The transporter lists main, winterland, desertland and cyberland. Town moves you to the main spawn point of your current map and fails with cant_escape when you are mobbed.</aside>
+</section>

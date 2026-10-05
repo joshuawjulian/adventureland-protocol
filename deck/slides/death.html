@@ -1,0 +1,21 @@
+<section id="death" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Death and respawn</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">When HP reaches 0</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Xp loss:</span> the larger of 1% of the level's xp and 2% of your current xp. You never lose a level, except on HARDCORE.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Gravestone:</span> you stay dead (rip: true) for at least 12 s. A priest can revive you.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Respawn:</span> back to town with full HP and half MP.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Tome of Protection:</span> cuts the loss to 1/50, then it is used up.</p>
+<p style="font-size:30px;line-height:1.4;color:#BCC3D6"><span style="color:#E0A73A">Watch out:</span> each death can give the monster a level.</p>
+</div>
+<div style="width:820px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/death.png" alt="The game world turned gray after the character died, with a Respawn button" style="width:820px;height:454px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<p style="font-size:24px;line-height:1.35;color:#8C93A8">After a death the world turns gray until you respawn.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Source: node/server.js:224, 6271-6309, 13884-13936</p>
+<aside>Your own death arrives in your player data as rip: true. The death event is for monsters that die near you. Send respawn after 12 seconds; too early fails with cant_respawn. With safe: true, respawn moves you to the Wizard's Crib. In PvP areas the xp loss is divided by 10.</aside>
+</section>

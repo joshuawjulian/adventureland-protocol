@@ -61,7 +61,9 @@ at legacy line numbers.
 | `docs/EXAMPLES.md` | **The contract for code examples**: seven languages, fence tags, libraries, the `AlSocket` mini client every example uses, how to compile-check in docker. |
 | `template.html` | The page: CSS, layout, search, rendering. `__DATA__` is replaced by the build. |
 | `build.py` | Python 3, no deps. Splits `content/` into entries, embeds them, writes the three `site/*.html` pages. |
-| `site/*.html` | The built pages: `learn.html` (the Build a bot course; the file name and the `learn-*` ids stay, so old links work), `game.html` (game guide), `index.html` (API reference). Complete HTML documents; GitHub Pages serves this folder. |
+| `site/*.html` | The built pages: `index.html` (the start page, from `home.html`), `game.html` (game guide), `deck.html` (the game guide as slides), `learn.html` (the Build a bot course; the file name and the `learn-*` ids stay, so old links work), `reference.html` (API reference; it was `index.html` until 2026-10, and the start page forwards `index.html#<id>` to it). Complete HTML documents; GitHub Pages serves this folder. |
+| `home.html` | The start page, copied to `site/index.html` by build.py (`write_home`, fills in the pinned commit). Plain HTML, same palette as template.html. It sends readers in order: 1. how the game works (slides, then the full guide), 2. Build a bot, 3. API reference. |
+| `deck/` | The game guide as slides: `deck.json` (title, order, sections, Google fonts) and `slides/<id>.html`, one `<section>` per slide on a 1920×1080 canvas with inline styles (the claude.ai Slides format: `<x-shape>` arrows, `<aside>` speaker notes). `scripts/build-deck.py` (run by build.py) makes `site/deck.html` with a small player (arrows, click, swipe, `#<id>`, N for notes). Images: `site/img/deck/` (the game's art, 256-colour PNG, at most 1640 px wide). Edit the slide files here; the claude.ai copy (https://claude.ai/artifact/DMfUzmN46fSTGXaQ5h99sJ) is not synced. |
 | `site/img/learn/` | Pictures for the Build a bot pages, made from the game's own art in `vendor/adventureland_mongodb/images` (screenshots, sprites cropped by the `G.sprites` / `G.imagesets` layout, labels in the game font `m5x7.ttf`). Git-tracked, unlike `vendor/`. License AdventureLandOnlyUse: use is fine, attribution required (the page footer credits the art). In Markdown: `![alt](img/learn/x.png "caption")` alone in a paragraph becomes a figure with that caption (`enhance` in template.html). Make files at display size (760 px wide or less), pixel art scaled by whole numbers with nearest-neighbour. |
 | `vendor/adventureland/` | The game's source at the pinned commit (git-ignored; `bash scripts/fetch-source.sh` recreates it). |
 | `docs/WRITING.md` | The entry formats and the prompts used to write each content file. |
@@ -69,6 +71,8 @@ at legacy line numbers.
 | `docs/UPDATING.md` | The update pass after a game update. |
 | `versions.json`, `data/g-fingerprint.json` | The pins (G version, live and common repo commits, legacy commit) and a per-key hash of the pinned G. |
 | `scripts/check-updates.py` | Compares the pins with the live game; lists entries to re-check; `--fix-lines`, `--pin`. |
+
+**Site order** (owner, 2026-10-04): the game guide comes first and is front and center ("if you are new to Adventure Land, here's how the game works"), then Build a bot, then the API reference. The start page and the page switcher (`PAGES` in build.py, plus Start) follow that order.
 
 **Three pages, kept separate on purpose** (the owner wants the reference apart from the teaching
 material): Build a bot (`site/learn.html`, formerly "Learn") = `learn-1..3.md`, a course from zero (HTTP, WebSockets, Socket.IO by hand,
@@ -85,7 +89,7 @@ Reference content files: `connect.md` (login, HTTP, handshake, observers, rate l
 ## Building
 
 ```sh
-python3 build.py                      # writes site/learn.html, game.html, index.html
+python3 build.py                      # writes site/index.html (start), game.html, learn.html, reference.html, deck.html
 python3 build.py --fragment OUT.html  # also writes the reference page without the <html>/<head> shell
 python3 scripts/check-examples.py     # compile every reference example against course/<lang>'s AlSocket
 python3 scripts/check-course.py       # build course/<lang> x7, run its programs against course/test-server

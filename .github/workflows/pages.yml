@@ -1,7 +1,8 @@
 # Publishes the site to GitHub Pages on every push to main.
 #
 # It runs build.py (Python 3 only, no dependencies; vendor/ is not needed) and deploys the
-# resulting site/ folder: learn.html, game.html, index.html, asyncapi.json, types/ and img/.
+# resulting site/ folder: index.html (start page), game.html, deck.html, learn.html,
+# reference.html, asyncapi.json, types/ and img/.
 # One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
 name: pages
 

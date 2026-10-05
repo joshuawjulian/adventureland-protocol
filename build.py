@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Builds site/index.html: the interactive Adventure Land API reference.
+Builds the site: site/index.html (the start page), game.html, learn.html, reference.html (the
+interactive Adventure Land API reference) and deck.html (the game guide as slides).
 
     python3 build.py
 
@@ -357,12 +358,15 @@ if dupes:
 # has room to breathe. Every page also gets `links`: id -> [file, kind, name] for the entries
 # that live on the *other* pages, so `#send-move` in the tutorial (or a `move` code span)
 # still finds its way to the reference.
+# In reading order (owner, 2026-10-04): how the game works, then build a bot, then the reference.
+# The site root (index.html) is the start page, home.html; it forwards an old `index.html#id` link
+# to reference.html, where the reference lived before.
 PAGES = [
-    {"id": "learn", "file": "learn.html", "title": "Build a bot", "kinds": ["learn"],
-     "doc_title": "Adventure Land: Build a Bot"},
     {"id": "game", "file": "game.html", "title": "Game guide", "kinds": ["game"],
      "doc_title": "Adventure Land: Game Guide"},
-    {"id": "ref", "file": "index.html", "title": "API reference",
+    {"id": "learn", "file": "learn.html", "title": "Build a bot", "kinds": ["learn"],
+     "doc_title": "Adventure Land: Build a Bot"},
+    {"id": "ref", "file": "reference.html", "title": "API reference",
      "kinds": ["guide", "send", "recv", "code", "g", "s"], "doc_title": "Adventure Land API"},
 ]
 # A page with nothing in it yet (its content files not written) is left out, nav included.
@@ -378,7 +382,8 @@ def render(page):
              for i in items if page_of[i["id"]] is not page}
     data = {
         "page": {k: page[k] for k in ("id", "title", "doc_title")},
-        "pages": [{k: p[k] for k in ("id", "file", "title")} for p in PAGES],
+        "pages": [{"id": "home", "file": "index.html", "title": "Start"}]
+                 + [{k: p[k] for k in ("id", "file", "title")} for p in PAGES],
         "items": mine,
         "links": links,
         "source": SOURCES,
@@ -422,6 +427,15 @@ def write_types():
     print("site/asyncapi.json: AsyncAPI 3.0")
 
 
+def write_home():
+    """The start page: home.html as it is, plus the pinned commit for its footer."""
+    live = SOURCES["live"]
+    html = (ROOT / "home.html").read_text().replace("__REPO__", live["repo"]).replace(
+        "__COMMIT__", live["commit"]).replace("__SHORT__", live["commit"][:7])
+    (ROOT / "site" / "index.html").write_text(html)
+    print("site/index.html: start page")
+
+
 if __name__ == "__main__":
     for page in PAGES:
         body = render(page)
@@ -433,3 +447,7 @@ if __name__ == "__main__":
         counts[i["kind"]] = counts.get(i["kind"], 0) + 1
     print(f"total: {len(items)} entries {counts}")
     write_types()
+    write_home()
+    # The game guide as slides: deck/ holds the slides, scripts/build-deck.py makes the page.
+    import subprocess
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "build-deck.py")], check=True)

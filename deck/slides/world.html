@@ -1,0 +1,20 @@
+<section id="world" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">The world</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Maps seen from above, measured in pixels</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:620px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/mainland.png" alt="An overhead map of Mainland: the town in the center, beach to the west, water and paths around it" style="width:620px;height:598px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:22px">
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>A map</b> has walls, doors to other maps, NPCs and monster spawn areas. G.geometry holds the walls as lines.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>Mainland</b> (main) is the hub. Its town is near (0, 0). A new character starts at (−87, 673), in the south part of the town.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>A spawn area</b> is the box where one monster type lives. A dead monster returns after a few seconds.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>All characters on a server</b> share the same monsters, so other players can make a good area crowded.</p>
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E"><b>54 maps</b> are in G. The server uses 49 of them.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.maps, G.geometry (G 17478); api.js:496 · Map art from the game's own guide</p>
+<aside>The unit of distance is the pixel. A spawn area is the boundary of an entry in G.maps[map].monsters, as x1, y1, x2, y2. A monster that nobody attacks slowly becomes stronger, which comes later in the leveling section.</aside>
+</section>

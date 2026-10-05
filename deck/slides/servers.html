@@ -1,0 +1,34 @@
+<section id="servers" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Servers, regions and PvP</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Each server is its own copy of the world</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="width:740px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:30px;line-height:1.4;color:#4A4E5E">A server key is a region plus a name: EUI, USII, USPVP. Each server has its own monsters, bosses and event state (S).</p>
+<table style="width:740px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:40%">Region</th><th style="width:60%">Clock offset</th></tr>
+<tr><td>EU</td><td>UTC +1 h</td></tr>
+<tr><td>US</td><td>UTC −5 h</td></tr>
+<tr><td>ASIA</td><td>UTC +7 h</td></tr>
+</table>
+<p style="font-size:30px;line-height:1.4;font-weight:600;color:#1B1F2E">Keep all your fighters on one server, and make it their home.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">PvP servers</h3>
+<p style="font-size:24px;line-height:1.35;color:#4A4E5E">Every map allows PvP. Xp ×1.2, gold ×1.25, luck ×1.15. Marked items can drop for your killer.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Home server</h3>
+<p style="font-size:24px;line-height:1.35;color:#4A4E5E">The first server you join. There you get 5× points on cooperative bosses and extra drop tables. Change it with set_home, once in 36 hours.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Hop Sickness</h3>
+<p style="font-size:24px;line-height:1.35;color:#4A4E5E">Level 60 or more on a server that is not home: −80% luck, gold and xp, and −20% damage, for 12 minutes of play.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: node/server.js:339-422, 5523-5535, 13311; node/server_functions.js:1094-1104</p>
+<aside>The region offset sets the hours of night and of the daily events. HARDCORE is a special server: one character per account, large multipliers, and a death costs a full level. Realm Fatigue stops the home bonuses for 30 minutes when another fighter of your account was recently on a different server.</aside>
+</section>

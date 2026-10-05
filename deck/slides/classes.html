@@ -1,0 +1,19 @@
+<section id="classes" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Classes</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Seven classes, chosen once</h2>
+</div>
+<table style="width:1664px;font-size:28px;color:#1B1F2E">
+<tr style="background:#E9E1CF"><th style="width:14%">Class</th><th style="width:22%">Role</th><th style="width:13%">Main stat</th><th style="width:14%">Damage</th><th style="width:13%;text-align:right">Range (px)</th><th style="width:12%;text-align:right">Dmg/s</th><th style="width:12%;text-align:right">HP</th></tr>
+<tr><td>Warrior</td><td>Tank, melee DPS</td><td>str</td><td>physical</td><td style="text-align:right">23</td><td style="text-align:right">35</td><td style="text-align:right">624</td></tr>
+<tr><td>Paladin</td><td>Tank, support</td><td>str + int</td><td>physical</td><td style="text-align:right">20</td><td style="text-align:right">32</td><td style="text-align:right">724</td></tr>
+<tr><td>Rogue</td><td>Melee DPS</td><td>dex</td><td>physical</td><td style="text-align:right">20</td><td style="text-align:right">24</td><td style="text-align:right">349</td></tr>
+<tr style="background:#FBF1DC"><td>Ranger</td><td>Ranged DPS</td><td>dex</td><td>physical</td><td style="text-align:right">70</td><td style="text-align:right">25</td><td style="text-align:right">320</td></tr>
+<tr style="background:#FBF1DC"><td>Mage</td><td>Ranged DPS</td><td>int</td><td>magical</td><td style="text-align:right">170</td><td style="text-align:right">16</td><td style="text-align:right">257</td></tr>
+<tr><td>Priest</td><td>Healer</td><td>int</td><td>magical</td><td style="text-align:right">170</td><td style="text-align:right">10</td><td style="text-align:right">305</td></tr>
+<tr><td>Merchant</td><td>Economy</td><td>int</td><td>none</td><td style="text-align:right">70</td><td style="text-align:right">0</td><td style="text-align:right">109</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A4E5E">Each class at level 1 with its starting weapon. Armor stops physical damage, resistance stops magical damage. The two shaded rows are the classes for beginners.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.classes (G 17478); main stat bonus: node/server_functions.js:1745-1752</p>
+<aside>MMO parties divide the work into tank, DPS and healer. Adventure Land adds a fourth role, the merchant, which does business and does not fight. Each class changes one attribute into damage: the server adds weapon attack times main stat divided by 20 to the attack of the character. You cannot change the class later.</aside>
+</section>

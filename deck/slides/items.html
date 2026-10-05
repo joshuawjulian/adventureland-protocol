@@ -1,0 +1,29 @@
+<section id="items" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Items and equipment</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">An item has two parts</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="width:640px;display:flex;flex-direction:column;gap:20px">
+<img src="img/deck/inv.png" alt="The character stats beside an inventory of items with their upgrade levels" style="width:640px;height:475px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">A full inventory is a bot's most frequent problem. Keep 5 or more slots free.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Definition: G.items[name]</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">The same for all copies: type, base price g, base stats, and the stat increase for each level.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F1;border:1px solid #E2DACA;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#1B1F2E">Instance: the object in a slot</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A4E5E">name, q (quantity), level, p (property such as shiny), l (lock), v (PvP mark) and a few more.</p>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;color:#8F5A0C">638</p><p style="font-size:24px;color:#4A4E5E">item definitions</p></div>
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;color:#8F5A0C">16</p><p style="font-size:24px;color:#4A4E5E">equipment slots</p></div>
+<div style="display:flex;flex-direction:column;gap:4px"><p style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;color:#8F5A0C">42</p><p style="font-size:24px;color:#4A4E5E">inventory slots</p></div>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: G.items (G 17478); js/old_common_functions.js:104, 877; node/server.js:1456</p>
+<aside>To get the stats of an item, combine the two parts: calculate_item_properties starts with the definition, then adds the increase per level, the property, and extras for a class or map. A client that compares gear needs a copy of this function. Starter items have gift: 1 and sell for only 1 gold.</aside>
+</section>

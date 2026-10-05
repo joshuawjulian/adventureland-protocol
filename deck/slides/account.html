@@ -1,0 +1,26 @@
+<section id="account" style="background:#F4EFE3;color:#1B1F2E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8F5A0C">Accounts and characters</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#1B1F2E">Set up once, before your bot plays</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<ol style="font-size:30px;line-height:1.4;color:#4A4E5E">
+<li>Make an account in the desktop client (Steam or the Mac App Store). The website refuses new accounts.</li>
+<li>Log in one time through that client. This links a platform id to the account.</li>
+<li>Create one character and select its class.</li>
+<li>Write down its name. Your program needs it.</li>
+</ol>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBF1DC;border:2px solid #E0A73A;border-radius:16px;padding:24px 32px">
+<h3 style="font-size:32px;font-weight:600;color:#8F5A0C">Caution: do not skip step 2</h3>
+<p style="font-size:26px;line-height:1.35;color:#1B1F2E">Without a platform link, each character gets authfail: −85% luck, −85% gold, −20% xp, and no bonuses for new players.</p>
+</div>
+<p style="font-size:26px;line-height:1.35;color:#4A4E5E">Slots: 5 for each account, 8 with a platform id, up to 18 at 200 shells each. A name has 4 to 12 characters.</p>
+</div>
+<div style="width:500px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/charselect.png" alt="The character select screen: ten characters with their class and level, and a New Character button" style="width:500px;height:584px;object-fit:cover;border-radius:12px;border:2px solid #E2DACA">
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#5D6170">Source: api.js:14-31, 93, 559-563; node/server.js:11863-11869</p>
+<aside>One account owns many characters. You log in to the account, and then you put one of its characters into the game. A second limit controls how many characters of one account can be online at the same time; that comes at the end of the deck.</aside>
+</section>

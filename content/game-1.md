@@ -2,6 +2,8 @@
 
 Adventure Land is a small 2D MMORPG in which code, not a person at a keyboard, plays the characters.
 
+> **Slides.** For a short, visual version of this guide, open [the game guide as slides](deck.html) (36 slides, with the game's own art).
+
 An MMORPG (massively multiplayer online role-playing game) is a game world that many people share at the same time. Each person controls one or more **characters**. A character fights monsters, collects items and becomes stronger over time.
 
 ### A game for bots

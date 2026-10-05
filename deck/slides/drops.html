@@ -1,0 +1,27 @@
+<section id="drops" style="background:#161A2B;color:#F4EFE3;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#E0A73A">Drops and loot</p>
+<h2 style="font-family:'Pixelify Sans', 'Courier New', monospace;font-size:64px;font-weight:600;line-height:1.1;color:#F4EFE3">The loot goes to whom the monster attacks</h2>
+</div>
+<div style="display:flex;gap:56px;align-items:start">
+<div style="width:700px;display:flex;flex-direction:column;gap:16px">
+<img src="img/deck/loot.png" alt="A cave fight with the game log listing found items: a fiery staff, earrings and gold" style="width:700px;height:431px;object-fit:cover;border-radius:12px;border:2px solid #2E3550">
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">That is usually the tank. Open chests at once: after 8 minutes, or from more than 400 px, the gold bonus is lost.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<div style="background:#1F2438;border:1px solid #2E3550;border-radius:12px;padding:24px 28px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;line-height:1.5;color:#F4EFE3">drops when random() / (share × luckm × level × mult) &lt; chance</p>
+</div>
+<table style="width:100%;font-size:26px;color:#F4EFE3">
+<tr style="background:#2E3550"><th style="width:35%">Chest</th><th style="width:65%">Holds</th></tr>
+<tr><td>chest3</td><td>Gold</td></tr>
+<tr><td>chest4</td><td>Gold with the ×10 bonus (3.1%)</td></tr>
+<tr><td>chest5</td><td>Gold with the ×50 bonus (0.2%)</td></tr>
+<tr><td>chest6</td><td>Items or shells</td></tr>
+</table>
+<p style="font-size:26px;line-height:1.4;color:#BCC3D6">Luck, and the level of the monster, multiply every independent roll.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8C93A8">Source: node/server.js:2325-2334, 2869-2893, 11273-11470</p>
+<aside>For each entry in G.drops.monsters[type], the item drops when the test on the slide is true. share is 1 for a usual kill; luckm is 1 plus luck divided by 100. In a party, each item goes to one member at random by share, and gold is divided by share with the opener's multiplier, so let the member with the most gold gear open chests. Cooperative bosses give each contributor its own chest.</aside>
+</section>
