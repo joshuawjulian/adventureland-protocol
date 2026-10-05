@@ -18,11 +18,16 @@ html, body { margin: 0; height: 100%; background: #0d1020; color: #f4efe3; font-
 .bar a:hover, .bar button:hover { color: #f4efe3; border-color: #8c93a8; }
 .bar .where { color: #8c93a8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
 .bar .count { color: #f4efe3; font-variant-numeric: tabular-nums; }
-.stage { position: fixed; left: 0; right: 0; top: 44px; bottom: 0; display: grid; place-items: center; }
+.stage { position: fixed; left: 0; right: 0; top: 44px; bottom: 0; overflow: hidden; }
 .stage.notes { bottom: 30vh; }
-.canvas { position: relative; width: 1920px; height: 1080px; transform-origin: center center; flex: none; }
+/* The canvas keeps its 1920x1080 size and is centered and scaled with one transform (fit()). */
+.canvas { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; }
 .canvas > section { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; opacity: 0; visibility: hidden; transition: opacity .25s; }
 .canvas > section.on { opacity: 1; visibility: visible; }
+/* The slide format paints children in source order: a pinned backdrop listed first stays under
+   the text. A browser paints pinned (absolute) boxes over normal flow, so flow children get
+   position: relative too; then all of them stack in source order. */
+.canvas > section > :not([style*="position:absolute"]) { position: relative; }
 .canvas h1, .canvas h2, .canvas h3, .canvas p, .canvas ul, .canvas ol, .canvas table { margin: 0; }
 .canvas h1 { font-size: 96px; font-weight: 600; line-height: 1.1; }
 .canvas h2 { font-size: 64px; font-weight: 600; line-height: 1.15; }
@@ -960,8 +965,7 @@ let i = 0, where = "";
 
 function fit() {
   const s = Math.min(stage.clientWidth / 1920, stage.clientHeight / 1080);
-  canvas.style.transform = `scale(${s})`;
-  canvas.style.margin = `${(1080 * s - 1080) / 2}px ${(1920 * s - 1920) / 2}px`;
+  canvas.style.transform = `translate(-50%, -50%) scale(${s})`;
 }
 
 function show(n, push) {
