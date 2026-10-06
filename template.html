@@ -398,7 +398,7 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 
 /* A run of fenced blocks in the course's languages becomes one tabbed example. */
 .codetabs { margin: 14px 0 20px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sunk); max-width: 100%; }
-.codetabs .tabbar {
+:is(.codetabs, .langtabs) .tabbar {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -406,7 +406,7 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   border-bottom: 1px solid var(--rule);
   padding: 4px 4px 0;
 }
-.codetabs .tab {
+:is(.codetabs, .langtabs) .tab {
   border: 0;
   background: none;
   color: var(--muted);
@@ -416,12 +416,20 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   cursor: pointer;
   white-space: nowrap;
 }
-.codetabs .tab:hover { color: var(--ink); }
-.codetabs .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+:is(.codetabs, .langtabs) .tab:hover { color: var(--ink); }
+:is(.codetabs, .langtabs) .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 .codetabs .copy { margin-left: auto; flex: none; font: 500 12px var(--body); border: 0; background: none; color: var(--muted); cursor: pointer; padding: 6px 8px; }
 .codetabs .copy:hover { color: var(--accent); }
 .codetabs pre { margin: 0; border: 0; border-radius: 0 0 8px 8px; }
 .codetabs .note { font: 12px var(--body); color: var(--muted); padding: 8px 14px 0; }
+/* Prose that differs by language: adjacent <div data-lang="go"> blocks in the Markdown become one
+   box with a tab per language. It follows the same language choice as the code tabs. */
+.langtabs { margin: 14px 0 20px; border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 8px; max-width: 100%; }
+.langtabs .tabbar { background: var(--sunk); border-radius: 8px 8px 0 0; }
+.langtabs .tabbar .label { flex: none; font: 600 11px var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 6px 8px 7px 10px; }
+.langtabs .langprose { padding: 0 18px 4px; }
+.langtabs .langprose > :first-child { margin-top: 12px; }
+.langtabs .note { font: 12px var(--body); color: var(--muted); padding: 8px 18px 0; }
 .md pre { position: relative; }
 
 /* highlight.js token colours, themed with the page. */
@@ -778,6 +786,7 @@ function enhance(root, fromKind, selfId) {
     c.replaceWith(a);
     a.append(c);
   }
+  langTabs(root);
   codeTabs(root);
 }
 
@@ -863,8 +872,64 @@ function codeTabs(root) {
   applyLang(root);
 }
 
+/* Prose blocks per language. In the Markdown, a block is
+     <div data-lang="go">            (or several ids: data-lang="js ts")
+     (blank line, Markdown, blank line)
+     </div>
+   A run of adjacent blocks becomes one .langtabs box, with one tab for each language that a
+   block covers. applyLang shows the block of the reader's language. */
+const langsOf = (el) => el.dataset.lang.split(/\s+/).map((l) => LANG_ALIAS[l] ?? l).filter((l) => LANG[l]);
+
+function langTabs(root) {
+  const blocks = [...root.querySelectorAll("div[data-lang]")].filter((d) => !d.closest(".langtabs, .codetabs"));
+  const seen = new Set();
+  for (const div of blocks) {
+    if (seen.has(div)) continue;
+    const run = [div];
+    let n = div.nextElementSibling;
+    while (n && n.matches("div[data-lang]")) { run.push(n); n = n.nextElementSibling; }
+    run.forEach((d) => seen.add(d));
+    const box = document.createElement("div");
+    box.className = "langtabs";
+    const bar = document.createElement("div");
+    bar.className = "tabbar";
+    bar.setAttribute("role", "tablist");
+    bar.innerHTML = `<span class="label">Your language</span>`;
+    box.append(bar);
+    const note = document.createElement("div");
+    note.className = "note";
+    box.append(note);
+    div.before(box);
+    const covered = new Set(run.flatMap(langsOf));
+    for (const l of LANGS) {
+      if (!covered.has(l.id)) continue;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tab";
+      b.setAttribute("role", "tab");
+      b.dataset.lang = l.id;
+      b.textContent = l.label;
+      bar.append(b);
+    }
+    for (const d of run) {
+      d.classList.add("langprose");
+      box.append(d);
+    }
+  }
+}
+
 /* Show each tab group in the chosen language, or its first block plus a note if it has none. */
 function applyLang(root = readerEl) {
+  for (const box of root.querySelectorAll(".langtabs")) {
+    const blocks = [...box.querySelectorAll(":scope > .langprose")];
+    const have = LANGS.map((l) => l.id).filter((id) => blocks.some((d) => langsOf(d).includes(id)));
+    const pick = have.includes(lang) ? lang : have[0];
+    for (const d of blocks) d.hidden = !langsOf(d).includes(pick);
+    for (const b of box.querySelectorAll(".tab")) b.setAttribute("aria-selected", String(b.dataset.lang === pick));
+    const note = box.querySelector(":scope > .note");
+    note.hidden = pick === lang;
+    note.textContent = `No ${LANG[lang].label} text here; showing ${LANG[pick].label}.`;
+  }
   for (const box of root.querySelectorAll(".codetabs")) {
     const have = [...box.querySelectorAll("pre")].map((p) => p.dataset.lang);
     const pick = have.includes(lang) ? lang : have[0];
@@ -956,9 +1021,9 @@ function show(id, { focus = false } = {}) {
 }
 
 readerEl.addEventListener("click", async (e) => {
-  const tab = e.target.closest(".codetabs .tab");
+  const tab = e.target.closest(":is(.codetabs, .langtabs) .tab");
   if (tab) {
-    setLang(tab.dataset.lang, tab.closest(".codetabs"));
+    setLang(tab.dataset.lang, tab.closest(".codetabs, .langtabs"));
     return;
   }
   const copyCode = e.target.closest(".codetabs .copy");

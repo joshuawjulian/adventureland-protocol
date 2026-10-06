@@ -82,6 +82,8 @@ and seasons); API reference = everything else. Every code example comes in seven
 TS, Python, Go, C#, Rust, Java) as tabs; the reader's pick is remembered (`alapi.lang`).
 
 Reference content files: `connect.md` (login, HTTP, handshake, observers, rate limits, conventions),
+`async.md` (the group "Async in your language": an overview, then the lecture "Async 1..9", one
+entry per `##`, mostly per-language `<div data-lang>` boxes; ids `guide-<slug>`),
 `send-1..4.md` (client→server events in server-code order), `send-observer.md` (`o:home`,
 `o:command`), `receive.md` (server→client events grouped by `##` section, including the
 225-row `game_response` code table), `game-data.md` (G), `server-events.md` (S).
@@ -168,7 +170,10 @@ add its name to a group.
 The pages (`template.html`, one template for all three): `[x](#id)` links and code-span
 cross-links resolve across pages (the build embeds `links`: id -> other page's file); a run of
 adjacent fenced blocks tagged `js ts python go csharp rust java` becomes one tabbed example,
-highlighted with highlight.js 11.9.0 from cdnjs; teaching pages get chapter numbers and
+highlighted with highlight.js 11.9.0 from cdnjs; prose that differs by language goes in adjacent `<div data-lang="go">` blocks
+(blank line, Markdown, blank line, `</div>`; `data-lang="js ts"` covers both), which become one
+"Your language" tab box that follows the same choice (`langTabs` in template.html; used by
+connect.md "The async model of your language"); teaching pages get chapter numbers and
 previous/next links. Search ranks name match > summary > body, every word must match;
 `code` spans whose text is an entry name become cross-links (same kind preferred, then
 send > recv > code > g > s); `file.js:123` references become GitHub links pinned to the

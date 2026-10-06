@@ -86,6 +86,10 @@ For a course from zero, see [Build a bot](learn.html). For how the game works, s
 Examples come in JavaScript, TypeScript, Python, Go, C#, Rust and Java (top bar). They use
 `sock`, a connected [`AlSocket`](learn.html#learn-alsocket).
 
+The group **Async in your language** explains how your language runs a client that reads,
+waits and acts at the same time. Start with
+[The async model of your language](#guide-the-async-model-of-your-language).
+
 ## Typed definitions
 
 The [schema](#guide-types) also generates typed definitions of every request and reply, for
@@ -219,6 +223,13 @@ for heading, body in split(read("connect.md"), 2):
     if heading is None:
         continue
     add("guide", "Connecting", heading, demote(body), id_=f"guide-{slug(heading)}")
+
+# Async in your language: an overview, then a lecture in chapters. Most of each chapter is
+# prose per language (<div data-lang> blocks, langTabs in template.html).
+for heading, body in split(read("async.md"), 2):
+    if heading is None:
+        continue
+    add("guide", "Async in your language", heading, demote(body), id_=f"guide-{slug(heading)}")
 
 # Types: an overview, then one entry per named type of the schema (id type-<name>), so field
 # tables can link each type.

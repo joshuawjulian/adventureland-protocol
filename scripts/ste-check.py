@@ -61,7 +61,7 @@ def prose_blocks(text):
         if in_code:
             continue
         s = line.strip()
-        if not s or s.startswith(("|", "#", "<!--")):
+        if not s or s.startswith(("|", "#", "<!--", "<div", "</div")):
             if para:
                 yield start, " ".join(para), False
                 para = []
