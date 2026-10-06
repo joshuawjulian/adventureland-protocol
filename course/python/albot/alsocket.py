@@ -21,6 +21,10 @@ class AlSocket:
         self._listening = False  # True after the first on()/wait_for()
         self._closed = False
         self._reader: asyncio.Task[None] | None = None
+        # The tasks of async handlers that still run. The event loop keeps only
+        # a weak reference to a task, so a task that nothing else references
+        # can disappear before it ends. This set is the strong reference.
+        self._handler_tasks: set[asyncio.Task[Any]] = set()
 
     @classmethod
     async def connect(cls, url: str, timeout: float = 10.0) -> "AlSocket":
@@ -77,7 +81,18 @@ class AlSocket:
             pass  # a normal end; the reason below has the close code
         except Exception as err:  # network error, bad JSON, ...
             reason = f"transport error: {err!r}"
-        self._shutdown(f"{reason} (code {self._ws.protocol.close_code})")
+        except asyncio.CancelledError:
+            # Somebody cancelled the reader (close() after its time limit, or
+            # asyncio.run at the end of the program). Nothing reads the socket
+            # from now on, so close the transport at once: else the server
+            # keeps the character online until its ping timeout.
+            reason = "reader cancelled"
+            self._abort()
+            raise
+        finally:
+            # In `finally`, so that the end is reported for every cause, also a
+            # cancellation: the `disconnect` event, then each waiter fails.
+            self._shutdown(f"{reason} (code {self._ws.protocol.close_code})")
 
     def _deliver(self, event: str, data: Any) -> None:
         """Give one event to the handlers and waiters for its name."""
@@ -85,14 +100,18 @@ class AlSocket:
             # Nobody listens yet: keep the event (see _subscribed).
             self._early.setdefault(event, []).append(data)
             return
-        for handler in self._handlers.get(event, []):
+        # Copies: a handler can call on() or wait_for(). A handler or a waiter
+        # that is added now must not get the event that is delivered now.
+        for handler in list(self._handlers.get(event, [])):
             try:
                 result = handler(data)
                 if inspect.isawaitable(result):  # an async handler runs as a task
-                    asyncio.ensure_future(result)
+                    task = asyncio.ensure_future(result)
+                    self._handler_tasks.add(task)  # keep it alive until it ends
+                    task.add_done_callback(self._handler_done)
             except Exception:
                 traceback.print_exc()  # one bad handler must not stop the socket
-        for name, pred, fut in self._waiters:
+        for name, pred, fut in list(self._waiters):
             if name != event or fut.done():
                 continue
             try:
@@ -102,6 +121,15 @@ class AlSocket:
                 match = False
             if match:
                 fut.set_result(data)
+
+    def _handler_done(self, task: asyncio.Task[Any]) -> None:
+        """An async handler ended. Forget its task, and print its error: nobody
+        awaits this task, so else the error shows only as "Task exception was
+        never retrieved", at some later time, or never."""
+        self._handler_tasks.discard(task)
+        err = None if task.cancelled() else task.exception()
+        if err is not None:
+            traceback.print_exception(err)
 
     def _subscribed(self, event: str) -> None:
         """Each on()/wait_for() calls this. The server sends "welcome"
@@ -126,7 +154,12 @@ class AlSocket:
         if self._closed:
             raise ConnectionError("socket is closed")
         args = [event] if data is None else [event, data]
-        await self._ws.send("42" + json.dumps(args, separators=(",", ":")))
+        try:
+            await self._ws.send("42" + json.dumps(args, separators=(",", ":")))
+        except ConnectionClosed as err:
+            # The connection ended, but the reader has not reported it yet.
+            # Raise the same error as after the report.
+            raise ConnectionError("socket is closed") from err
 
     def on(self, event: str, handler: Callable[[Any], Any]) -> None:
         """Call handler(data) for each `event` from now on (sync or async)."""
@@ -149,6 +182,11 @@ class AlSocket:
         then emit, then await."""
         loop = asyncio.get_running_loop()
         fut: asyncio.Future[Any] = loop.create_future()
+        # Mark the error of the future as read when the future ends. The
+        # coroutine below raises it again for the code that awaits. Code that
+        # never awaits (an emit failed first) then gets no "Future exception
+        # was never retrieved" log.
+        fut.add_done_callback(_retrieve)
         if self._closed:
             fut.set_exception(ConnectionError("socket is closed"))
         else:
@@ -162,7 +200,8 @@ class AlSocket:
 
             def cleanup(_: asyncio.Future[Any]) -> None:
                 timer.cancel()
-                self._waiters.remove(waiter)
+                if waiter in self._waiters:  # _shutdown already emptied the list
+                    self._waiters.remove(waiter)
 
             fut.add_done_callback(cleanup)
             self._subscribed(event)
@@ -173,16 +212,37 @@ class AlSocket:
         return result()
 
     async def close(self) -> None:
-        """Disconnect correctly: Socket.IO disconnect, then a normal WebSocket close."""
+        """Disconnect correctly: Socket.IO disconnect, then a normal WebSocket
+        close. Returns after the reader reported "disconnect", in 5 s at most."""
         if self._closed:
             return
         try:
-            await self._ws.send("41")
-        except Exception:
-            pass  # the connection is already gone
-        await self._ws.close()
-        if self._reader:
-            await self._reader  # the reader ends and reports "disconnect"
+            # 5 s: a working server answers the close in much less time. A
+            # server that does not answer must not hold a program that wants
+            # to stop (or to reconnect) for the 10 s close timeout of websockets.
+            async with asyncio.timeout(5):
+                try:
+                    await self._ws.send("41")
+                except Exception:
+                    pass  # the connection is already gone
+                await self._ws.close()
+                if self._reader:
+                    await self._reader  # the reader ends and reports "disconnect"
+        except TimeoutError:
+            # Force the end: drop the TCP connection, and stop the reader. Its
+            # `finally` reports "disconnect" and fails the waiters.
+            self._abort()
+            if self._reader:
+                self._reader.cancel()
+                await asyncio.wait([self._reader])  # wait() does not raise
+
+    def _abort(self) -> None:
+        """Drop the TCP connection at once, with no close handshake."""
+        transport = self._ws.transport
+        if isinstance(transport, asyncio.Transport):  # always, for a TCP socket
+            transport.abort()
+        else:
+            transport.close()
 
     def _shutdown(self, reason: str) -> None:
         """This runs one time, when the connection ends for any cause."""
@@ -193,6 +253,16 @@ class AlSocket:
         # so does AlSocket. The server never sends an event with this name.
         self._listening = True
         self._deliver("disconnect", reason)
-        for _, _, fut in self._waiters:
+        # Take the list, then fail each waiter in it, one time. (cleanup runs
+        # later, from the loop, and finds its waiter gone: that is fine.)
+        waiters, self._waiters = self._waiters, []
+        for _, _, fut in waiters:
             if not fut.done():
                 fut.set_exception(ConnectionError(f"socket closed: {reason}"))
+
+
+def _retrieve(fut: asyncio.Future[Any]) -> None:
+    """A done callback: read the exception of `fut`, so that asyncio counts it
+    as seen. It does not hide the error: `await fut` still raises it."""
+    if not fut.cancelled():
+        fut.exception()

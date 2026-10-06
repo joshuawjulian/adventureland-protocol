@@ -41,9 +41,9 @@ let killed = false;
 world.listen<{ id: string }>("death", (d) => { if (d.id === target?.id) killed = true; });
 world.listen<{ id: string; kill?: boolean }>("hit", (d) => { if (d.id === target?.id && d.kill) killed = true; });
 
-const deadline = Date.now() + GIVE_UP_MS;
+const deadline = performance.now() + GIVE_UP_MS;
 while (!killed) {
-  if (Date.now() > deadline) throw new Error("no kill in 90 s");
+  if (performance.now() > deadline) throw new Error("no kill in 90 s");
   world.advance(); // positions are now, not the last update
 
   if (me.rip) {
@@ -78,8 +78,8 @@ while (!killed) {
 console.log(`killed goo ${target?.id}`);
 
 // The chest: wait for its `drop`, then open each chest that we know of.
-const chestDeadline = Date.now() + CHEST_WAIT_MS;
-while (world.chests.size === 0 && Date.now() < chestDeadline) await sleep(TICK_MS);
+const chestDeadline = performance.now() + CHEST_WAIT_MS;
+while (world.chests.size === 0 && performance.now() < chestDeadline) await sleep(TICK_MS);
 for (const id of [...world.chests.keys()]) {
   const r = await act.openChest(id);
   if (r && !r.gone) console.log(`chest ${id}: +${r.gold ?? 0} gold, ${r.items?.length ?? 0} item(s)`);

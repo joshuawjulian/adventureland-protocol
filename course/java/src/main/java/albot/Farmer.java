@@ -67,7 +67,7 @@ public final class Farmer {
         });
         world.listen("game_response", d -> {
             if (d.path("response").asText().equals("defeated_by_a_monster")) {
-                synchronized (this) { diedAt = System.currentTimeMillis(); }
+                synchronized (this) { diedAt = World.nowMs(); }
             }
         });
         // Each chest that opens for us.
@@ -151,7 +151,7 @@ public final class Farmer {
         if (dead) {
             long died;
             synchronized (this) { died = diedAt; }
-            long left = died == 0 ? RIP_MS : Math.max(0, died + RIP_MS - System.currentTimeMillis());
+            long left = died == 0 ? RIP_MS : Math.max(0, died + RIP_MS - World.nowMs());
             log("died; respawn in " + (long) Math.ceil(left / 1000.0) + " s");
             if (act.respawn()) synchronized (world) { log("respawned at " + xy(world.me)); }
             return;

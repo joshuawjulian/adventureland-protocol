@@ -42,7 +42,7 @@ public final class Cooldowns {
 
     /** The timer of `name` runs for `ms` from now. Also the skill whose cooldown it shares (3shot -> attack). */
     public synchronized void start(String name, double ms) {
-        long at = System.currentTimeMillis() + (long) ms;
+        long at = World.nowMs() + (long) ms;
         readyAt.put(name, at);
         GData.SkillDef skill = G.skills().get(name);
         if (skill != null && skill.share() != null) readyAt.put(skill.share(), at);
@@ -55,7 +55,7 @@ public final class Cooldowns {
 
     /** The time in ms until `name` is ready; 0 when it is ready. */
     public synchronized long msLeft(String name) {
-        return Math.max(0, readyAt.getOrDefault(name, 0L) - System.currentTimeMillis());
+        return Math.max(0, readyAt.getOrDefault(name, 0L) - World.nowMs());
     }
     // endregion cooldowns
 }

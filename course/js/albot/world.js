@@ -61,7 +61,7 @@ export class World {
     this.listen("correction", (data) => {
       this.me.x = data.x;
       this.me.y = data.y;
-      this.#steppedAt.set(this.me, Date.now());
+      this.#steppedAt.set(this.me, performance.now());
     });
   }
   // endregion constructor
@@ -94,7 +94,7 @@ export class World {
   onStart(data) {
     const { entities, ...rest } = data;
     this.me = rest;
-    this.#steppedAt.set(this.me, Date.now());
+    this.#steppedAt.set(this.me, performance.now());
     this.applyEntities(entities);
   }
   // endregion on-start
@@ -106,7 +106,7 @@ export class World {
   onPlayer(data) {
     const { hitchhikers, ...rest } = data;
     Object.assign(this.me, rest);
-    this.#steppedAt.set(this.me, Date.now()); // x and y are new now
+    this.#steppedAt.set(this.me, performance.now()); // x and y are new now
     // Hitchhikers: [event, payload] pairs that rode along. Handle them as if
     // they arrived alone.
     for (const [event, payload] of hitchhikers ?? []) this.dispatch(event, payload);
@@ -124,7 +124,7 @@ export class World {
       this.monsters.clear();
       this.players.clear();
     }
-    const now = Date.now();
+    const now = performance.now();
     for (const m of data.monsters) {
       const monster = this.withDefaults(m);
       this.monsters.set(m.id, monster);
@@ -152,7 +152,7 @@ export class World {
   /** @param {Entity} data */
   onNewMap(data) {
     Object.assign(this.me, { map: data.name, in: data.in, x: data.x, y: data.y, m: data.m, moving: false });
-    this.#steppedAt.set(this.me, Date.now());
+    this.#steppedAt.set(this.me, performance.now());
     this.applyEntities(data.entities);
   }
   // endregion on-new-map
@@ -162,7 +162,7 @@ export class World {
   // since the update that brought it. Call it before you read positions. There
   // is no background timer, so nothing moves while you do not look.
   advance() {
-    const now = Date.now();
+    const now = performance.now();
     for (const e of [this.me, ...this.monsters.values(), ...this.players.values()]) {
       step(e, now - (this.#steppedAt.get(e) ?? now));
       this.#steppedAt.set(e, now);

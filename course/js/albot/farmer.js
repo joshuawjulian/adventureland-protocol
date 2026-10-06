@@ -101,7 +101,7 @@ export class Farmer {
 
     // 1. Dead: wait for the 12 s, then respawn (at main spawn 5 on `main`).
     if (me.rip) {
-      this.log(`died; respawn in ${Math.ceil(Math.max(0, act.diedAt + 12000 - Date.now()) / 1000)} s`);
+      this.log(`died; respawn in ${Math.ceil(act.msUntilRespawn() / 1000)} s`);
       if (await act.respawn()) this.log(`respawned at ${Math.round(me.x)},${Math.round(me.y)}`);
       return;
     }

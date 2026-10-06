@@ -237,7 +237,7 @@ export class Items {
   async #roll(event, payload, timeoutMs) {
     const since = this.#seq; // only answers that come after the emit
     await this.budget.emit(event, payload);
-    for (const end = Date.now() + timeoutMs; Date.now() < end; await sleep(50)) {
+    for (const end = performance.now() + timeoutMs; performance.now() < end; await sleep(50)) {
       for (const { seq, r } of this.#log) {
         if (seq > since && (r.place === event || String(r.response).startsWith(event + "_"))) return r;
       }

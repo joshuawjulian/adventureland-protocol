@@ -24,19 +24,19 @@ for (const sig of ["SIGINT", "SIGTERM"]) {
 }
 // A sleep that ends early when we stop.
 async function wait(ms: number): Promise<void> {
-  for (const end = Date.now() + ms; !stop && Date.now() < end; ) await sleep(Math.min(200, end - Date.now()));
+  for (const end = performance.now() + ms; !stop && performance.now() < end; ) await sleep(Math.min(200, end - performance.now()));
 }
 // endregion stop
 
 const seconds = Number(process.argv[2] ?? 0);
-const started = Date.now();
+const started = performance.now();
 const endAt = seconds > 0 ? started + seconds * 1000 : Infinity;
 let kills = 0;
 let attempt = 0; // failed tries in a row, for reconnectDelayMs
 let last: { level?: number; gold?: number } = {}; // our character in the last session
 
 // region session
-while (!stop && Date.now() < endAt) {
+while (!stop && performance.now() < endAt) {
   // 1. Connect. A failure (the server is full, the save of the last session
   //    still runs, ...) waits as the reconnect rule says, then tries again.
   let bot: Bot;
@@ -48,7 +48,7 @@ while (!stop && Date.now() < endAt) {
     await wait(ms);
     continue;
   }
-  const session = Date.now();
+  const session = performance.now();
   const me = bot.world.me;
   last = me;
   console.log(`in game as ${me.id} (${me.ctype}, level ${me.level}) on ${me.map} at ${Math.round(me.x)},${Math.round(me.y)}`);
@@ -61,7 +61,7 @@ while (!stop && Date.now() < endAt) {
   bot.world.listen<string>("disconnect_reason", (reason) => console.log(`the server says: ${reason}`)); // "limitdc", "limits", ...
   const farmer = new Farmer(bot.world, bot.act, bot.cooldowns, new Travel(bot.world, bot.act));
   try {
-    while (!stop && lost === null && Date.now() < endAt) {
+    while (!stop && lost === null && performance.now() < endAt) {
       await sleep(TICK_MS);
       await farmer.tick();
       farmer.nextType(); // a stronger monster when this one is too easy
@@ -70,19 +70,21 @@ while (!stop && Date.now() < endAt) {
     lost ??= (err as Error).message;
   }
   kills += farmer.kills;
-  const reason: string | null = lost; // read it first: close() fires our own `disconnect` event too
+  // The cause of this end. Our close() also gives a local `disconnect`
+  // event, but later, from the WebSocket `close` event: `reason` keeps the first cause.
+  const reason: string | null = lost;
   bot.close();
   if (reason === null) break; // we stopped, or the time is over
 
   // 3. The reconnect rule: wait, then make a new socket and a full handshake.
-  if (Date.now() - session >= STABLE_MS) attempt = 0;
+  if (performance.now() - session >= STABLE_MS) attempt = 0;
   const ms = reconnectDelayMs(attempt++);
   console.log(`disconnected: ${reason}; reconnect in ${ms / 1000} s`);
   await wait(ms);
 }
 // endregion session
 
-const secs = Math.round((Date.now() - started) / 1000);
+const secs = Math.round((performance.now() - started) / 1000);
 console.log(`farmed ${secs} s: ${kills} kill(s), level ${last.level}, ${last.gold} gold`);
 console.log("OK");
 process.exit(0); // the SIGINT handlers keep Node alive otherwise

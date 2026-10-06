@@ -40,21 +40,26 @@ type waiter struct {
 // any goroutine.
 //
 // Two goroutines do the work: readLoop reads packets and answers pings at
-// once, and dispatchLoop runs your handlers. Because they are separate, a
-// slow handler can't make us miss a ping.
+// once, and dispatchLoop runs your handlers and wakes your waiters. Because
+// they are separate, a slow handler can't make us miss a ping.
 type Socket struct {
 	conn *websocket.Conn
 
-	mu        sync.Mutex // guards the five fields below
+	mu        sync.Mutex // guards the six fields below
 	handlers  map[string][]Handler
 	waiters   map[*waiter]struct{}
 	early     map[string][]json.RawMessage // payloads from before the first On/Expect
+	replay    []event                      // kept events that dispatchLoop gives out next
 	listening bool                         // true after the first On/Expect
 	closed    bool
 
-	closing atomic.Bool   // Close sets it, so that readLoop knows the end was ours
-	events  chan event    // readLoop -> dispatchLoop
-	done    chan struct{} // closed when the connection has ended
+	closing   atomic.Bool   // Close sets it, so that readLoop knows the end was ours
+	events    chan event    // readLoop -> dispatchLoop
+	wake      chan struct{} // subscribed -> dispatchLoop: "replay has events" (buffer of 1)
+	quit      chan struct{} // closed by Close: readLoop stops a wait for a full buffer
+	quitOnce  sync.Once     // Close can run more than one time; close(quit) only once
+	endReason string        // why the connection ended; readLoop sets it before close(events)
+	done      chan struct{} // closed when the connection has ended
 }
 
 // Connect opens the WebSocket and does the Socket.IO handshake. url is the
@@ -96,6 +101,8 @@ func Connect(ctx context.Context, url string) (*Socket, error) {
 		early:    map[string][]json.RawMessage{},
 		// If this buffer is full, readLoop waits, and pings get no answer.
 		events: make(chan event, 1024),
+		wake:   make(chan struct{}, 1),
+		quit:   make(chan struct{}),
 		done:   make(chan struct{}),
 	}
 	go s.readLoop()
@@ -106,6 +113,7 @@ func Connect(ctx context.Context, url string) (*Socket, error) {
 // readLoop reads all packets until the connection ends.
 func (s *Socket) readLoop() {
 	reason := "transport closed"
+loop:
 	for {
 		_, msg, err := s.conn.Read(context.Background())
 		if err != nil {
@@ -116,7 +124,7 @@ func (s *Socket) readLoop() {
 			} else {
 				reason = "transport error: " + err.Error()
 			}
-			break
+			break loop
 		}
 		packet := string(msg)
 		switch {
@@ -147,29 +155,95 @@ func (s *Socket) readLoop() {
 				continue
 			}
 			s.mu.Unlock()
-			s.events <- event{name, data}
+			if !s.send(event{name, data}) {
+				reason = "closed by client"
+				break loop // Close ran while the dispatcher was stuck in a handler
+			}
 		case strings.HasPrefix(packet, "41"), packet == "1":
 			// 41: the server closed our namespace. 1: Engine.IO close.
 			s.conn.Close(websocket.StatusNormalClosure, "")
 		}
 		// AL does not use the other packets ("6" noop, binary packets, acks).
 	}
-	// socket.io-client reports the end as a local "disconnect" event, and so
-	// does AlSocket. The server never sends an event with this name.
-	reasonJSON, _ := json.Marshal(reason)
-	s.events <- event{"disconnect", reasonJSON}
-	close(s.events) // dispatchLoop stops after the last event
+	// The end. readLoop does not send the "disconnect" event itself: a send
+	// waits when the buffer is full, and a close never waits. dispatchLoop
+	// gives out "disconnect" after the last event (see end). The close
+	// happens before dispatchLoop sees the end of the channel (the Go memory
+	// model), so dispatchLoop can read endReason without the lock.
+	s.endReason = reason
+	close(s.events)
 }
 
-// dispatchLoop gives events to handlers and waiters, in arrival order.
-func (s *Socket) dispatchLoop() {
-	for ev := range s.events {
-		s.deliver(ev)
+// send puts one event on the events channel. When the buffer is full (your
+// handlers are 1,024 events behind), it waits: this holds back the reader,
+// and the server drops us after 12 s without a pong. It returns false only
+// if Close runs during such a wait. Then the dispatcher is stuck in a
+// handler, and nothing can give out the event anyway: it is the same as a
+// frame that we did not read. Without this, a handler that never returns
+// would keep readLoop here forever, also after Close.
+func (s *Socket) send(ev event) bool {
+	select {
+	case s.events <- ev: // the usual case: room in the buffer
+		return true
+	default:
 	}
+	select {
+	case s.events <- ev:
+		return true
+	case <-s.quit:
+		return false
+	}
+}
+
+// dispatchLoop gives events to handlers and waiters, in arrival order. It
+// is the only goroutine that runs handlers and wakes waiters, also for the
+// kept early events (see subscribed). Thus two handlers never run at the
+// same time.
+func (s *Socket) dispatchLoop() {
+	for {
+		s.replayKept() // kept events go before any event that came later
+		select {
+		case ev, ok := <-s.events:
+			if !ok {
+				s.end()
+				return
+			}
+			s.replayKept() // subscribed can add some while we waited
+			s.deliver(ev)
+		case <-s.wake: // subscribed added kept events: the next loop gives them out
+		}
+	}
+}
+
+// end runs after the last event of readLoop. socket.io-client reports the
+// end as a local "disconnect" event, and so does AlSocket (the server never
+// sends an event with this name). It comes after every other event.
+func (s *Socket) end() {
+	s.replayKept()
+	reasonJSON, _ := json.Marshal(s.endReason)
+	s.deliver(event{"disconnect", reasonJSON})
 	s.mu.Lock()
-	s.closed = true
+	s.closed = true // from now on, Expect returns ErrClosed at once
+	s.replay = nil  // kept events for an On after the end: nobody gives them out
 	s.mu.Unlock()
 	close(s.done) // wakes each WaitFor that still waits
+}
+
+// replayKept gives out the kept events that subscribed moved to replay, in
+// their arrival order. Only dispatchLoop calls it.
+func (s *Socket) replayKept() {
+	for {
+		s.mu.Lock()
+		kept := s.replay
+		s.replay = nil
+		s.mu.Unlock()
+		if len(kept) == 0 {
+			return
+		}
+		for _, ev := range kept {
+			s.deliver(ev) // outside the lock: a handler can call On, which locks
+		}
+	}
 }
 
 // deliver gives one event to the handlers and waiters for its name.
@@ -198,16 +272,26 @@ func (s *Socket) deliver(ev event) {
 // subscribed runs after each On/Expect. The server sends "welcome"
 // immediately after the handshake, before your code can call WaitFor.
 // AlSocket keeps all events from before the first On/Expect. The first
-// subscriber for an event name gets the kept events for that name. They
-// run on the goroutine that called On/Expect, one time.
+// subscriber for an event name gets the kept events for that name, one
+// time. subscribed does not run them here, on your goroutine: then two
+// goroutines could run handlers at the same time. It moves them to replay
+// and wakes dispatchLoop, which gives them out before its next event.
+// Expect registers its waiter before it calls subscribed, so the waiter
+// gets them.
 func (s *Socket) subscribed(name string) {
 	s.mu.Lock()
 	s.listening = true
 	kept := s.early[name]
 	delete(s.early, name)
-	s.mu.Unlock()
 	for _, data := range kept {
-		s.deliver(event{name, data})
+		s.replay = append(s.replay, event{name, data})
+	}
+	s.mu.Unlock()
+	if len(kept) > 0 {
+		select {
+		case s.wake <- struct{}{}: // dispatchLoop can wait on its channels: wake it
+		default: // a wake is already there; one is enough
+		}
 	}
 }
 
@@ -293,8 +377,17 @@ func (s *Socket) Expect(name string, pred func(json.RawMessage) bool) func(conte
 			return data, nil
 		case <-ctx.Done(): // your timeout
 			s.mu.Lock()
+			_, waiting := s.waiters[w]
 			delete(s.waiters, w)
 			s.mu.Unlock()
+			if !waiting {
+				// deliver took the waiter first: the reply came at the same
+				// time as the deadline, and select chose the deadline (it
+				// chooses at random when both are ready). The reply is on
+				// its way to w.ch: deliver sends it after the handlers of
+				// that event. Take it.
+				return <-w.ch, nil
+			}
 			return nil, fmt.Errorf("waiting for %q: %w", name, ctx.Err())
 		case <-s.done:
 			select {
@@ -318,10 +411,40 @@ func (s *Socket) WaitFor(ctx context.Context, name string, pred func(json.RawMes
 // out each event.
 func (s *Socket) Done() <-chan struct{} { return s.done }
 
+// closeWait is the most time that Close waits. 5 s: a working server ends
+// the close in one round trip. More means that the server, the network or
+// one of your handlers is stuck, and Close must not hang your program then.
+const closeWait = 5 * time.Second
+
 // Close disconnects correctly: Socket.IO disconnect, then a normal
-// WebSocket close.
+// WebSocket close. Then it waits until dispatchLoop has given out the last
+// event ("disconnect"), as Done does. After closeWait, it stops the
+// connection without the close handshake and returns. Do not call Close in
+// a handler: the dispatcher is then in your handler, and Close waits the
+// full closeWait for it.
 func (s *Socket) Close() error {
 	s.closing.Store(true)
-	s.write("41") // if the connection is already gone, the error does not matter
-	return s.conn.Close(websocket.StatusNormalClosure, "")
+	s.quitOnce.Do(func() { close(s.quit) })
+	timer := time.NewTimer(closeWait)
+	defer timer.Stop()
+
+	closed := make(chan error, 1) // 1: the goroutine can end also when we stop to wait
+	go func() {
+		s.write("41") // if the connection is already gone, the error does not matter
+		closed <- s.conn.Close(websocket.StatusNormalClosure, "")
+	}()
+	var err error
+	select {
+	case err = <-closed:
+	case <-timer.C:
+		s.conn.CloseNow() // the clean close then fails at once, and its goroutine ends
+		return errors.New("alsocket: close timed out; connection stopped")
+	}
+	select {
+	case <-s.done:
+	case <-timer.C:
+		s.conn.CloseNow()
+		return errors.New("alsocket: close timed out; a handler did not return")
+	}
+	return err
 }

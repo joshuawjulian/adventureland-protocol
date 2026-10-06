@@ -42,12 +42,12 @@ public final class Budget {
     }
 
     private synchronized void record(double cost) {
-        calls.addLast(new double[] {System.currentTimeMillis(), cost});
+        calls.addLast(new double[] {World.nowMs(), cost});
     }
 
     /** The total cost of the last 4 s. */
     public synchronized double spent() {
-        long now = System.currentTimeMillis();
+        long now = World.nowMs();
         while (!calls.isEmpty() && now - calls.peekFirst()[0] > WINDOW_MS) calls.pollFirst(); // forget old calls
         return calls.stream().mapToDouble(c -> c[1]).sum();
     }
@@ -63,11 +63,16 @@ public final class Budget {
                     break;
                 }
                 // Until the oldest call leaves the window, plus 10 ms so that it is surely gone.
-                wait = WINDOW_MS - (System.currentTimeMillis() - (long) calls.peekFirst()[0]) + 10;
+                wait = WINDOW_MS - (World.nowMs() - (long) calls.peekFirst()[0]) + 10;
             }
             Thread.sleep(Math.max(wait, 1));
         }
-        sock.emit(event, payload);
+        // The send runs later, in the order of the sends (AlSocket.send). Nobody waits for it, so
+        // log a failure here: else a failed send is silent. (It fails only when the connection is
+        // gone, and then the local `disconnect` event and the waiters report it too.)
+        sock.emit(event, payload).whenComplete((r, e) -> {
+            if (e != null) System.err.println("budget: send of \"" + event + "\" failed: " + e);
+        });
     }
 
     /** emit with no payload. */

@@ -24,8 +24,8 @@ public class Farm {
 
     /** A sleep that ends early when we stop. */
     static void pause(long ms) throws InterruptedException {
-        for (long end = System.currentTimeMillis() + ms; !stop && System.currentTimeMillis() < end; ) {
-            Thread.sleep(Math.max(1, Math.min(200, end - System.currentTimeMillis())));
+        for (long end = World.nowMs() + ms; !stop && World.nowMs() < end; ) {
+            Thread.sleep(Math.max(1, Math.min(200, end - World.nowMs())));
         }
     }
     // endregion stop
@@ -39,14 +39,14 @@ public class Farm {
         }));
 
         long seconds = args.length > 0 ? Long.parseLong(args[0]) : 0;
-        long started = System.currentTimeMillis();
+        long started = World.nowMs();
         long endAt = seconds > 0 ? started + seconds * 1000 : Long.MAX_VALUE;
         int kills = 0;
         int attempt = 0; // failed tries in a row, for reconnectDelayMs
         JsonNode last = null; // our character in the last session
 
         // region session
-        while (!stop && System.currentTimeMillis() < endAt) {
+        while (!stop && World.nowMs() < endAt) {
             // 1. Connect. A failure (the server is full, the save of the last session still
             //    runs, ...) waits as the reconnect rule says, then tries again.
             Bot bot;
@@ -58,7 +58,7 @@ public class Farm {
                 pause(ms);
                 continue;
             }
-            long session = System.currentTimeMillis();
+            long session = World.nowMs();
             World world = bot.world;
             synchronized (world) {
                 last = world.me;
@@ -74,7 +74,7 @@ public class Farm {
             world.listen("disconnect_reason", r -> System.out.println("the server says: " + r.asText())); // "limitdc", "limits", ...
             Farmer farmer = new Farmer(world, bot.act, bot.cooldowns, new Travel(world, bot.act));
             try {
-                while (!stop && lost.get() == null && System.currentTimeMillis() < endAt) {
+                while (!stop && lost.get() == null && World.nowMs() < endAt) {
                     Thread.sleep(TICK_MS);
                     farmer.tick();
                     farmer.nextType(); // a stronger monster when this one is too easy
@@ -89,14 +89,14 @@ public class Farm {
             if (reason == null) break; // we stopped, or the time is over
 
             // 3. The reconnect rule: wait, then make a new socket and a full handshake.
-            if (System.currentTimeMillis() - session >= STABLE_MS) attempt = 0;
+            if (World.nowMs() - session >= STABLE_MS) attempt = 0;
             long ms = Bot.reconnectDelayMs(attempt++);
             System.out.println("disconnected: " + reason + "; reconnect in " + ms / 1000 + " s");
             pause(ms);
         }
         // endregion session
 
-        long secs = Math.round((System.currentTimeMillis() - started) / 1000.0);
+        long secs = Math.round((World.nowMs() - started) / 1000.0);
         System.out.printf("farmed %d s: %d kill(s), level %d, %d gold%n", secs, kills,
                 last == null ? 0 : last.path("level").asInt(), last == null ? 0 : last.path("gold").asLong());
         System.out.println("OK");

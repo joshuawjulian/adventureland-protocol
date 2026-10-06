@@ -302,9 +302,10 @@ func (t *Travel) GoToMap(mapName string) (bool, error) {
 // endregion route
 
 // waitUntil polls test (with a copy of our character) every 50 ms, until
-// it is true or newMapWait has passed.
+// it is true, newMapWait has passed, or the session ends (Actions.SetContext).
 func (t *Travel) waitUntil(test func(world.Entity) bool) bool {
-	for end := time.Now().Add(newMapWait); time.Now().Before(end); time.Sleep(50 * time.Millisecond) {
+	session := t.act.Context()
+	for end := time.Now().Add(newMapWait); time.Now().Before(end) && session.Err() == nil; time.Sleep(50 * time.Millisecond) {
 		if test(t.world.CopyMe()) {
 			return true
 		}

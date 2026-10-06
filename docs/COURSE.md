@@ -154,9 +154,13 @@ course reads), `GameResponse` (normalized `game_response`), the G defs below.
 The surface of docs/EXAMPLES.md, unchanged: `connect(url)`, `emit(name, payload?)`,
 `on(name, handler)`, `waitFor(name, pred?, timeoutMs?)`, `close()`; Go adds `Expect` and
 `Done`; Rust adds `wait_for_timeout`; Java adds `waitFor(name)` and `done()`. Behavior: answers
-each `2` with `3` in the reader; one dispatcher in arrival order; keeps events that arrive
-before the first `on`/`waitFor` and gives them to the first subscriber of that name; a local
-`disconnect` event with a reason, after which waiters fail; no reconnect.
+each `2` with `3` in the reader; one dispatcher in arrival order, which runs every handler;
+for each event, the handlers run before the waiters; keeps events that arrive before the first
+`on`/`waitFor` and gives them to the first subscriber of that name, through the dispatcher (on
+the event loop in JS, TS and Python), before any later event; a local `disconnect` event with
+a reason, after which each waiter fails once; `close()` waits for the end at most 5 s, then
+closes the transport itself (JS, TS: `close()` returns at once; if the WebSocket `close` event
+does not come in 5 s, `AlSocket` ends the session itself and gives `disconnect`); no reconnect. Rust: dropping an `AlSocket` closes its connection.
 
 Regions: none required (chapters include the whole file).
 
@@ -541,9 +545,12 @@ list + the first merchant. One `login`, one `serversAndCharacters`, one `loadG`,
 wait up to 5 s for the full list. Fighters (concurrently): `Farmer` with prefix `<name>: `;
 after each tick, if the merchant is in view within 300 px: `sendItem` each item that is not a
 potion, and `sendGold` of gold above 20,000 when gold is above 40,000; print the gave line if
-anything moved. Merchant trip: wait for a fighter with items to give; walk to each such fighter
+anything moved. Merchant trip: wait for a fighter with items to give, or until the merchant
+itself holds loot (a walk of the last trip failed); walk to each such fighter
 and wait (10 s at most) until it gave all; walk to `fancypots`; sell `isLoot` items; `goToMap("bank")`;
-deposit gold above 50,000; `goToMap("main")`. Check: `party-merchant 1`.
+deposit gold above 50,000; `goToMap("main")`. If a fighter fails (its socket closes), the
+program prints that failure at once, stops the other characters, closes each socket and exits
+with status 1; the exact text differs by language. Check: `party-merchant 1`.
 
 ```
 team: Tester, Healer, Archer; merchant: Merchy
@@ -635,7 +642,7 @@ the NPC that sells it; `equip`/`unequip`; doors and `transport` (`new_map`); `ja
 
 | Language | Notes |
 |---|---|
-| all | `Member` exists because `Bot` has no public constructor from parts in TS and Java; `connectMember` calls `Bot.connectWith` (`connect_with`, `ConnectWith`, `ConnectWithAsync`), which has each language's welcome-race handling. The farm program reads the lost reason **before** `close()`: our own close fires the local `disconnect` event. |
+| all | `Member` exists because `Bot` has no public constructor from parts in TS and Java; `connectMember` calls `Bot.connectWith` (`connect_with`, `ConnectWith`, `ConnectWithAsync`), which has each language's welcome-race handling. The farm program reads the lost reason **before** `close()`: the local `disconnect` event that our own close causes must not replace the first cause (in JS and TS it comes later, from the WebSocket `close` event). |
 | ts | `Items.me` is `world.me` cast to `MeWithGear` (`World.Me` has no `slots`/`esize`). `Farmer` uses `act.msUntilRespawn()`. |
 | python | `Grid.for_map(G, map_name)`, `Travel.go_to_map(map_name)`, `Travel.route(start, goal)`; `Hop` and `Npc` are frozen dataclasses (`Hop.map_name`); `Party.wait_invite(name, seconds=5)`; `farmer.where(e)` formats `x,y`. Prints use `flush=True`. |
 | go | `travel.New`, `items.New`, `party.New`, `farmer.New`; `(value, error)` returns, `actions.ErrNoReply` for no answer; `Route` → `([]Hop, bool)`, `NPCSelling`/`NPCWithRole` → `(NPC, bool)`; `Find(name, level)` with `-1` = any level; `Compound(ctx, [3]int, ...)`; `WaitInvite(name, time.Duration)`; `Farmer` and `Party` state through methods (`Kills()`, `Type()`, `ClearTarget()`, `List()`). |
@@ -651,10 +658,10 @@ show these names; do not "fix" them back.
 | Language | Notes |
 |---|---|
 | all | `request`/`openChest` give "no reply" on a timeout (null, `None`, `ErrNoReply`, `Ok(None)`); a closed socket is an error. Extra helpers: `Actions.openChest(id)` (first-kill prints each chest), a "time of death" / respawn-wait accessor (`diedAt`, `died_at`, `RespawnWait`, `respawn_ms_left`, `RespawnMsLeft`, `msUntilRespawn`). `distance`: an entity whose `type` is a key of `G.monsters` uses `G.dimensions` (24×24 if missing) × `size`; anything else is 26×36 (`node/server.js:11782-11783`). |
-| js | `world.monsters`, `players`, `chests` are `Map`s, as in TS. The `types` region of gdata holds only the JSDoc typedef of `G`. |
-| ts | `world.monsters`, `players`, `chests` are `Map`s. `move`/`moveTo` are async (they go through `budget.emit`). `tsconfig` sets `verbatimModuleSyntax` (Node's type stripping needs `import type`). |
+| js | `world.monsters`, `players`, `chests` are `Map`s, as in TS. The `types` region of gdata holds only the JSDoc typedef of `G`. Every duration uses `performance.now()` (monotonic): `Date.now()` can jump. `Actions.msUntilRespawn()` as in TS. |
+| ts | `world.monsters`, `players`, `chests` are `Map`s. `move`/`moveTo` are async (they go through `budget.emit`). `tsconfig` sets `verbatimModuleSyntax` (Node's type stripping needs `import type`). Every duration uses `performance.now()` (monotonic): `Date.now()` can jump. |
 | python | `request(..., timeout_ms=2000)`, `enter_game(..., timeout_ms=30000)`; `transport(map_name, spawn)`, `Grid.for_map(G, map_name)`, `nearest_monster(mtype=None)` (no shadowed builtins). Extra `Budget.wait_for_room(event)`. alsocket fix: websockets 13.1 has `ws.protocol.close_code`, not `ws.close_code`. |
-| go | Go initialisms: `BaseURL`, `APICall`, `SocketURL`, `ID`. `ctx` is the first parameter of every network call; defaults are explicit arguments (`FindServer(servers, os.Getenv("AL_SERVER"))`). `ServersAndCharacters` returns `([]Server, []Character, error)`. `EnterGame(ctx, sock, auth, characterID, timeout, waitWelcome)`. `World` embeds `sync.Mutex`; `CopyMe`, `CopyMonster`, `ChestIDs` read under the lock. alsocket's `deliver` runs handlers before it wakes waiters. |
+| go | Go initialisms: `BaseURL`, `APICall`, `SocketURL`, `ID`. `ctx` is the first parameter of every network call; defaults are explicit arguments (`FindServer(servers, os.Getenv("AL_SERVER"))`). `ServersAndCharacters` returns `([]Server, []Character, error)`. `EnterGame(ctx, sock, auth, characterID, timeout, waitWelcome)`. `World` embeds `sync.Mutex`; `CopyMe`, `CopyMonster`, `ChestIDs` read under the lock. alsocket's `deliver` runs handlers before it wakes waiters. `Actions.SetContext(ctx)`, `Actions.Context()` and `Budget.SetContext(ctx)`: a session context that ends each wait of the actions (Ctrl-C, a stopped group); `farm` and `party-merchant` set it, and the default is `context.Background()`. `Socket.Close` waits for the end, at most 5 s. |
 | csharp | `Auth(string User, string Token)` (a member cannot have its type's name). `GData` is one partial class (typed tables + `Raw`, and the static loaders). `EnterGameAsync(..., Task<JsonElement>? welcomeWait = null)`. All `World` state behind `world.Gate` (`lock (world.Gate) { ... }`). `Servers` and `Echo` do not reference `Albot`. |
 | rust | `Actions::r#move` (`move` is a keyword). Field `g` for G. Defaults are `Option` parameters (`None` = the JS default). `download_g` returns `Value`. `World` is a Clone handle on `Arc<Mutex<WorldState>>`; the handlers are `WorldState` methods. `enter_game(sock, auth, id, timeout_ms, welcome: Option<Value>)`. alsocket's `deliver` runs handlers before it wakes waiters. |
-| java | Records nested in their module: `Api.Auth`, `Api.Server`, `Api.Character`, `Actions.GameResponse`, `Bot.LoginError`, `GData.ItemDef`... Overloads stand in for default arguments. `enterGame` also exists as two halves, `waitWelcome` and `sendAuth`. `World` is `synchronized`; programs read inside `synchronized (world) { ... }`. All `HttpClient`s use HTTP/1.1. |
+| java | Records nested in their module: `Api.Auth`, `Api.Server`, `Api.Character`, `Actions.GameResponse`, `Bot.LoginError`, `GData.ItemDef`... Overloads stand in for default arguments. `enterGame` also exists as two halves, `waitWelcome` and `sendAuth`. `World` is `synchronized`; programs read inside `synchronized (world) { ... }`. The `HttpClient`s of `Api`, `GData` and `Servers` set HTTP/1.1; `AlSocket` uses `newHttpClient()`, whose WebSocket handshake is always HTTP/1.1. `World.nowMs()` (`System.nanoTime()`) measures every duration: a wall clock can jump. `request`/`openChest` throw `UncheckedIOException` when the socket closed. |

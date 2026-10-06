@@ -204,7 +204,7 @@ public final class Travel {
 
     /** Polls `test` every 50 ms until it is true, or until `ms` have passed. */
     static boolean waitUntil(BooleanSupplier test, long ms) throws InterruptedException {
-        for (long end = System.currentTimeMillis() + ms; System.currentTimeMillis() < end; Thread.sleep(50)) {
+        for (long end = World.nowMs() + ms; World.nowMs() < end; Thread.sleep(50)) {
             if (test.getAsBoolean()) return true;
         }
         return test.getAsBoolean();

@@ -160,7 +160,7 @@ export class Travel {
   // Polls `test` every 50 ms until it is true, or until `ms` have passed.
   /** @param {() => boolean} test @param {number} ms */
   async #waitUntil(test, ms) {
-    for (const end = Date.now() + ms; Date.now() < end; await sleep(50)) if (test()) return true;
+    for (const end = performance.now() + ms; performance.now() < end; await sleep(50)) if (test()) return true;
     return test();
   }
 }

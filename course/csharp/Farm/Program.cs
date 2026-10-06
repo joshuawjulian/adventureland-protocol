@@ -12,21 +12,25 @@ const long StableMs = 5 * 60000; // after a session of 5 min, the reconnect wait
 // region stop
 // Ctrl-C (SIGINT) or `docker stop` (SIGTERM): finish this tick, close the
 // socket, print the summary. A second Ctrl-C stops at once.
-var stop = false;
+// The signal handlers run on another thread than the loop. A plain bool is
+// not safe between threads: the JIT can read it once and keep the old value.
+// A CancellationTokenSource is safe, and Task.Delay can wait for it too.
+using var stopping = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) =>
 {
-    if (stop) Environment.Exit(1);
+    if (stopping.IsCancellationRequested) Environment.Exit(1);
     e.Cancel = true; // do not end the process now: the loop ends cleanly
-    stop = true;
+    stopping.Cancel();
     Console.WriteLine("stopping (press Ctrl-C again to stop at once)");
 };
-using var term = PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx => { ctx.Cancel = true; stop = true; });
+using var term = PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx => { ctx.Cancel = true; stopping.Cancel(); });
+bool Stop() => stopping.IsCancellationRequested;
 
 // A sleep that ends early when we stop.
 async Task Wait(int ms)
 {
-    var end = Environment.TickCount64 + ms;
-    while (!stop && Environment.TickCount64 < end) await Task.Delay((int)Math.Min(200, end - Environment.TickCount64));
+    try { await Task.Delay(ms, stopping.Token); }
+    catch (OperationCanceledException) { } // we stop: the wait is over
 }
 // endregion stop
 
@@ -38,7 +42,7 @@ var attempt = 0; // failed tries in a row, for ReconnectDelayMs
 double level = 0, gold = 0; // our character in the last session
 
 // region session
-while (!stop && Environment.TickCount64 < endAt)
+while (!Stop() && Environment.TickCount64 < endAt)
 {
     // 1. Connect. A failure (the server is full, the save of the last session
     //    still runs, ...) waits as the reconnect rule says, then tries again.
@@ -62,13 +66,16 @@ while (!stop && Environment.TickCount64 < endAt)
     // 2. Play until we stop, the time is over, or the socket closes. AlSocket's
     //    local `disconnect` event has the reason; a send on a closed socket
     //    throws, so the catch below is the same case.
+    // A handler (on the dispatcher thread) writes `lost`, and this loop reads it.
+    // CompareExchange: the first reason counts, and the write is visible at
+    // once; Volatile.Read always reads the value in memory, not an old copy.
     string? lost = null;
-    world.Listen("disconnect", r => lost ??= r?.ToString() ?? "disconnect");
+    world.Listen("disconnect", r => Interlocked.CompareExchange(ref lost, r?.ToString() ?? "disconnect", null));
     world.Listen("disconnect_reason", r => Console.WriteLine($"the server says: {r}")); // "limitdc", "limits", ...
     var farmer = new Farmer(world, bot.Act, bot.Cooldowns, new Travel(world, bot.Act));
     try
     {
-        while (!stop && lost is null && Environment.TickCount64 < endAt)
+        while (!Stop() && Volatile.Read(ref lost) is null && Environment.TickCount64 < endAt)
         {
             await Task.Delay(TickMs);
             await farmer.TickAsync();
@@ -77,12 +84,12 @@ while (!stop && Environment.TickCount64 < endAt)
     }
     catch (Exception e)
     {
-        lost ??= e.Message;
+        Interlocked.CompareExchange(ref lost, e.Message, null);
     }
     kills += farmer.Kills;
     lock (world.Gate) (level, gold) = (world.Me.Num("level"), world.Me.Num("gold"));
     // Read the reason BEFORE the close: our own close also fires `disconnect`.
-    var reason = lost;
+    var reason = Volatile.Read(ref lost);
     try { await bot.CloseAsync(); } catch { } // the socket can be gone already
     if (reason is null) break; // we stopped, or the time is over
 

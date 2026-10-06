@@ -22,6 +22,7 @@ import albot.World;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class PartyMerchant {
     static final long TICK_MS = 100;
@@ -47,6 +48,7 @@ public class PartyMerchant {
     record Crew(Party.Member m, Travel travel, Items items, Party party, Farmer farmer) {}
 
     static volatile boolean stop = false;
+    static final AtomicReference<String> failed = new AtomicReference<>(); // the first error of a fighter
     static GData G;
     static List<Crew> crew = new ArrayList<>();
     static Crew merchant;
@@ -112,23 +114,38 @@ public class PartyMerchant {
         // endregion party
 
         // region run
+        // One virtual thread for each fighter. If one fails (its socket closed, a bug), it says so
+        // at once and sets `stop`: the other fighters and the merchant then end their loops, and
+        // the program closes every socket. Without this, the error of a virtual thread shows only
+        // as a stack trace, and the others play on without it.
         List<Thread> fighting = new ArrayList<>();
         for (Crew f : crew.subList(0, crew.size() - 1)) {
-            fighting.add(Thread.ofVirtual().start(() -> {
+            fighting.add(Thread.ofVirtual().name("fighter-" + f.m().name()).start(() -> {
                 try {
                     fighterLoop(f);
                 } catch (InterruptedException e) {
                     // the program ends
+                } catch (RuntimeException e) {
+                    failed.compareAndSet(null, f.m().name() + ": " + e.getMessage()); // the first error wins
+                    System.out.println(f.m().name() + " failed: " + e.getMessage() + "; stop");
+                    stop = true;
                 }
             }));
         }
         int done = 0;
-        while (!stop && (trips == 0 || done < trips)) {
-            if (merchantTrip()) done++;
+        try {
+            while (!stop && (trips == 0 || done < trips)) {
+                if (merchantTrip()) done++;
+            }
+        } finally { // also when the merchant fails: end the fighters and close each socket
+            stop = true; // the fighters end their loops
+            for (Thread t : fighting) t.join();
+            for (Crew c : crew) c.m().close();
         }
-        stop = true; // the fighters end their loops
-        for (Thread t : fighting) t.join();
-        for (Crew c : crew) c.m().close();
+        if (failed.get() != null) {
+            System.out.println("FAILED: " + failed.get());
+            System.exit(1);
+        }
         System.out.println("OK");
         System.exit(0);
         // endregion run
@@ -169,6 +186,14 @@ public class PartyMerchant {
 
     // region merchant
     /** Does this fighter have something to give? */
+    /** Does the merchant itself hold loot to sell? */
+    static boolean holdsLoot(World w) {
+        synchronized (w) {
+            for (JsonNode it : w.me.path("items")) if (Items.isLoot(G, it)) return true;
+            return false;
+        }
+    }
+
     static boolean hasLoot(Crew f) {
         World w = f.m().world();
         synchronized (w) {
@@ -182,8 +207,11 @@ public class PartyMerchant {
         World world = merchant.m().world();
         String name = merchant.m().name();
         List<Crew> fighters = crew.subList(0, crew.size() - 1);
-        // 1. Wait until a fighter has something to give.
-        while (!stop && fighters.stream().noneMatch(PartyMerchant::hasLoot)) Thread.sleep(500);
+        // 1. Wait until a fighter has something to give, or until the merchant holds loot.
+        // The merchant holds loot when a walk of the last trip failed after it collected: then go
+        // on and sell it. Without this, the wait never ends: the fighters gave all already.
+        while (!stop && !holdsLoot(world) && fighters.stream().noneMatch(PartyMerchant::hasLoot)) Thread.sleep(500);
+        if (stop) return false; // Ctrl-C, or a fighter failed: no trip
         // 2. Go to each fighter with loot, and wait (10 s at most) until it gave all.
         for (Crew f : fighters) {
             if (stop || !hasLoot(f)) continue;

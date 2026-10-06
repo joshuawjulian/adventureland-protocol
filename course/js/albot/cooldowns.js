@@ -7,7 +7,7 @@
 
 // region cooldowns
 export class Cooldowns {
-  /** @type {Map<string, number>} name -> the time (Date.now() ms) it is ready again */
+  /** @type {Map<string, number>} name -> the time (performance.now() ms) it is ready again */
   #readyAt = new Map();
 
   /** @param {import("./world.js").World} world */
@@ -41,7 +41,7 @@ export class Cooldowns {
   // with another (G.skills[name].share, for example 3shot shares "attack").
   /** @param {string} name @param {number} ms */
   start(name, ms) {
-    const at = Date.now() + ms;
+    const at = performance.now() + ms;
     this.#readyAt.set(name, at);
     const share = this.G.skills[name]?.share;
     if (share) this.#readyAt.set(share, at);
@@ -55,7 +55,7 @@ export class Cooldowns {
   // Milliseconds until `name` is ready; 0 when it is ready now.
   /** @param {string} name */
   msLeft(name) {
-    return Math.max(0, (this.#readyAt.get(name) ?? 0) - Date.now());
+    return Math.max(0, (this.#readyAt.get(name) ?? 0) - performance.now());
   }
 }
 // endregion cooldowns

@@ -7,6 +7,7 @@
 //      trips: stop after this many merchant trips (the tests use 1). Without it: until Ctrl-C.
 // Make a merchant first, if you have none:
 //      dotnet run --project PartyMerchant -- --create-merchant MyMerchant
+using System.Net.WebSockets;
 using System.Text.Json.Nodes;
 using Albot;
 
@@ -131,8 +132,11 @@ async Task<bool> MerchantTrip()
 {
     var world = merchant.M.World;
     var me = world.Me;
-    // 1. Wait until a fighter has something to give.
-    while (!stop.IsCancellationRequested && !team.Any(HasLoot)) await Task.Delay(500);
+    // 1. Wait until a fighter has something to give, or until the merchant holds loot.
+    // The merchant holds loot when a walk of the last trip failed after it collected: then go
+    // on and sell it. Without this, the wait never ends: the fighters gave all already.
+    bool HoldsLoot() { lock (world.Gate) return (me["items"] as JsonArray ?? []).Any(it => Items.IsLoot(G, it)); }
+    while (!stop.IsCancellationRequested && !HoldsLoot() && !team.Any(HasLoot)) await Task.Delay(500);
     // 2. Go to each fighter with loot, and wait (10 s at most) until it gave all.
     foreach (var f in team)
     {
@@ -143,6 +147,9 @@ async Task<bool> MerchantTrip()
         await merchant.Travel.WalkToAsync(fx, fy);
         for (var waited = 0; HasLoot(f) && waited < 10000; waited += 200) await Task.Delay(200);
     }
+    // A fighter failed, or Ctrl-C: do not start the next step. (A step that runs
+    // ends first: a walk has no token.)
+    if (stop.IsCancellationRequested) return false;
     // 3. Sell the loot in the town. Keep the jewelry: three of a kind compound.
     var shop = merchant.Items.NpcSelling("hpot0") ?? throw new InvalidOperationException("no shop on this map");
     Console.WriteLine($"{merchant.M.Name}: walk to {shop.Id} at {shop.X},{shop.Y}");
@@ -163,6 +170,7 @@ async Task<bool> MerchantTrip()
         if (r is { Failed: false }) { sold++; gold += r.Data.Num("gold"); }
     }
     Console.WriteLine($"{merchant.M.Name}: sold {sold} item(s): +{gold} gold");
+    if (stop.IsCancellationRequested) return false;
     // 4. The bank: the door is north of the town. Deposit, then go back out.
     if (!await merchant.Travel.GoToMapAsync("bank")) return false;
     double amount;
@@ -176,16 +184,44 @@ async Task<bool> MerchantTrip()
 // endregion merchant
 
 // region run
-var fighting = team.Select(f => Task.Run(() => FighterLoop(f))).ToList();
-var done = 0;
-while (!stop.IsCancellationRequested && (trips == 0 || done < trips))
+// Each fighter runs on its own task. If one fails (its socket closed, ...), it
+// says so AT ONCE and stops the others: without this, nobody looks at its task
+// until the last trip ends, and the error shows only then.
+var fighting = team.Select(f => Task.Run(async () =>
 {
-    if (await MerchantTrip()) done++;
+    try { await FighterLoop(f); }
+    catch (Exception e)
+    {
+        Console.WriteLine($"{f.M.Name}: stopped: {e.Message}");
+        stop.Cancel(); // the merchant and the other fighters end their loops
+        throw;         // the task fails: the check after WhenAll sees it
+    }
+})).ToList();
+var done = 0;
+try
+{
+    while (!stop.IsCancellationRequested && (trips == 0 || done < trips))
+    {
+        if (await MerchantTrip()) done++;
+    }
 }
-stop.Cancel(); // the fighters end their loops
-await Task.WhenAll(fighting);
-foreach (var c in crew) await c.M.CloseAsync();
-Console.WriteLine("OK");
+finally
+{
+    // Also when the merchant failed: stop the fighters, wait for them, close
+    // each socket. Each fighter already printed its own error.
+    stop.Cancel();
+    try { await Task.WhenAll(fighting); } catch { }
+    foreach (var c in crew)
+    {
+        try { await c.M.CloseAsync(); } catch (WebSocketException) { } // that socket is gone already
+    }
+}
+if (fighting.Any(t => t.IsFaulted))
+{
+    Console.WriteLine("a fighter failed: see above");
+    Environment.ExitCode = 1;
+}
+else Console.WriteLine("OK");
 // endregion run
 
 /// <summary>One character of the team, with its tools. Farmer is null for the merchant.</summary>

@@ -175,8 +175,9 @@ func (w *World) Listen(name string, handler func(json.RawMessage)) {
 	w.handlers[name] = append(w.handlers[name], handler)
 	w.Unlock()
 	if first {
-		// After the unlock: sock.On can give us a kept event at once, and
-		// Dispatch takes the lock.
+		// After the unlock: sock.On takes the lock of the socket, and the
+		// dispatch goroutine can call Dispatch (which takes our lock) at any
+		// time from now on, also for a kept event.
 		w.sock.On(name, func(d json.RawMessage) { w.Dispatch(name, d) })
 	}
 }

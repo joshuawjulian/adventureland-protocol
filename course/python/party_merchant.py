@@ -152,8 +152,10 @@ async def run(crew: list[Crew], G: GData, trips: int) -> None:
         """The merchant: wait for loot, collect it, sell it, bank the gold."""
         me = merchant.m.world.me
         name = merchant.m.name
-        # 1. Wait until a fighter has something to give.
-        while not any(has_loot(f) for f in fighters):
+        # 1. Wait until a fighter has something to give, or until the merchant holds loot.
+        # The merchant holds loot when a walk of the last trip failed after it collected: then go
+        # on and sell it. Without this, the wait never ends: the fighters gave all already.
+        while not any(is_loot(G, it) for it in me["items"]) and not any(has_loot(f) for f in fighters):
             await asyncio.sleep(0.5)
         # 2. Go to each fighter with loot, and wait (10 s at most) until it gave all.
         for f in fighters:
@@ -195,15 +197,29 @@ async def run(crew: list[Crew], G: GData, trips: int) -> None:
     # endregion merchant
 
     # region run
-    fighting = asyncio.gather(*(fighter_loop(f) for f in fighters))
+    async def merchant_loop() -> None:
+        try:
+            done = 0
+            while trips == 0 or done < trips:
+                if await merchant_trip():
+                    done += 1
+        finally:
+            stop.set()  # the fighters end their loops
+
+    # A TaskGroup, not gather: when one character fails (its socket closes),
+    # the group cancels the others at once and raises. gather would let the
+    # others continue, and the error would show only at the end.
     try:
-        done = 0
-        while trips == 0 or done < trips:
-            if await merchant_trip():
-                done += 1
-    finally:
-        stop.set()  # the fighters end their loops
-        await fighting
+        async with asyncio.TaskGroup() as tg:
+            for f in fighters:
+                tg.create_task(fighter_loop(f))
+            tg.create_task(merchant_loop())
+    except ExceptionGroup as group:
+        # The group holds each error. Print the others; raise the first, so
+        # that main() prints it as `<type>: <message>`, as for one character.
+        for err in group.exceptions[1:]:
+            print(f"also: {type(err).__name__}: {err}", file=sys.stderr)
+        raise group.exceptions[0] from None
     # endregion run
 
 

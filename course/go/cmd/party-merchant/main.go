@@ -178,9 +178,28 @@ func run() error {
 	fmt.Printf("party: %s\n", strings.Join(lead.party.List(), ", "))
 	// endregion party
 
-	var mu sync.Mutex
-	stopped := false
-	isStopped := func() bool { mu.Lock(); defer mu.Unlock(); return stopped || ctx.Err() != nil }
+	// play ends when we stop: Ctrl-C (ctx), the last trip, or the first error
+	// of a character. Each character's actions use it (SetContext), so a wait
+	// in progress (a reply, a walk) ends at once too, not at its timeout.
+	play, stopPlay := context.WithCancel(ctx)
+	defer stopPlay()
+	for _, c := range crew {
+		c.m.Act.SetContext(play)
+	}
+	isStopped := func() bool { return play.Err() != nil }
+	// fail keeps the first error of any character and stops all the others
+	// at once. Without it, a fighter's error waits until the merchant's
+	// trips end, and the other characters play on without that fighter.
+	var errMu sync.Mutex
+	var firstErr error
+	fail := func(err error) {
+		errMu.Lock()
+		if firstErr == nil {
+			firstErr = err
+		}
+		errMu.Unlock()
+		stopPlay()
+	}
 
 	// region fighter
 	// A fighter farms. When the merchant is near, it gives its loot and gold.
@@ -254,8 +273,19 @@ func run() error {
 	name := merchant.m.Name
 	merchantTrip := func() (bool, error) {
 		w := merchant.m.World
-		// 1. Wait until a fighter has something to give.
-		for !isStopped() && !anyLoot() {
+		// 1. Wait until a fighter has something to give, or until the merchant holds loot.
+		// The merchant holds loot when a walk of the last trip failed after it collected: then go
+		// on and sell it. Without this, the wait never ends: the fighters gave all already.
+		holdsLoot := func() bool {
+			me := w.CopyMe()
+			for num := 0; num < items.Count(me); num++ {
+				if items.IsLoot(G, items.ItemAt(me, num)) {
+					return true
+				}
+			}
+			return false
+		}
+		for !isStopped() && !holdsLoot() && !anyLoot() {
 			time.Sleep(500 * time.Millisecond)
 		}
 		// 2. Go to each fighter with loot, and wait (10 s at most) until it gave all.
@@ -268,7 +298,7 @@ func run() error {
 			if _, err := merchant.travel.WalkTo(fm.Num("x"), fm.Num("y")); err != nil {
 				return false, err
 			}
-			for waited := 0; hasLoot(f) && waited < 10000; waited += 200 {
+			for waited := 0; !isStopped() && hasLoot(f) && waited < 10000; waited += 200 {
 				time.Sleep(200 * time.Millisecond)
 			}
 		}
@@ -323,37 +353,34 @@ func run() error {
 
 	// region run
 	var wg sync.WaitGroup
-	errs := make(chan error, len(fighting))
 	for _, f := range fighting {
 		wg.Add(1)
 		go func(f *crewMember) {
 			defer wg.Done()
-			if err := fighterLoop(f); err != nil {
-				errs <- fmt.Errorf("%s: %w", f.m.Name, err)
+			// An error after the stop is only the stop itself (context.Canceled).
+			if err := fighterLoop(f); err != nil && !isStopped() {
+				fail(fmt.Errorf("%s: %w", f.m.Name, err)) // the others stop at once
 			}
 		}(f)
 	}
-	var tripErr error
 	for done := 0; !isStopped() && (trips == 0 || done < trips); {
 		ok, err := merchantTrip()
 		if err != nil {
-			tripErr = err
+			if !isStopped() {
+				fail(fmt.Errorf("%s: %w", name, err))
+			}
 			break
 		}
 		if ok {
 			done++
 		}
 	}
-	mu.Lock()
-	stopped = true // the fighters end their loops
-	mu.Unlock()
+	stopPlay() // the fighters end their loops (and their waits)
 	wg.Wait()
-	close(errs)
-	if tripErr != nil {
-		return tripErr
-	}
-	for err := range errs {
-		return err
+	errMu.Lock()
+	defer errMu.Unlock()
+	if firstErr != nil {
+		return firstErr
 	}
 	fmt.Println("OK")
 	return nil

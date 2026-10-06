@@ -111,7 +111,7 @@ export class Party {
   // Waits until `name` invited us (true), or `ms` passed (false).
   /** @param {string} name @param {number} [ms] */
   async waitInvite(name, ms = 5000) {
-    for (const end = Date.now() + ms; Date.now() < end; await sleep(50)) if (this.#invites.has(name)) return true;
+    for (const end = performance.now() + ms; performance.now() < end; await sleep(50)) if (this.#invites.has(name)) return true;
     return this.#invites.has(name);
   }
 }

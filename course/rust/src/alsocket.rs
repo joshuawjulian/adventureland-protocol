@@ -5,15 +5,17 @@
 //   cargo add tokio-tungstenite --features rustls-tls-webpki-roots
 //   cargo add futures-util serde_json
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::sync::{mpsc, oneshot, watch, Notify};
+use tokio::task::AbortHandle;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::{frame::coding::CloseCode, CloseFrame};
 use tokio_tungstenite::tungstenite::Message;
@@ -35,6 +37,7 @@ struct Shared {
     handlers: HashMap<String, Vec<Handler>>,
     waiters: Vec<Waiter>,
     early: HashMap<String, Vec<Value>>, // events from before the first on/wait_for
+    replay: VecDeque<(String, Value)>,  // kept events that the dispatcher must give out next
     listening: bool,                    // true after the first on/wait_for
     closed: bool,
 }
@@ -53,7 +56,17 @@ pub struct AlSocket {
     out: mpsc::UnboundedSender<Out>,
     shared: Arc<Mutex<Shared>>,
     done: watch::Receiver<bool>, // true when the connection has ended
+    replay: Arc<Notify>,         // wakes the dispatcher: kept events wait in `replay`
+    force: Arc<Notify>,          // makes the reader stop now (see close and Drop)
+    ended: Arc<AtomicBool>,      // true when the reader saw the end of the connection
+    writer: AbortHandle,         // to stop a writer that waits on a dead connection
 }
+
+/// 5 s: the longest time that close() and drop wait for the server to answer
+/// our close frame. A working server answers in much less; a server that is
+/// gone (or a network that drops packets) never answers. Then we stop the
+/// connection from our side, so that close() cannot wait forever.
+const CLOSE_WAIT: Duration = Duration::from_secs(5);
 
 // The next text message. Other frame types are ignored.
 async fn next_text<S>(stream: &mut S) -> Result<String>
@@ -101,6 +114,15 @@ fn deliver(shared: &Mutex<Shared>, name: &str, data: &Value) {
     }
 }
 
+// Give out the kept events that `subscribed` put in `replay`, oldest first.
+// Take them under the lock, deliver them outside it (handlers lock it too).
+fn drain_replay(shared: &Mutex<Shared>) {
+    loop {
+        let Some((name, data)) = shared.lock().unwrap().replay.pop_front() else { return };
+        deliver(shared, &name, &data);
+    }
+}
+
 impl AlSocket {
     /// Open the WebSocket and do the Socket.IO handshake. `url` is the full
     /// URL, for example "wss://de.adventure.land/ws1/?EIO=4&transport=websocket&map_protocol=1&no_graphics=1".
@@ -131,9 +153,12 @@ impl AlSocket {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<(String, Value)>();
         let (done_tx, done_rx) = watch::channel(false);
         let shared = Arc::new(Mutex::new(Shared::default()));
+        let replay = Arc::new(Notify::new());
+        let force = Arc::new(Notify::new());
+        let ended = Arc::new(AtomicBool::new(false));
 
         // Writer: the only task that uses the sending half.
-        tokio::spawn(async move {
+        let writer = tokio::spawn(async move {
             while let Some(out) = out_rx.recv().await {
                 let result = match out {
                     Out::Text(text) => sink.send(Message::Text(text.into())).await,
@@ -153,12 +178,20 @@ impl AlSocket {
             }
         });
 
-        // Reader: all packets, until the connection ends.
+        // Reader: all packets, until the connection ends, or until close() or
+        // drop gives up on the server (`force`).
         let pong = out_tx.clone();
         let state = shared.clone();
+        let (stop, saw_end) = (force.clone(), ended.clone());
         tokio::spawn(async move {
             let reason = loop {
-                let packet = match stream.next().await {
+                let next = tokio::select! {
+                    // `biased`: a waiting stop wins over more packets.
+                    biased;
+                    _ = stop.notified() => break "closed by the client (no answer to the close in 5 s)".to_string(),
+                    next = stream.next() => next,
+                };
+                let packet = match next {
                     Some(Ok(Message::Text(t))) => t.to_string(),
                     Some(Ok(Message::Close(frame))) => {
                         let code = frame.map(|f| u16::from(f.code)).unwrap_or(1005);
@@ -202,6 +235,11 @@ impl AlSocket {
                 }
                 // AL does not use the other packets ("6" noop, binary packets, acks).
             };
+            // From now on, emit() fails at once (see emit).
+            saw_end.store(true, Ordering::SeqCst);
+            // Drop our half of the stream now. The writer ends at its next send
+            // or at Out::Close; with both halves gone, the TCP connection closes.
+            drop(stream);
             // socket.io-client reports the end as a local "disconnect" event,
             // and so does AlSocket. The server never sends this name.
             let _ = event_tx.send(("disconnect".to_string(), Value::String(reason)));
@@ -210,14 +248,33 @@ impl AlSocket {
         });
 
         // Dispatcher: gives events to handlers and waiters, in arrival order.
+        // The kept events of `replay` go first: they arrived before each event
+        // that is still in the channel. `wake` tells it that replay has some.
         let state = shared.clone();
+        let wake = replay.clone();
         tokio::spawn(async move {
-            while let Some((name, data)) = event_rx.recv().await {
+            loop {
+                let next = tokio::select! {
+                    next = event_rx.recv() => next,
+                    _ = wake.notified() => {
+                        drain_replay(&state);
+                        continue;
+                    }
+                };
+                drain_replay(&state); // before this event: it can be newer than them
+                let Some((name, data)) = next else { break };
                 deliver(&state, &name, &data);
             }
-            let mut s = state.lock().unwrap();
-            s.closed = true;
-            s.waiters.clear(); // dropping the senders fails each wait_for that still waits
+            // The end. The same lock as `subscribed`: after this, nobody adds to
+            // replay, and no wait_for registers.
+            let waiters = {
+                let mut s = state.lock().unwrap();
+                s.closed = true;
+                std::mem::take(&mut s.waiters)
+            };
+            // Dropping the senders fails each wait_for that still waits, one
+            // time each. We drop them outside the lock, from our own copy.
+            drop(waiters);
             let _ = done_tx.send(true);
         });
 
@@ -225,27 +282,48 @@ impl AlSocket {
             out: out_tx,
             shared,
             done: done_rx,
+            replay,
+            force,
+            ended,
+            writer: writer.abort_handle(),
         })
     }
 
     // Each on/wait_for calls this. The server sends "welcome" immediately
     // after the handshake, before your code can call wait_for("welcome").
     // AlSocket keeps all events from before the first on/wait_for. The first
-    // subscriber for an event name gets the kept events for that name. They
-    // run on the task that called on/wait_for, one time.
+    // subscriber for an event name gets the kept events for that name, one
+    // time. They go to the dispatcher (through `replay`), like every other
+    // event: the handlers run on the dispatcher task, one at a time, before
+    // each event that is still in the channel.
     fn subscribed(&self, event: &str) {
-        let kept = {
-            let mut s = self.shared.lock().unwrap();
-            s.listening = true;
-            s.early.remove(event).unwrap_or_default()
-        };
-        for data in kept {
-            deliver(&self.shared, event, &data);
+        let mut s = self.shared.lock().unwrap();
+        s.listening = true;
+        if s.closed {
+            return; // the dispatcher has ended: nobody would give them out
         }
+        let kept = s.early.remove(event).unwrap_or_default();
+        if kept.is_empty() {
+            return;
+        }
+        s.replay.extend(kept.into_iter().map(|data| (event.to_string(), data)));
+        drop(s);
+        // The dispatcher can wait on an empty channel: wake it. If it is busy,
+        // Notify keeps the wake for its next wait.
+        self.replay.notify_one();
     }
 
     /// Send an event: 42["name", data]. With `Value::Null`, send no payload.
+    ///
+    /// `Ok` means that the frame is in the queue of the writer task, not that
+    /// it is on the network. After the reader saw the end of the connection,
+    /// emit fails at once. A frame that you queue in the short time before
+    /// that (the connection broke, but nothing noticed it yet) is lost
+    /// without an error. The `disconnect` event is the reliable sign of the end.
     pub async fn emit(&self, event: &str, data: Value) -> Result<()> {
+        if self.ended.load(Ordering::SeqCst) {
+            return Err("socket is closed".into());
+        }
         let args = if data.is_null() {
             vec![Value::from(event)]
         } else {
@@ -318,12 +396,56 @@ impl AlSocket {
 
     /// Disconnect correctly: Socket.IO disconnect, then a normal WebSocket
     /// close. Returns when the connection has ended and the dispatcher has
-    /// given out each event.
+    /// given out each event. If the server does not answer in 5 s, it stops
+    /// the connection from our side, and returns soon after.
     pub async fn close(&self) -> Result<()> {
+        self.start_close();
+        let mut done = self.done.clone();
+        if tokio::time::timeout(CLOSE_WAIT, done.wait_for(|ended| *ended)).await.is_err() {
+            self.force_close();
+            // The reader stops at once now, and the dispatcher gives out what
+            // is left. 1 s more is enough; a handler that never returns must not
+            // keep close() waiting forever.
+            let _ = tokio::time::timeout(Duration::from_secs(1), done.wait_for(|ended| *ended)).await;
+        }
+        Ok(())
+    }
+
+    // Queue the Socket.IO disconnect and the WebSocket close frame.
+    fn start_close(&self) {
         let _ = self.out.send(Out::Text("41".into()));
         let _ = self.out.send(Out::Close);
-        let mut done = self.done.clone();
-        let _ = done.wait_for(|ended| *ended).await;
-        Ok(())
+    }
+
+    // Stop without the server: the reader leaves its loop (and sends
+    // `disconnect`), and the writer stops. Both halves of the WebSocket are
+    // dropped, so the TCP connection closes.
+    fn force_close(&self) {
+        self.force.notify_one();
+        self.writer.abort();
+    }
+}
+
+/// A dropped AlSocket closes its connection, the same as close() but without
+/// the wait. Without this, the reader would answer pings forever (it holds a
+/// sender of the writer's queue for the pongs), and the character would stay
+/// in the game. Call close().await when you can: it waits for the end.
+impl Drop for AlSocket {
+    fn drop(&mut self) {
+        if *self.done.borrow() {
+            return; // the connection has ended already
+        }
+        self.start_close();
+        // Give the server 5 s to answer the close frame, then stop. This needs
+        // a task; outside a Tokio runtime the tasks end with the runtime anyway.
+        if let Ok(rt) = tokio::runtime::Handle::try_current() {
+            let (force, writer, mut done) = (self.force.clone(), self.writer.clone(), self.done.clone());
+            rt.spawn(async move {
+                if tokio::time::timeout(CLOSE_WAIT, done.wait_for(|ended| *ended)).await.is_err() {
+                    force.notify_one();
+                    writer.abort();
+                }
+            });
+        }
     }
 }

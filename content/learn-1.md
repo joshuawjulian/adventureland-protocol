@@ -742,11 +742,13 @@ it, with the same five operations in all seven languages.
 | `emit(name, payload)` | Sends `42["name",payload]`. With no payload, it sends `42["name"]`. |
 | `on(name, handler)` | Calls `handler(payload)` for each event with this name, from now on. |
 | `waitFor(name, pred, timeout)` | Waits for the next event with this name for which `pred(payload)` is true. Fails after the timeout (10 s by default) or when the connection closes. |
-| `close()` | Sends `41`, then closes the WebSocket with code 1000. |
+| `close()` | Sends `41`, then closes the WebSocket with code 1000. If the server does not answer the close in 5 s, it ends the connection itself. |
 
 The names follow each language: `wait_for` in Python and Rust, `WaitFor` in Go and
 `WaitForAsync` in C#. In C#, each method that returns a task has `Async` at the end of its
-name. Inside, `AlSocket` has four parts:
+name. For how these parts use the async model of your language, see
+[Async in your language](#guide-the-async-model-of-your-language) in the API reference.
+Inside, `AlSocket` has four parts:
 
 1. **A reader.** One loop reads each frame. If the frame is `2`, the reader sends `3` at once.
    If the frame is an event, the reader decodes the JSON and gives the event to the

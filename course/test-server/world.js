@@ -26,6 +26,13 @@ import {
 } from "./g.js";
 import { ACCOUNT } from "./accounts.js";
 
+// Every time and duration here uses clock(), not clock(). clock() is the wall clock, and
+// it can jump: in Docker on WSL2 it jumped by seconds during the course checks. A jump moved
+// characters too far or too little and broke walks in the programs. clock() is milliseconds
+// since the epoch, like clock(), but it is monotonic: performance.now() counts from the
+// start of the process (performance.timeOrigin) and never goes back.
+const clock = () => performance.timeOrigin + performance.now();
+
 // The maps that exist on the test server. A door or `transport` to another map
 // gets "cant_enter", as live does for a map without an instance
 // (node/server.js:5912-5918). trim-g.js keeps the geometry of these maps.
@@ -180,7 +187,7 @@ export class World {
 
   // Run fn after ms (in the world tick). reset() drops what is pending.
   later(ms, fn) {
-    this.pending.push([Date.now() + ms, fn]);
+    this.pending.push([clock() + ms, fn]);
   }
 
   // node/server_functions.js:1784-1855 (create_npc) and 1942-1951: every NPC of
@@ -246,7 +253,7 @@ export class World {
       luckx: 1,
       outgoing: 0,
       s: {},
-      last: { attacked: Date.now(), attack: 0 },
+      last: { attacked: clock(), attack: 0 },
       pack,
       box: (map === "main" && SPAWN_BOX[pack.type]) || pack.boundary, // where it spawns and wanders
       points: {},
@@ -254,7 +261,7 @@ export class World {
       y: y1 + this.rng() * (y2 - y1),
       moving: false,
       u: true,
-      next_wander: Date.now() + 1000 + this.rng() * 4000,
+      next_wander: clock() + 1000 + this.rng() * 4000,
     };
     for (const p of ["speed", "xp", "hp", "attack", "range", "frequency", "damage_type", "aggro", "evasion", "armor", "resistance", "apiercing", "rpiercing", "1hp", "projectile"]) {
       if (p in def) m[p] = def[p];
@@ -281,7 +288,13 @@ export class World {
     this.pruneCalls(socket);
     const last = socket.calls[socket.calls.length - 1];
     if (last && last[1] === method && num !== -1) last[2] += num;
-    else socket.calls.push([new Date(), method, num === -1 ? 1 : num]);
+    else {
+      // [date, method, cost] is the live shape (limitdcreport sends it). The window uses
+      // entry.t, a monotonic time, which JSON does not send (it is not an array index).
+      const entry = [new Date(), method, num === -1 ? 1 : num];
+      entry.t = clock();
+      socket.calls.push(entry);
+    }
   }
 
   // add_call_cost(num) with a number only charges current_socket: the socket
@@ -291,8 +304,8 @@ export class World {
   }
 
   pruneCalls(socket) {
-    const now = Date.now();
-    while (socket.calls.length && now - socket.calls[0][0].getTime() > CALL_WINDOW_MS) socket.calls.shift();
+    const now = clock();
+    while (socket.calls.length && now - socket.calls[0].t > CALL_WINDOW_MS) socket.calls.shift();
   }
 
   // node/server_functions.js:5388-5405 (get_call_cost)
@@ -940,7 +953,7 @@ export class World {
   // Build the live player object from the database record
   // (node/server.js:11697-11815, init_player).
   makePlayer(socket, record, data) {
-    const now = Date.now();
+    const now = clock();
     const p = {
       socket,
       is_player: true,
@@ -1212,7 +1225,7 @@ export class World {
       // Live also sends `eval: EV`, but EV is always undefined there
       // (node/server.js:4727-4737 is switched off), so the key is not in the JSON.
     });
-    p.last.transport = Date.now();
+    p.last.transport = clock();
     this.resend(p, "u+cid");
   }
   // endregion movement
@@ -1230,7 +1243,7 @@ export class World {
     stats.attacks++;
     const place = "attack";
     if (p.rip) return this.fail(socket, "disabled", place);
-    const now = Date.now();
+    const now = clock();
     const cooldown = p.attack_ms; // G.skills.attack.cooldown = player.attack_ms (node/server.js:9778)
     if (cooldown && p.last.attack && now - p.last.attack < cooldown) {
       stats.cooldown++;
@@ -1295,7 +1308,7 @@ export class World {
   // cooldown plus the penalty (penalty_cd, at most 10 s).
   consumeSkill(p, name, cooldown) {
     const penalty = Math.min((p.s.penalty_cd && p.s.penalty_cd.ms) || 0, 10000);
-    p.last[name] = Date.now() + penalty;
+    p.last[name] = clock() + penalty;
     p.socket.emit("skill_timeout", { name, ms: penalty + cooldown, penalty });
   }
 
@@ -1376,7 +1389,7 @@ export class World {
     if (m.dead) return;
     m.target = p.name;
     if (!noIncrease) p.targets = (p.targets || 0) + 1;
-    m.last.attacked = Date.now();
+    m.last.attacked = clock();
     m.moving = false;
     m.abs = true;
     m.u = true;
@@ -1408,7 +1421,7 @@ export class World {
   rip(p) {
     p.hp = 0;
     p.rip = true;
-    p.rip_time = Date.now();
+    p.rip_time = clock();
     p.moving = false;
     p.abs = true;
     this.ctx.stats.deaths++;
@@ -1503,7 +1516,7 @@ export class World {
     if (this.rng() < gd.x50) (drop.gold *= 50), (chest = "chest5");
     if (drop.items.length || drop.cash) chest = "chest6";
     drop.chest = chest;
-    drop.date = Date.now();
+    drop.date = clock();
     this.chests[id] = drop;
     this.ctx.stats.chests_dropped++;
     if (p.party) {
@@ -1546,7 +1559,7 @@ export class World {
     const p = this.players[socket.id];
     if (!p || !p.rip) return this.fail(socket, "invalid");
     if (p.rip_time) {
-      const left = this.ctx.settings.ripMs - (Date.now() - p.rip_time);
+      const left = this.ctx.settings.ripMs - (clock() - p.rip_time);
       if (left > 0) return this.fail(socket, "cant_respawn", { ms: left });
     }
     this.ctx.stats.respawns++;
@@ -1582,7 +1595,7 @@ export class World {
     const p = this.players[socket.id];
     if (!p) return;
     if (data.item === "hp" || data.item === "mp") {
-      const now = Date.now();
+      const now = clock();
       if (p.last.potion && p.last.potion > now) return this.fail(socket, "not_ready", { ms: p.last.potion - now });
       p.last.potion = now + 4000;
       if (data.item === "hp") p.hp = Math.min(p.hp + this.G.skills.regen_hp.output, p.max_hp);
@@ -1618,7 +1631,7 @@ export class World {
     if (def.gives) {
       // node/server.js:7798-7855: the shared potion timer.
       resolve.used = item.name;
-      const now = Date.now();
+      const now = clock();
       if (p.last.potion && p.last.potion > now) return this.fail(socket, "not_ready", { ms: p.last.potion - now });
       if (item.l) return this.fail(socket, "item_locked");
       this.consume(p, num);
@@ -1685,7 +1698,7 @@ export class World {
       r.goldm = 1;
       r.dry = true;
     }
-    if (chest && Date.now() - chest.date > 8 * 60000) {
+    if (chest && clock() - chest.date > 8 * 60000) {
       r.goldm = 1;
       r.stale = true;
     }
@@ -2331,7 +2344,7 @@ export class World {
   // region tick
   // One step of the world: timers, movement, monsters, queues, updates.
   tick() {
-    const now = Date.now();
+    const now = clock();
     const dt = this.lastTick ? (now - this.lastTick) / 1000 : TICK_MS / 1000;
     this.lastTick = now;
     try {

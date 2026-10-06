@@ -12,6 +12,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,16 +32,19 @@ public final class AlSocket implements WebSocket.Listener {
     private record Event(String name, JsonNode data) {}
     private record Waiter(String name, Predicate<JsonNode> pred, CompletableFuture<JsonNode> result) {}
     private static final Event END = new Event("", NullNode.instance); // the last item in the queue
+    private static final Event WAKE = new Event("", NullNode.instance); // "look at `replay`": no event
 
     private WebSocket ws;
     private final StringBuilder partial = new StringBuilder(); // a large message comes in parts
     private final CompletableFuture<Void> handshake = new CompletableFuture<>();
 
-    private final Object lock = new Object(); // guards the five fields below
+    private final Object lock = new Object(); // guards the seven fields below
     private final Map<String, List<Consumer<JsonNode>>> handlers = new HashMap<>();
     private final List<Waiter> waiters = new ArrayList<>();
     private final Map<String, List<JsonNode>> early = new HashMap<>(); // events from before the first on/waitFor
+    private final ArrayDeque<Event> replay = new ArrayDeque<>(); // kept events that the dispatcher must deliver next
     private boolean listening; // true after the first on/waitFor
+    private boolean ended; // true after end(): the queue has its last items
     private boolean closed;
 
     // The listener thread puts events here. The dispatcher thread runs your
@@ -150,9 +154,14 @@ public final class AlSocket implements WebSocket.Listener {
         end("transport error: " + error);
     }
 
-    // This runs when the connection ends, for any cause.
+    // This runs when the connection ends, for any cause. Only the first call counts:
+    // onClose, onError and close() can all call it.
     private void end(String reason) {
         handshake.completeExceptionally(new IOException(reason)); // no effect if already complete
+        synchronized (lock) {
+            if (ended) return;
+            ended = true;
+        }
         // socket.io-client reports the end as a local "disconnect" event, and so
         // does AlSocket. The server never sends an event with this name.
         events.add(new Event("disconnect", new TextNode(reason)));
@@ -161,36 +170,55 @@ public final class AlSocket implements WebSocket.Listener {
 
     // ---- the dispatcher thread ----
 
-    // Gives events to handlers and waiters, in arrival order.
+    // Gives events to handlers and waiters, in arrival order. Before each event
+    // from the queue, it delivers the kept events that a new subscriber asked for
+    // (see subscribed): they arrived before every event in the queue.
     private void dispatch() {
         try {
-            for (Event ev = events.take(); ev != END; ev = events.take()) {
-                deliver(ev);
+            while (true) {
+                Event ev = events.take(); // blocks; the virtual thread unmounts here
+                deliverReplay();
+                if (ev == END) break;
+                if (ev != WAKE) deliver(ev);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        // Fail each waiter that is left, one time. Copy the list, clear it, and fail
+        // the copies outside the lock: each failure runs the whenComplete of waitFor
+        // on this thread, and that code removes the waiter from `waiters`. A loop
+        // over `waiters` itself would see it change under it.
+        List<Waiter> left;
         synchronized (lock) {
             closed = true;
-            for (Waiter w : waiters) w.result().completeExceptionally(new IOException("socket closed"));
+            left = new ArrayList<>(waiters);
             waiters.clear();
+            replay.clear();
         }
+        for (Waiter w : left) w.result().completeExceptionally(new IOException("socket closed"));
         done.complete(null);
     }
 
-    // Gives one event to the handlers and waiters for its name.
+    // Delivers the kept events in `replay`, oldest first.
+    private void deliverReplay() {
+        while (true) {
+            Event ev;
+            synchronized (lock) { ev = replay.poll(); }
+            if (ev == null) return;
+            deliver(ev);
+        }
+    }
+
+    // Gives one event to the handlers and waiters for its name: first each
+    // handler, then each waiter. Thus when a wait returns, the handlers of the
+    // same event (for example the ones of World) already ran.
     private void deliver(Event ev) {
         List<Consumer<JsonNode>> toCall;
+        List<Waiter> candidates; // the waiters from before this event: a handler that adds one does not give it this event
         synchronized (lock) {
             toCall = new ArrayList<>(handlers.getOrDefault(ev.name(), List.of()));
-            var it = waiters.iterator();
-            while (it.hasNext()) {
-                Waiter w = it.next();
-                if (w.name().equals(ev.name()) && safeTest(w, ev.data())) {
-                    it.remove();
-                    w.result().complete(ev.data());
-                }
-            }
+            candidates = new ArrayList<>();
+            for (Waiter w : waiters) if (w.name().equals(ev.name())) candidates.add(w);
         }
         for (var handler : toCall) {
             try {
@@ -199,22 +227,34 @@ public final class AlSocket implements WebSocket.Listener {
                 System.err.println("alsocket: handler for \"" + ev.name() + "\" threw: " + e);
             }
         }
+        if (candidates.isEmpty()) return;
+        List<Waiter> matched = new ArrayList<>();
+        synchronized (lock) {
+            for (Waiter w : candidates) {
+                // waiters.remove is false if the waiter already ended (timeout, cancel).
+                if (safeTest(w, ev.data()) && waiters.remove(w)) matched.add(w);
+            }
+        }
+        // Complete them outside the lock. Each one's code after get()/join() runs on
+        // its own thread, and its next stages on the common pool (see waitFor).
+        for (Waiter w : matched) w.result().complete(ev.data());
     }
 
     // Each on/waitFor calls this. The server sends "welcome" immediately after
     // the handshake, before your code can call waitFor("welcome"). AlSocket
     // keeps all events from before the first on/waitFor. The first subscriber
-    // for an event name gets the kept events for that name. They run on the
-    // thread that called on/waitFor, one time.
+    // for an event name gets the kept events for that name, one time. The
+    // dispatcher delivers them, in arrival order, before any later event: so
+    // handlers always run on the dispatcher thread, one at a time.
     private void subscribed(String name) {
-        List<JsonNode> kept;
         synchronized (lock) {
             listening = true;
-            kept = early.remove(name);
+            List<JsonNode> kept = early.remove(name);
+            if (kept == null) return;
+            for (JsonNode data : kept) replay.add(new Event(name, data));
         }
-        if (kept != null) {
-            for (JsonNode data : kept) deliver(new Event(name, data));
-        }
+        // The dispatcher can be blocked in take() on an empty queue: wake it.
+        events.add(WAKE);
     }
 
     // A predicate that throws counts as "no match".
@@ -278,11 +318,15 @@ public final class AlSocket implements WebSocket.Listener {
             if (closed) return CompletableFuture.failedFuture(new IOException("socket closed"));
             waiters.add(waiter);
         }
-        // On timeout, remove the waiter. thenApplyAsync: your code after
-        // join() must not run inside the lock of the dispatcher.
+        // On timeout, remove the waiter. thenApplyAsync: the stages that you add
+        // to the future run on the common pool, never on the dispatcher thread.
         var future = result.orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
                 .whenComplete((d, e) -> { synchronized (lock) { waiters.remove(waiter); } })
                 .thenApplyAsync(d -> d);
+        // `future` is a new stage, not `result`. If you cancel it (or complete it
+        // yourself), cancel `result` too: the whenComplete above then removes the
+        // waiter at once, not at its timeout.
+        future.whenComplete((d, e) -> result.cancel(false)); // no effect if result is complete
         subscribed(event);
         return future;
     }
@@ -297,11 +341,25 @@ public final class AlSocket implements WebSocket.Listener {
         return done;
     }
 
-    /** Disconnect correctly: Socket.IO disconnect, then a normal WebSocket close. Waits for the end. */
+    /**
+     * Disconnect correctly: Socket.IO disconnect, then a normal WebSocket close. Waits for the
+     * end, at most 5 s. Then it closes the transport at once (abort) and returns.
+     */
     public void close() {
         if (done.isDone()) return;
         send("41");
         sendClose();
-        done.join();
+        try {
+            // 5 s: the server answers a close in much less. More time means a dead
+            // network, or a handler that does not return; do not wait for ever.
+            done.get(5, TimeUnit.SECONDS);
+        } catch (TimeoutException | ExecutionException e) {
+            ws.abort(); // no more frames in or out
+            end("closed by the client (no answer in 5 s)"); // waiters fail when the dispatcher is free
+        } catch (InterruptedException e) {
+            ws.abort();
+            end("closed by the client (interrupted)");
+            Thread.currentThread().interrupt(); // keep the request to stop for our caller
+        }
     }
 }

@@ -28,15 +28,15 @@ world.listen("chest_opened", (r) => {
 
 // Waits the 12 s, respawns, and says so.
 async function respawn() {
-  const left = Math.max(0, act.diedAt + 12000 - Date.now()); // 12 s: B.rip_time
+  const left = act.msUntilRespawn(); // the rest of the 12 s (B.rip_time)
   console.log(`died; respawn in ${Math.ceil(left / 1000)} s`);
   if (!(await act.respawn())) throw new Error("respawn failed");
   console.log(`respawned at ${Math.round(me.x)},${Math.round(me.y)}`);
 }
 
-const deadline = Date.now() + LIMIT_MS;
+const deadline = performance.now() + LIMIT_MS;
 while (!killed) {
-  if (Date.now() > deadline) throw new Error("no kill in 90 s");
+  if (performance.now() > deadline) throw new Error("no kill in 90 s");
   await sleep(TICK_MS);
   world.advance(); // positions at this moment
 

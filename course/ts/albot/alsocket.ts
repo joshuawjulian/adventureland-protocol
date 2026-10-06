@@ -18,6 +18,7 @@ export class AlSocket {
   #early = new Map<string, unknown[]>(); // event name -> [payload, ...] from before the first on()/waitFor()
   #listening = false; // true after the first on()/waitFor()
   #closed = false;
+  #closeTimer: ReturnType<typeof setTimeout> | null = null; // close(): the 5 s limit for the end of the connection
 
   private constructor(ws: WebSocket) {
     this.#ws = ws;
@@ -76,7 +77,16 @@ export class AlSocket {
     } else if (packet.startsWith("42")) {
       // Socket.IO EVENT: 42["name", payload]. An ack id (digits) can come
       // between "42" and "[", so parse from the "[".
-      const args = JSON.parse(packet.slice(packet.indexOf("["))) as [string, unknown?];
+      let args: [string, unknown?];
+      try {
+        args = JSON.parse(packet.slice(packet.indexOf("["))) as [string, unknown?];
+      } catch (err) {
+        // A bad frame must not stop the program: an exception that leaves a
+        // WebSocket listener is an uncaught exception, and Node.js exits.
+        // Log the frame and continue with the next one.
+        console.error("bad event frame, ignored:", packet.slice(0, 200), err);
+        return;
+      }
       this.#deliver(args[0], args[1]); // with no payload, args[1] is undefined
     } else if (packet.startsWith("41") || packet === "1") {
       // 41: the server closed our namespace. 1: Engine.IO close.
@@ -93,14 +103,26 @@ export class AlSocket {
       this.#early.get(event)!.push(data);
       return;
     }
-    for (const handler of this.#handlers.get(event) ?? []) {
+    // Copies of both lists, made before any handler runs: a handler can call
+    // on() or waitFor(). A new handler or waiter starts with the NEXT event,
+    // not with this one. (A Set iterator also visits the entries that are
+    // added while it runs.)
+    const handlers = [...(this.#handlers.get(event) ?? [])];
+    const waiters = [...this.#waiters];
+    for (const handler of handlers) {
       try {
-        handler(data);
+        // The type says `void`, but an `async` handler fits it and returns a
+        // promise. AlSocket does not wait for it. Its rejection would be
+        // unhandled, and Node.js 15+ then stops the process. Log it, as we log a throw.
+        const result: unknown = handler(data);
+        if (typeof (result as PromiseLike<unknown> | undefined)?.then === "function") {
+          (result as PromiseLike<unknown>).then(undefined, (err: unknown) => console.error(`async handler for "${event}" failed:`, err));
+        }
       } catch (err) {
         console.error(`handler for "${event}" threw:`, err); // one bad handler must not stop the socket
       }
     }
-    for (const w of this.#waiters) {
+    for (const w of waiters) {
       if (w.event !== event) continue;
       let match = false;
       try {
@@ -162,20 +184,30 @@ export class AlSocket {
   }
 
   // Disconnect correctly: Socket.IO disconnect, then a normal WebSocket close.
+  // close() returns at once. The local "disconnect" event comes later, from
+  // the WebSocket "close" event. If that event does not come in 5 s (a server
+  // that never answers the close), end the session here: 5 s is far more than
+  // a working close takes, and short enough that a program can go on.
   close(): void {
-    if (this.#closed) return;
+    if (this.#closed || this.#closeTimer) return;
     if (this.#ws.readyState === WebSocket.OPEN) this.#ws.send("41");
     this.#ws.close(1000);
+    this.#closeTimer = setTimeout(() => this.#shutdown("closed by us (no close from the server in 5 s)"), 5000);
+    this.#closeTimer.unref(); // this timer alone must not keep Node.js running
   }
 
   // This runs one time, when the connection ends for any cause.
   #shutdown(reason: string): void {
     if (this.#closed) return;
     this.#closed = true;
+    if (this.#closeTimer) clearTimeout(this.#closeTimer);
     // socket.io-client reports the end as a local "disconnect" event, and so
     // does AlSocket. The server never sends an event with this name.
     this.#listening = true;
     this.#deliver("disconnect", reason);
-    for (const w of this.#waiters) w.reject(new Error(`socket closed: ${reason}`));
+    // Copy, clear, then fail each one: w.reject() removes w from the set.
+    const waiters = [...this.#waiters];
+    this.#waiters.clear();
+    for (const w of waiters) w.reject(new Error(`socket closed: ${reason}`));
   }
 }

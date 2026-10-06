@@ -12,7 +12,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 
 public final class Actions {
@@ -20,7 +23,7 @@ public final class Actions {
     private final World world;
     private final Cooldowns cooldowns;
     private final Budget budget;
-    private long diedAt = 0; // System.currentTimeMillis() of our last death; guarded by `this`
+    private long diedAt = 0; // World.nowMs() of our last death (0: none); guarded by `this`
 
     public Actions(AlSocket sock, World world, Cooldowns cooldowns, Budget budget) {
         this.sock = sock;
@@ -30,7 +33,7 @@ public final class Actions {
         // The death of our character: game_response "defeated_by_a_monster" {monster, xp}.
         world.listen("game_response", d -> {
             if (d.path("response").asText().equals("defeated_by_a_monster")) {
-                synchronized (this) { diedAt = System.currentTimeMillis(); }
+                synchronized (this) { diedAt = World.nowMs(); }
             }
         });
     }
@@ -60,16 +63,26 @@ public final class Actions {
     /**
      * Sends `event` and waits for the game_response whose place matches. The wait starts BEFORE
      * the emit, so that a fast answer cannot pass first. null if no answer came in time (some
-     * failures answer with another event, for example `disappear`).
+     * failures answer with another event, for example `disappear`). Throws an
+     * UncheckedIOException if the socket closed: that is not "no answer", and a loop must stop.
      */
     public GameResponse request(String event, Object payload, String place, long timeoutMs) throws InterruptedException {
         var reply = sock.waitFor("game_response", responseFor(place), Duration.ofMillis(timeoutMs));
-        budget.emit(event, payload);
         try {
+            budget.emit(event, payload);
             return normalize(reply.get());
-        } catch (ExecutionException timeoutOrClosed) {
-            return null;
+        } catch (ExecutionException e) {
+            return noReply(e);
+        } finally {
+            reply.cancel(false); // if we leave early (an interrupt), the socket forgets the waiter now
         }
+    }
+
+    /** null for a timeout; an UncheckedIOException for a closed socket. */
+    static <T> T noReply(ExecutionException e) {
+        if (e.getCause() instanceof TimeoutException) return null;
+        if (e.getCause() instanceof IOException io) throw new UncheckedIOException(io);
+        throw new IllegalStateException(e.getCause()); // not expected: AlSocket fails a waiter only in these two ways
     }
 
     /** request with place = event and a 2 s timeout (a normal answer takes well under 1 s). */
@@ -162,11 +175,13 @@ public final class Actions {
     /** Opens one chest. Its answer is `chest_opened` (with gold and items, or gone: true), or null. */
     public JsonNode openChest(String id) throws InterruptedException {
         var opened = sock.waitFor("chest_opened", d -> id.equals(d.path("id").asText()), Duration.ofSeconds(2));
-        budget.emit("open_chest", Map.of("id", id));
         try {
+            budget.emit("open_chest", Map.of("id", id));
             return opened.get();
-        } catch (ExecutionException timeout) {
-            return null; // no answer: for example game_response "loot_no_space"
+        } catch (ExecutionException e) {
+            return noReply(e); // null: no answer, for example game_response "loot_no_space"
+        } finally {
+            opened.cancel(false);
         }
     }
 
@@ -192,7 +207,7 @@ public final class Actions {
      */
     public boolean respawn() throws InterruptedException {
         long wait;
-        synchronized (this) { wait = diedAt + 12000 - System.currentTimeMillis(); } // 12 s: rip_time
+        synchronized (this) { wait = diedAt == 0 ? 0 : diedAt + 12000 - World.nowMs(); } // 12 s: rip_time
         if (wait > 0) Thread.sleep(wait);
         // 3 s: the answer comes after `new_map` and `player`.
         GameResponse r = request("respawn", Map.of(), "respawn", 3000); // {safe: true} goes to "woffice"

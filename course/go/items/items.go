@@ -394,7 +394,8 @@ func (it *Items) roll(event string, payload any, timeout time.Duration) (actions
 	if err := it.budget.Emit(event, payload); err != nil {
 		return actions.GameResponse{}, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	session := it.act.Context() // Ctrl-C (Actions.SetContext) ends the wait too
+	ctx, cancel := context.WithTimeout(session, timeout)
 	defer cancel()
 	for {
 		it.mu.Lock()
@@ -407,6 +408,9 @@ func (it *Items) roll(event string, payload any, timeout time.Duration) (actions
 		it.mu.Unlock()
 		select {
 		case <-ctx.Done():
+			if err := session.Err(); err != nil {
+				return actions.GameResponse{}, err // the session ended, not our timeout
+			}
 			return actions.GameResponse{}, actions.ErrNoReply
 		case <-time.After(50 * time.Millisecond):
 		}

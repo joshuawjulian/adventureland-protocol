@@ -75,21 +75,35 @@ func ResponseFor(place string) func(json.RawMessage) bool {
 
 // Request sends event and waits for the game_response whose place is place.
 // It returns ErrNoReply after timeout.
+// The session context (SetContext) also ends the wait: then Request returns
+// its error (context.Canceled on Ctrl-C), not ErrNoReply.
 func (a *Actions) Request(event string, payload any, place string, timeout time.Duration) (GameResponse, error) {
 	wait := a.sock.Expect("game_response", ResponseFor(place)) // 1. register the wait
 	if err := a.budget.Emit(event, payload); err != nil {      // 2. send
+		forget(wait) // nothing was sent: remove the waiter now
 		return GameResponse{}, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	session := a.Context()
+	ctx, cancel := context.WithTimeout(session, timeout) // the timeout runs inside the session
 	defer cancel()
-	data, err := wait(ctx) // 3. block until the reply, the timeout or the end of the socket
-	if errors.Is(err, context.DeadlineExceeded) {
-		return GameResponse{}, ErrNoReply
+	data, err := wait(ctx) // 3. block until the reply, the timeout, the end of the session or of the socket
+	if errors.Is(err, context.DeadlineExceeded) && session.Err() == nil {
+		return GameResponse{}, ErrNoReply // our own timeout, not the end of the session
 	}
 	if err != nil {
 		return GameResponse{}, err
 	}
 	return Normalize(data), nil
+}
+
+// forget removes a waiter of Expect that we no longer need: a wait with a
+// context that already ended returns at once and unregisters the waiter.
+// Without it, the waiter stays until a matching event or the end of the
+// socket.
+func forget(wait func(context.Context) (json.RawMessage, error)) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, _ = wait(ctx)
 }
 
 // endregion request
@@ -101,8 +115,46 @@ type Actions struct {
 	cooldowns *cooldowns.Cooldowns
 	budget    *budget.Budget
 
-	mu     sync.Mutex // guards diedAt
-	diedAt time.Time  // when we last died; zero if not known
+	mu     sync.Mutex      // guards diedAt and ctx
+	diedAt time.Time       // when we last died; zero if not known
+	ctx    context.Context // the session context (SetContext); nil = context.Background()
+}
+
+// SetContext sets the context of the session: when it ends (Ctrl-C, or an
+// errgroup that stops), each wait of Actions and of its Budget ends at once
+// with its error, instead of at its own timeout. Call it after New, before
+// the first action. Without it, the actions use context.Background().
+//
+// Why a field and not a ctx parameter on each method: the methods (Attack,
+// Heal, MoveTo, ...) and the packages above them (travel, items, farmer)
+// keep their signatures, and one call in the program covers all of them.
+func (a *Actions) SetContext(ctx context.Context) {
+	a.mu.Lock()
+	a.ctx = ctx
+	a.mu.Unlock()
+	a.budget.SetContext(ctx)
+}
+
+// Context returns the session context (context.Background() if none is set).
+func (a *Actions) Context() context.Context {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.ctx == nil {
+		return context.Background()
+	}
+	return a.ctx
+}
+
+// sleep waits d, or less when the session ends; then it returns its error.
+func (a *Actions) sleep(d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return nil
+	case <-a.Context().Done():
+		return a.Context().Err()
+	}
 }
 
 // New makes the actions of one character.
@@ -149,7 +201,9 @@ func (a *Actions) MoveTo(x, y float64) (bool, error) {
 	me := a.world.CopyMe()
 	speed := math.Max(me.Num("speed"), 1) // px per second; 1 if not known
 	seconds := math.Hypot(x-me.Num("x"), y-me.Num("y")) / speed
-	time.Sleep(time.Duration(seconds*float64(time.Second)) + 250*time.Millisecond)
+	if err := a.sleep(time.Duration(seconds*float64(time.Second)) + 250*time.Millisecond); err != nil {
+		return false, err // the session ended during the walk
+	}
 	a.world.Advance()
 	me = a.world.CopyMe()
 	// Arrived: within 1 px, and still on the way to (x, y). A `correction`
@@ -233,12 +287,14 @@ func (a *Actions) OpenChest(id string) (world.Entity, error) {
 		return json.Unmarshal(d, &c) == nil && c.ID == id
 	})
 	if err := a.budget.Emit("open_chest", map[string]any{"id": id}); err != nil {
+		forget(wait)
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	session := a.Context()
+	ctx, cancel := context.WithTimeout(session, 2*time.Second)
 	defer cancel()
 	data, err := wait(ctx)
-	if errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.DeadlineExceeded) && session.Err() == nil {
 		return nil, ErrNoReply
 	}
 	if err != nil {
@@ -296,7 +352,9 @@ func (a *Actions) RespawnWait() time.Duration {
 // one more time. Success: a `new_map` and a `player` with rip: false come
 // first, then the game_response.
 func (a *Actions) Respawn() (bool, error) {
-	time.Sleep(a.RespawnWait())
+	if err := a.sleep(a.RespawnWait()); err != nil {
+		return false, err
+	}
 	for try := 0; try < 2; try++ {
 		r, err := a.Request("respawn", map[string]any{}, "respawn", 3*time.Second)
 		if err != nil {
@@ -305,7 +363,9 @@ func (a *Actions) Respawn() (bool, error) {
 		if r.Response != "cant_respawn" {
 			return !r.Failed, nil
 		}
-		time.Sleep(time.Duration(r.MS * float64(time.Millisecond)))
+		if err := a.sleep(time.Duration(r.MS * float64(time.Millisecond))); err != nil {
+			return false, err
+		}
 	}
 	return false, nil
 }

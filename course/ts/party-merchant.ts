@@ -130,8 +130,11 @@ const hasLoot = (f: Crew) => f.m.world.me.items.some((it) => give(G, it));
 async function merchantTrip(): Promise<boolean> {
   const { world } = merchant.m;
   const me = world.me;
-  // 1. Wait until a fighter has something to give.
-  while (!stop && !crew.slice(0, -1).some(hasLoot)) await sleep(500);
+  // 1. Wait until a fighter has something to give, or until the merchant holds loot.
+  // The merchant holds loot when a walk of the last trip failed after it collected: then go
+  // on and sell it. Without this, the wait never ends: the fighters gave all already.
+  const holdsLoot = () => me.items.some((it) => isLoot(G, it));
+  while (!stop && !holdsLoot() && !crew.slice(0, -1).some(hasLoot)) await sleep(500);
   // 2. Go to each fighter with loot, and wait (10 s at most) until it gave all.
   for (const f of crew.slice(0, -1)) {
     if (stop || !hasLoot(f)) continue;
@@ -140,6 +143,8 @@ async function merchantTrip(): Promise<boolean> {
     await merchant.travel.walkTo(fm.x, fm.y);
     for (let waited = 0; hasLoot(f) && waited < 10000; waited += 200) await sleep(200);
   }
+  // Stop between the steps when we must stop (Ctrl-C, or a fighter failed).
+  if (stop) return false;
   // 3. Sell the loot in the town. Keep the jewelry: three of a kind compound.
   const shop = merchant.items.npcSelling("hpot0");
   if (!shop) throw new Error("no shop on this map");
@@ -154,6 +159,7 @@ async function merchantTrip(): Promise<boolean> {
     if (r && !r.failed) (sold++, (gold += Number(r.gold)));
   }
   console.log(`${merchant.m.name}: sold ${sold} item(s): +${gold} gold`);
+  if (stop) return false;
   // 4. The bank: the door is north of the town. Deposit, then go back out.
   if (!(await merchant.travel.goToMap("bank"))) return false;
   const amount = Math.max(0, me.gold - MERCHANT_GOLD);
@@ -166,14 +172,35 @@ async function merchantTrip(): Promise<boolean> {
 // endregion merchant
 
 // region run
-const fighting = crew.slice(0, -1).map((f) => fighterLoop(f));
+// The fighters run at the same time as the merchant. Each fighter gets its
+// catch NOW, not at the end: a promise that rejects with no handler stops
+// Node.js at once (since Node.js 15). When one fighter fails (for example its
+// socket closed), say so at once and stop the others: each loop checks `stop`.
+let failure: unknown = null; // the first error of a fighter (null: none)
+const fighting = crew.slice(0, -1).map((f) =>
+  fighterLoop(f).catch((err) => {
+    console.log(`${f.m.name}: stopped: ${(err as Error).message}`);
+    failure ??= err;
+    stop = true;
+  }),
+);
 let done = 0;
-while (!stop && (trips === 0 || done < trips)) {
-  if (await merchantTrip()) done++;
+try {
+  while (!stop && (trips === 0 || done < trips)) {
+    if (await merchantTrip()) done++;
+  }
+} finally {
+  // Also when the merchant failed: end the fighters' loops, wait for them
+  // (this never rejects: each one has its catch), and close every socket.
+  stop = true;
+  await Promise.all(fighting);
+  for (const c of crew) c.m.close();
 }
-stop = true; // the fighters end their loops
-await Promise.all(fighting);
-for (const c of crew) c.m.close();
+if (failure) {
+  // The fighter printed its error above. Exit code 1: the run did not end well.
+  console.log("stopped: a fighter failed");
+  process.exit(1);
+}
 console.log("OK");
 process.exit(0);
 // endregion run

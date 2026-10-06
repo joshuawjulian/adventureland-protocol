@@ -64,7 +64,11 @@ export class Actions {
   readonly world: World;
   readonly cooldowns: Cooldowns;
   readonly budget: Budget;
-  #diedAt = 0; // Date.now() of our last death, 0 if not known
+  // performance.now() of our last death, 0 if not known. The course measures
+  // each duration with performance.now(): a clock that only goes forward.
+  // Date.now() is the wall clock, and it can jump by seconds when the system
+  // sets its time (a VM, WSL, NTP).
+  #diedAt = 0;
 
   constructor(sock: AlSocket, world: World, cooldowns: Cooldowns, budget: Budget) {
     this.sock = sock;
@@ -73,7 +77,7 @@ export class Actions {
     this.budget = budget;
     // The server says "defeated_by_a_monster" when we die (node/server.js:13884-13940).
     world.listen<GameResponse | string>("game_response", (d) => {
-      if (typeof d === "object" && d.response === "defeated_by_a_monster") this.#diedAt = Date.now();
+      if (typeof d === "object" && d.response === "defeated_by_a_monster") this.#diedAt = performance.now();
     });
   }
 
@@ -81,12 +85,22 @@ export class Actions {
   // Send `event` and wait for the game_response whose `place` matches.
   // null when no reply comes in time: some failures have no game_response
   // (an attack on a monster that is gone gets `disappear` with reason "not_there").
+  // Throws when the socket is closed, or closes during the wait.
   async request(event: string, payload: object = {}, place = event, timeoutMs = 2000): Promise<GameResponse | null> {
-    // The wait starts here, before the emit. `.then` turns a timeout (or a
-    // closed socket) into null, so the promise never rejects unhandled.
-    const reply = this.sock.waitFor("game_response", responseFor(place), timeoutMs).then(normalize, () => null);
+    // The wait starts here, before the emit.
+    const reply = this.sock.waitFor("game_response", responseFor(place), timeoutMs);
+    // Mark a failure of `reply` as handled now. If budget.emit() throws (the
+    // socket is closed), we leave before `await reply`, and Node.js would stop
+    // the process for its unhandled rejection. The `await reply` below still
+    // gets the same rejection.
+    reply.catch(() => {});
     await this.budget.emit(event, payload);
-    return reply;
+    try {
+      return normalize(await reply);
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("timed out")) return null; // no reply in time
+      throw err; // the socket closed: the caller must know
+    }
   }
   // endregion request
 
@@ -175,7 +189,7 @@ export class Actions {
   // region respawn
   /** The ms until `respawn` can work (0 when we do not know the time of the death). */
   msUntilRespawn(): number {
-    return this.#diedAt ? Math.max(0, this.#diedAt + RIP_TIME_MS - Date.now()) : 0;
+    return this.#diedAt ? Math.max(0, this.#diedAt + RIP_TIME_MS - performance.now()) : 0;
   }
 
   // Call this while me.rip is set. Wait the rest of the 12 s, then send `respawn`.

@@ -280,7 +280,7 @@ export class World {
   // Move every entity forward to now. There is no timer in the background:
   // call advance() before you read positions.
   advance(): void {
-    const now = Date.now();
+    const now = performance.now();
     const move = (e: Entity) => {
       step(e, now - (this.#stamps.get(e) ?? now));
       this.#stamps.set(e, now);
@@ -292,7 +292,7 @@ export class World {
   // endregion advance
 
   #stamp(e: Entity): void {
-    this.#stamps.set(e, Date.now());
+    this.#stamps.set(e, performance.now());
   }
 
   // region distance

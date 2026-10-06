@@ -31,7 +31,7 @@ export class Budget {
     this.sock = sock;
     // A map change costs 8 more (add_call_cost(player, 8, "transport"),
     // node/server.js:4726). It comes from the server, so count it on `new_map`.
-    world.listen("new_map", () => this.#calls.push([Date.now(), 8]));
+    world.listen("new_map", () => this.#calls.push([performance.now(), 8]));
   }
 
   /** @param {string} event */
@@ -41,7 +41,7 @@ export class Budget {
 
   // The total call-cost of the last 4 s.
   spent() {
-    const now = Date.now();
+    const now = performance.now();
     while (this.#calls.length && now - this.#calls[0][0] >= WINDOW_MS) this.#calls.shift(); // forget old calls
     return this.#calls.reduce((sum, [, c]) => sum + c, 0);
   }
@@ -52,9 +52,9 @@ export class Budget {
     const cost = this.cost(event);
     while (this.spent() + cost > LIMIT) {
       // Sleep until the oldest call leaves the window (+10 ms of margin).
-      await sleep(WINDOW_MS - (Date.now() - this.#calls[0][0]) + 10);
+      await sleep(WINDOW_MS - (performance.now() - this.#calls[0][0]) + 10);
     }
-    this.#calls.push([Date.now(), cost]);
+    this.#calls.push([performance.now(), cost]);
     this.sock.emit(event, payload);
   }
 }

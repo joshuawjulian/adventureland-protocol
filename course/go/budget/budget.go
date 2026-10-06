@@ -9,6 +9,7 @@
 package budget
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
 	"time"
@@ -42,8 +43,18 @@ type spend struct {
 // Budget is the record of what we spent in the last WindowMs.
 type Budget struct {
 	mu    sync.Mutex
-	spent []spend // oldest first
+	spent []spend         // oldest first
+	ctx   context.Context // the session context (SetContext); nil = context.Background()
 	sock  *alsocket.Socket
+}
+
+// SetContext sets the context of the session: when it ends, a wait in Emit
+// for room in the budget ends at once with its error. Actions.SetContext
+// calls it for you.
+func (b *Budget) SetContext(ctx context.Context) {
+	b.mu.Lock()
+	b.ctx = ctx
+	b.mu.Unlock()
 }
 
 // New makes the budget. A map change costs 8 more on the server
@@ -85,7 +96,8 @@ func (b *Budget) Spent() float64 {
 }
 
 // Emit waits until the last 4 s have room for this event, records its
-// cost, then sends it.
+// cost, then sends it. If the session context ends during the wait, it
+// returns that error and sends nothing.
 func (b *Budget) Emit(event string, payload any) error {
 	cost := b.Cost(event)
 	for {
@@ -97,8 +109,18 @@ func (b *Budget) Emit(event string, payload any) error {
 		}
 		// Wait until the oldest cost leaves the window (+10 ms of margin).
 		wait := WindowMs*time.Millisecond - time.Since(b.spent[0].at) + 10*time.Millisecond
-		b.mu.Unlock()
-		time.Sleep(wait)
+		ctx := b.ctx
+		b.mu.Unlock() // never wait with the lock: the new_map handler needs it
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		timer := time.NewTimer(wait)
+		select {
+		case <-timer.C:
+		case <-ctx.Done(): // Ctrl-C or the end of the group: do not wait up to 4 s
+			timer.Stop()
+			return ctx.Err()
+		}
 	}
 }
 

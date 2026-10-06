@@ -39,7 +39,7 @@ export class Budget {
     this.#sock = sock;
     // The server charges 8 for each map change (add_call_cost(player, 8,
     // "transport"), node/server.js:4726). We see the change as `new_map`.
-    world.listen("new_map", () => this.#calls.push([Date.now(), 8]));
+    world.listen("new_map", () => this.#calls.push([performance.now(), 8]));
   }
 
   cost(event: string): number {
@@ -48,7 +48,7 @@ export class Budget {
 
   /** The total cost of the last 4 s. */
   spent(): number {
-    const now = Date.now();
+    const now = performance.now();
     while (this.#calls.length > 0 && now - this.#calls[0][0] >= WINDOW_MS) this.#calls.shift();
     return this.#calls.reduce((sum, [, cost]) => sum + cost, 0);
   }
@@ -58,10 +58,10 @@ export class Budget {
     const cost = this.cost(event);
     while (this.spent() + cost > LIMIT) {
       // Wait until the oldest call leaves the window (+10 ms, so that it is out).
-      await sleep(this.#calls[0][0] + WINDOW_MS - Date.now() + 10);
+      await sleep(this.#calls[0][0] + WINDOW_MS - performance.now() + 10);
     }
     // No `await` between the check and the push: no other emit can come between.
-    this.#calls.push([Date.now(), cost]);
+    this.#calls.push([performance.now(), cost]);
     this.#sock.emit(event, payload);
   }
 }

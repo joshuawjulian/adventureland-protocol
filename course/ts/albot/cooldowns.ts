@@ -24,7 +24,7 @@ interface CooldownResponse {
 // for the one timer that all potions and the free regeneration share.
 export class Cooldowns {
   readonly #G: GData;
-  #readyAt = new Map<string, number>(); // name -> the time (Date.now() ms) when it is ready
+  #readyAt = new Map<string, number>(); // name -> the time (performance.now() ms) when it is ready
 
   constructor(world: World) {
     this.#G = world.G;
@@ -49,7 +49,7 @@ export class Cooldowns {
 
   /** The skill `name` is ready again in `ms`. A skill with `share` also starts that skill's timer. */
   start(name: string, ms: number): void {
-    const at = Date.now() + ms;
+    const at = performance.now() + ms;
     this.#readyAt.set(name, at);
     const share = this.#G.skills[name]?.share; // for example 3shot shares the cooldown of attack
     if (share) this.#readyAt.set(share, at);
@@ -61,7 +61,7 @@ export class Cooldowns {
 
   /** The ms until `name` is ready; 0 when it is ready now. */
   msLeft(name: string): number {
-    return Math.max(0, (this.#readyAt.get(name) ?? 0) - Date.now());
+    return Math.max(0, (this.#readyAt.get(name) ?? 0) - performance.now());
   }
 }
 // endregion cooldowns

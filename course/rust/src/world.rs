@@ -115,7 +115,7 @@ impl World {
             let list = w.handlers.entry(name.to_string()).or_default();
             list.push(Arc::new(handler));
             list.len() == 1
-        }; // the lock ends here: sock.on can give kept events at once, and they lock it
+        }; // the lock ends here: the dispatcher locks it to run the handler, also for kept events
         if first {
             let (state, event) = (self.state.clone(), name.to_string());
             self.sock.on(name, move |data| {

@@ -42,10 +42,13 @@ export class Actions {
     this.world = world;
     this.cooldowns = cooldowns;
     this.budget = budget;
-    // When we died (Date.now() ms), for respawn(). 0: we did not see it.
+    // When we died (performance.now() ms), for respawn(). 0: we did not see it.
+    // The course measures each duration with performance.now(): a clock that
+    // only goes forward. Date.now() is the wall clock, and it can jump by
+    // seconds when the system sets its time (a VM, WSL, NTP).
     this.diedAt = 0;
     world.listen("game_response", (d) => {
-      if (d?.response === "defeated_by_a_monster") this.diedAt = Date.now();
+      if (d?.response === "defeated_by_a_monster") this.diedAt = performance.now();
     });
   }
 
@@ -62,6 +65,11 @@ export class Actions {
    */
   async request(event, payload, place = event, timeoutMs = 2000) {
     const reply = this.sock.waitFor("game_response", responseFor(place), timeoutMs);
+    // Mark a failure of `reply` as handled now. If budget.emit() throws (the
+    // socket is closed), we leave before `await reply`, and Node.js would stop
+    // the process for its unhandled rejection. The `await reply` below still
+    // gets the same rejection.
+    reply.catch(() => {});
     await this.budget.emit(event, payload);
     try {
       return normalize(await reply);
@@ -137,6 +145,7 @@ export class Actions {
   /** @param {string} id @returns {Promise<any>} */
   async openChest(id) {
     const opened = this.sock.waitFor("chest_opened", (d) => d?.id === id, 2000);
+    opened.catch(() => {}); // as in request(): emit can throw before we await it
     await this.budget.emit("open_chest", { id });
     try {
       return await opened;
@@ -158,12 +167,17 @@ export class Actions {
   // endregion open-chests
 
   // region respawn
+  // The ms until `respawn` can work (0 when we do not know the time of the death).
+  msUntilRespawn() {
+    return this.diedAt ? Math.max(0, this.diedAt + RIP_MS - performance.now()) : 0;
+  }
+
   // After death (`me.rip` is set), the server accepts `respawn` only after
   // 12 s. Wait the rest of that time, then send it. If the server still says
   // "cant_respawn" (we did not see the death, so diedAt was 0), it gives the
   // `ms` left: wait that, and try one more time.
   async respawn() {
-    const wait = this.diedAt + RIP_MS - Date.now();
+    const wait = this.msUntilRespawn();
     if (wait > 0) await sleep(wait);
     for (let attempt = 0; attempt < 2; attempt++) {
       // 3 s: the answer comes after `new_map` and `player`.

@@ -83,6 +83,9 @@ func run() error {
 			wait(time.Duration(ms) * time.Millisecond)
 			continue
 		}
+		// Ctrl-C also ends a wait in progress (a reply, a walk, the 12 s
+		// before a respawn), not only the loop at its next tick.
+		b.Act.SetContext(ctx)
 		session := time.Now()
 		me := b.World.CopyMe()
 		last = me
@@ -116,7 +119,9 @@ func run() error {
 		for running() && isLost() == "" {
 			time.Sleep(tick)
 			if err := f.Tick(); err != nil {
-				setLost(err.Error())
+				if ctx.Err() == nil { // an error from Ctrl-C is a stop, not a lost connection
+					setLost(err.Error())
+				}
 				break
 			}
 			f.NextType() // a stronger monster when this one is too easy

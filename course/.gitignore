@@ -4,6 +4,8 @@ node_modules/
 __pycache__/
 .mypy_cache/
 bin/
+# ...but the Rust programs (src/bin/*.rs) are source, not build output.
+!rust/src/bin/
 obj/
 target/
 cp.txt

@@ -26,7 +26,17 @@ public final class World {
     /** The game data. */
     public final GData G;
     private final Map<String, List<Consumer<JsonNode>>> handlers = new HashMap<>();
-    private long lastAdvance = System.currentTimeMillis(); // when advance() last moved the entities
+    private long lastAdvance = nowMs(); // when advance() last moved the entities
+
+    /**
+     * Now, in ms, on a clock that only goes forward (System.nanoTime). The course uses it for each
+     * duration and deadline. nowMs() is the wall clock: it jumps when the system
+     * time changes, and a clock sync (in a VM, WSL2 or a container) can move it by seconds. A jump
+     * back then makes advance() move us too little, and a sleep look too short.
+     */
+    public static long nowMs() {
+        return System.nanoTime() / 1_000_000;
+    }
 
     /** Our character: the `start` payload (without `entities`), with each `player` merged in. Empty until `start`. */
     public ObjectNode me = JSON.createObjectNode();
@@ -89,7 +99,7 @@ public final class World {
     public synchronized void onStart(JsonNode data) {
         me = data.deepCopy();
         me.remove("entities");
-        lastAdvance = System.currentTimeMillis();
+        lastAdvance = nowMs();
         applyEntities(data.path("entities"));
     }
     // endregion on-start
@@ -173,7 +183,7 @@ public final class World {
     // region advance
     /** Moves `me`, the monsters and the players forward to now. Call it before you read positions. */
     public synchronized void advance() {
-        long now = System.currentTimeMillis();
+        long now = nowMs();
         double ms = now - lastAdvance;
         lastAdvance = now;
         step(me, ms);

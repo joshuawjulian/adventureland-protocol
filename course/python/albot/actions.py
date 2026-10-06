@@ -60,7 +60,14 @@ class Actions:
         failures send another event instead (attack: `disappear`)."""
         await self.budget.wait_for_room(event)  # first, so that it does not use the timeout
         reply = self.sock.wait_for("game_response", response_for(place or event), timeout=timeout_ms / 1000)
-        await self.budget.emit(event, payload)
+        try:
+            await self.budget.emit(event, payload)
+        except BaseException:
+            # The send failed (the socket closed) or we were cancelled: nobody
+            # will await `reply`. Close it, so Python does not warn "coroutine
+            # ... was never awaited". The waiter ends at its timer, or at the close.
+            reply.close()
+            raise
         try:
             return normalize(await reply)
         except TimeoutError:
@@ -139,7 +146,11 @@ class Actions:
         await self.budget.wait_for_room("open_chest")
         opened = self.sock.wait_for(
             "chest_opened", lambda d: isinstance(d, dict) and d.get("id") == chest_id, timeout=2)
-        await self.budget.emit("open_chest", {"id": chest_id})
+        try:
+            await self.budget.emit("open_chest", {"id": chest_id})
+        except BaseException:
+            opened.close()  # never awaited: see request()
+            raise
         try:
             result: dict[str, Any] = await opened
             return result

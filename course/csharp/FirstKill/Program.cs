@@ -17,10 +17,12 @@ try
     world.Listen("death", d => killed |= d.Str("id") == targetId);
     world.Listen("hit", d => killed |= d.Str("id") == targetId && d.Bool("kill"));
 
-    var deadline = DateTime.UtcNow.AddSeconds(90); // 90 s: a goo dies in about 20 s
+    // 90 s: a goo dies in about 20 s. Environment.TickCount64 is monotonic; the wall clock
+    // (DateTime.UtcNow) can jump, for example in Docker on WSL2.
+    var deadline = Environment.TickCount64 + 90_000;
     while (true)
     {
-        if (DateTime.UtcNow > deadline) throw new TimeoutException("no kill in 90 s");
+        if (Environment.TickCount64 > deadline) throw new TimeoutException("no kill in 90 s");
         world.Advance(); // positions are as of now
         if (Locked(() => killed)) break;
 

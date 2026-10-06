@@ -15,18 +15,23 @@ public sealed class AlSocket
     // your emits (any task) use this lock to take turns.
     private readonly SemaphoreSlim _sendLock = new(1, 1);
 
-    private readonly object _lock = new(); // guards the five fields below
+    private readonly object _lock = new(); // guards the six fields below
     private readonly Dictionary<string, List<Action<JsonElement>>> _handlers = new();
     private readonly List<Waiter> _waiters = new();
     private readonly Dictionary<string, List<JsonElement>> _early = new(); // events from before the first On/WaitForAsync
+    private readonly List<(string Name, JsonElement Data)> _replay = new(); // kept events for the dispatcher (see Subscribed)
     private bool _listening; // true after the first On/WaitForAsync
     private bool _closed;
 
     // Reader task -> dispatcher task. Because they are separate, a slow
-    // handler can't make us miss a ping.
-    private readonly Channel<(string Name, JsonElement Data)> _events =
-        Channel.CreateUnbounded<(string, JsonElement)>();
+    // handler can't make us miss a ping. A null Name is not an event: it only
+    // wakes the dispatcher, so that it gives out _replay (see Subscribed).
+    private readonly Channel<(string? Name, JsonElement Data)> _events =
+        Channel.CreateUnbounded<(string?, JsonElement)>();
     private Task _dispatcher = Task.CompletedTask;
+
+    // CloseAsync waits this long for the clean end, then forces it (see CloseAsync).
+    private static readonly TimeSpan CloseTimeout = TimeSpan.FromSeconds(5);
 
     private sealed record Waiter(string Name, Func<JsonElement, bool> Pred, TaskCompletionSource<JsonElement> Result);
 
@@ -150,53 +155,86 @@ public sealed class AlSocket
         _events.Writer.Complete(); // the dispatcher stops after the last event
     }
 
-    // Gives events to handlers and waiters, in arrival order.
+    // Gives events to handlers and waiters, in arrival order. This task is the
+    // only one that calls Deliver, so handlers never run at the same time as
+    // each other, and kept events (Subscribed) keep their place in the order.
     private async Task Dispatch()
     {
         await foreach (var (name, data) in _events.Reader.ReadAllAsync())
-            Deliver(name, data);
+        {
+            DeliverReplay(); // kept events first: they are older than this item
+            if (name is not null) Deliver(name, data); // null: only a wake-up
+        }
+        DeliverReplay(); // a Subscribed that came after the last item
+        // The end: each waiter fails, exactly once. Copy and clear the list
+        // inside the lock, and fail the copies outside it. A waiter that fails
+        // starts its own callbacks (its timer, ContinueWith); they must never
+        // see a list that this loop is going through.
+        List<Waiter> left;
         lock (_lock)
         {
             _closed = true;
-            foreach (var w in _waiters) w.Result.TrySetException(new WebSocketException("socket closed"));
+            left = new(_waiters);
             _waiters.Clear();
         }
+        foreach (var w in left) w.Result.TrySetException(new WebSocketException("socket closed"));
     }
 
-    // Gives one event to the handlers and waiters for its name.
+    // Gives the kept events that Subscribed put in _replay, in arrival order.
+    private void DeliverReplay()
+    {
+        List<(string Name, JsonElement Data)> replay;
+        lock (_lock)
+        {
+            if (_replay.Count == 0) return;
+            replay = new(_replay);
+            _replay.Clear();
+        }
+        foreach (var (name, data) in replay) Deliver(name, data);
+    }
+
+    // Gives one event to the handlers, then to the waiters, for its name.
+    // Handlers first: when a wait returns, the handlers of the same event (for
+    // example, the ones that update the World) have already run.
     private void Deliver(string name, JsonElement data)
     {
         List<Action<JsonElement>> handlers;
+        List<Waiter> matched;
         lock (_lock)
         {
+            // Copies, so that a handler can call On or WaitForAsync. A waiter that a
+            // handler adds now does not get this event: only the waiters that
+            // existed when the event arrived get it.
             handlers = _handlers.TryGetValue(name, out var list) ? new(list) : new();
-            foreach (var w in _waiters.Where(w => w.Name == name && SafePred(w, data)).ToList())
-            {
-                _waiters.Remove(w);
-                w.Result.TrySetResult(data);
-            }
+            matched = _waiters.Where(w => w.Name == name && SafePred(w, data)).ToList();
+            foreach (var w in matched) _waiters.Remove(w);
         }
         foreach (var handler in handlers)
         {
             try { handler(data); }
             catch (Exception e) { Console.Error.WriteLine($"handler for \"{name}\" threw: {e}"); } // one bad handler must not stop the socket
         }
+        // Outside the lock. RunContinuationsAsynchronously (WaitForAsync): the
+        // code after your await runs on a pool thread, not here.
+        foreach (var w in matched) w.Result.TrySetResult(data);
     }
 
     // Each On/WaitForAsync calls this. The server sends "welcome" immediately
     // after the handshake, before your code can call WaitForAsync("welcome").
     // AlSocket keeps all events from before the first On/WaitForAsync. The
-    // first subscriber for an event name gets the kept events for that name.
-    // They run on the thread that called On/WaitForAsync, one time.
+    // first subscriber for an event name gets the kept events for that name,
+    // one time. They go to the dispatcher, like every other event: it gives
+    // them out before the next event that it takes, in their arrival order.
+    // The dispatcher can be idle (waiting for the channel), so wake it.
     private void Subscribed(string name)
     {
-        List<JsonElement>? kept;
         lock (_lock)
         {
             _listening = true;
-            if (_early.Remove(name, out kept) is false) return;
+            if (_early.Remove(name, out var kept) is false) return;
+            foreach (var data in kept) _replay.Add((name, data));
         }
-        foreach (var data in kept!) Deliver(name, data);
+        _events.Writer.TryWrite((null, default)); // false after the end: then nothing listens anyway
     }
 
     // A predicate that throws counts as "no match". The dispatcher continues.
@@ -229,12 +267,14 @@ public sealed class AlSocket
     /// true. Throws TimeoutException after timeout (default 10 s), or
     /// WebSocketException if the socket closes first. The call registers
     /// the waiter immediately. Thus you can call it, then emit, then await
-    /// the task.
+    /// the task. When the task completes, the handlers of the same event
+    /// have already run.
     /// </summary>
     public Task<JsonElement> WaitForAsync(string name, Func<JsonElement, bool>? pred = null, TimeSpan? timeout = null)
     {
         // RunContinuationsAsynchronously: your code after the await must not
-        // run inside the lock of the dispatcher.
+        // run on the dispatcher. There it would hold back each later event, and
+        // a wait for the next reply would wait for itself.
         var result = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         var waiter = new Waiter(name, pred ?? (_ => true), result);
         lock (_lock)
@@ -249,7 +289,14 @@ public sealed class AlSocket
             lock (_lock) _waiters.Remove(waiter);
             result.TrySetException(new TimeoutException($"timed out waiting for \"{name}\""));
         });
-        result.Task.ContinueWith(_ => timer.Dispose());
+        result.Task.ContinueWith(t =>
+        {
+            timer.Dispose();
+            // Reading Exception marks a failure as observed. Without this, a wait
+            // that nobody awaits (for example, the emit after it threw) fails
+            // later as an "unobserved task exception". An await still throws.
+            _ = t.Exception;
+        });
         Subscribed(name);
         return result.Task;
     }
@@ -265,8 +312,30 @@ public sealed class AlSocket
         finally { _sendLock.Release(); }
     }
 
-    /// <summary>Disconnect correctly: Socket.IO disconnect, then a normal WebSocket close.</summary>
+    /// <summary>
+    /// Disconnect correctly: Socket.IO disconnect, then a normal WebSocket close.
+    /// Returns after 5 s at most, also when the server does not answer.
+    /// </summary>
     public async Task CloseAsync()
+    {
+        var clean = CloseCleanlyAsync();
+        try
+        {
+            // 5 s: the server answers a close in one round trip. Longer means that
+            // the connection is dead (no answer, a send that never ends) or that a
+            // handler never returns. Then a clean close is not possible.
+            await clean.WaitAsync(CloseTimeout);
+            return;
+        }
+        catch (TimeoutException) { }
+        catch (WebSocketException) { } // the connection broke during the close
+        // Force the end. Abort makes the ReceiveAsync of ReadLoop throw: the
+        // reader writes "disconnect" and ends, and the dispatcher fails the waiters.
+        _ws.Abort();
+        _ = clean.ContinueWith(t => _ = t.Exception); // its later failure is expected: mark it observed
+    }
+
+    private async Task CloseCleanlyAsync()
     {
         try { await SendRawAsync("41"); } catch (WebSocketException) { } // the connection is already gone
         await CloseOutputAsync();

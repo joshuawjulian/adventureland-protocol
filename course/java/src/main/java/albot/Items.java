@@ -308,7 +308,7 @@ public final class Items {
         long since;
         synchronized (this) { since = seq; } // only answers that come after the emit
         budget.emit(event, payload);
-        for (long end = System.currentTimeMillis() + timeoutMs; System.currentTimeMillis() < end; Thread.sleep(50)) {
+        for (long end = World.nowMs() + timeoutMs; World.nowMs() < end; Thread.sleep(50)) {
             synchronized (this) {
                 for (Logged l : log) {
                     if (l.seq() > since && (event.equals(l.r().place()) || l.r().response().startsWith(event + "_"))) return l.r();

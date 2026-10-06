@@ -42,12 +42,12 @@ public class FirstKill {
         });
         var diedAt = new AtomicLong(); // for the "respawn in <s> s" line only; Actions keeps its own
         world.listen("game_response", d -> {
-            if (d.path("response").asText().equals("defeated_by_a_monster")) diedAt.set(System.currentTimeMillis());
+            if (d.path("response").asText().equals("defeated_by_a_monster")) diedAt.set(World.nowMs());
         });
 
-        long deadline = System.currentTimeMillis() + LIMIT_MS;
+        long deadline = World.nowMs() + LIMIT_MS;
         while (!killed.get()) {
-            if (System.currentTimeMillis() > deadline) throw new IllegalStateException("no kill in 90 s");
+            if (World.nowMs() > deadline) throw new IllegalStateException("no kill in 90 s");
             world.advance(); // positions are now, not at the last update
             double hp, maxHp, range;
             boolean dead;
@@ -60,7 +60,7 @@ public class FirstKill {
             }
 
             if (dead) {
-                long left = diedAt.get() == 0 ? RIP_MS : Math.max(0, diedAt.get() + RIP_MS - System.currentTimeMillis());
+                long left = diedAt.get() == 0 ? RIP_MS : Math.max(0, diedAt.get() + RIP_MS - World.nowMs());
                 System.out.println("died; respawn in " + Math.round(left / 1000.0) + " s");
                 if (!bot.act.respawn()) throw new IllegalStateException("respawn failed");
                 synchronized (world) { System.out.println("respawned at " + xy(world.me)); }
@@ -118,8 +118,8 @@ public class FirstKill {
         System.out.println("killed goo " + target[0]);
 
         // The chest (`drop`) comes just after the kill. Wait up to 3 s for it.
-        long until = System.currentTimeMillis() + 3000;
-        while (System.currentTimeMillis() < until) {
+        long until = World.nowMs() + 3000;
+        while (World.nowMs() < until) {
             synchronized (world) { if (!world.chests.isEmpty()) break; }
             Thread.sleep(TICK_MS);
         }

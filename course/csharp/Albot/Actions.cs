@@ -74,6 +74,8 @@ public sealed class Actions
     public async Task<GameResponse?> RequestAsync(string evt, object? payload, string? place = null, int timeoutMs = 2000)
     {
         var reply = _sock.WaitForAsync("game_response", ResponseFor(place ?? evt), TimeSpan.FromMilliseconds(timeoutMs));
+        // If the emit throws (the socket closed), we never await `reply`. That is
+        // safe: AlSocket marks the failure of each wait as observed.
         await _budget.EmitAsync(evt, payload);
         try { return Normalize(await reply); }
         catch (TimeoutException) { return null; }
